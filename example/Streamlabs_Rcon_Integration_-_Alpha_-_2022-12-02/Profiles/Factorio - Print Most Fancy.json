@@ -1,0 +1,99 @@
+{
+    "name": "Factorio - Print Most Fancy",
+    "description": "Prints all financial and host details to Factorio with flavour text",
+    "reactions": [
+        {
+            "platform": "streamlabs",
+            "type": "donation",
+            "filteredActions": [
+                {
+                    "condition": "[VALUE] >= 5",
+                    "manipulator": "[VALUE] * 1.5",
+                    "action": "Thanks for the $[VALUE] donation [name], its worth $[CALCVALUE] to me"
+                },
+                {
+                    "condition": "[VALUE] < 5",
+                    "manipulator": "",
+                    "action": "[ACTION_TaValue]"
+                }
+            ]
+        },
+        {
+            "platform": "twitch_account",
+            "type": "subscription",
+            "filteredActions": [
+                {
+                    "condition": "[VALUE] >= 5",
+                    "manipulator": "",
+                    "action": "Thanks for subscribing [BESTNAME] for [months] months"
+                },
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "",
+                    "action": "[ACTION_TaValue]"
+                }
+            ]
+        },
+        {
+            "platform": "twitch_account",
+            "type": "subscriptionGift",
+            "filteredActions": [
+                {
+                    "condition": "[VALUE] >= 5",
+                    "manipulator": "",
+                    "action": "Thanks [gifter] for subscribing [display_name]"
+                },
+                {
+                    "condition": "[VALUE] < 5",
+                    "manipulator": "",
+                    "action": "[ACTION_TaValue]"
+                }
+            ]
+        },
+        {
+            "valueType": "money",
+            "filteredActions": [
+                {
+                    "condition": "[VALUE] >= 5",
+                    "manipulator": "",
+                    "action": "Cheers for the $[VALUE] support, it really helps. [BESTNAME]: [BESTCOMMENT]"
+                },
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "",
+                    "action": "[ACTION_TaValue]"
+                }
+            ]
+        },
+        {
+            "valueType": "follow",
+            "filteredActions": [
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "",
+                    "action": "[NOTHING]"
+                }
+            ]
+        },
+        {
+            "valueType": "viewer",
+            "filteredActions": [
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "",
+                    "action": "[BESTNAME] brought [VALUE] viewers with them"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "TaValue",
+            "description": "Say thanks for small value stuff",
+            "effect": "Ta for $[VALUE] [BESTNAME]"
+        }
+    ],
+    "options": {
+        "twitchMysterSubGiftMode": "donator"
+    }
+}

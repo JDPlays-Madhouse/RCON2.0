@@ -1,0 +1,89 @@
+{
+    "name": "Factorio - Advanced Usage Example",
+    "description": "Example of some more complicated uses",
+    "reactions": [
+        {
+            "platform": "twitch_account",
+            "type": "subscription",
+            "filteredActions": [
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "'themselves'",
+                    "action": "[ACTION_SubscriptionBy]"
+                }
+            ]
+        },
+        {
+            "platform": "twitch_account",
+            "type": "subscriptionGift",
+            "filteredActions": [
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "'[gifter]'",
+                    "action": "[ACTION_SubscriptionBy]"
+                }
+            ]
+        },
+        {
+            "platform": "twitch_account",
+            "type": "subMysteryGift",
+            "filteredActions": [
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "",
+                    "action": "subMysterGift donator enabled: [BESTNAME] subscribed [amount] users"
+                }
+            ]
+        },
+        {
+            "valueType": "money",
+            "filteredActions": [
+                {
+                    "condition": "[VALUE] >= 10",
+                    "manipulator": "int([VALUE]/10)",
+                    "action": "/a_custom_command [CALCVALUE] '[BESTNAME]'"
+                },
+                {
+                    "condition": "[VALUE] >= 0",
+                    "manipulator": "int([VALUE]/10)",
+                    "action": "I run with any value, including when the >10 action runs"
+                },
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "myValue = floor([VALUE])\ncalcValue = myValue * 2",
+                    "action": "special calcValue: \"[CALCVALUE]\""
+                }
+            ]
+        },
+        {
+            "valueType": "follow",
+            "filteredActions": [
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "'bob'",
+                    "action": "static manipulator value: \"[CALCVALUE]\""
+                }
+            ]
+        },
+        {
+            "valueType": "viewer",
+            "filteredActions": [
+                {
+                    "condition": "[VALUE] >= 0",
+                    "manipulator": "'bo\\'b'",
+                    "action": "/sc game.print('[CALCVALUE]\\'s great' .. ' and ' .. \"[BESTNAME]'s awesome\")"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "SubscriptionBy",
+            "description": "prints who subscribed and by whom. CALCVALUE must be provided as a string as otherwise it will be run like code",
+            "effect": "[BESTNAME] subscribed by [CALCVALUE]"
+        }
+    ],
+    "options": {
+        "twitchMysterSubGiftMode": "donator"
+    }
+}

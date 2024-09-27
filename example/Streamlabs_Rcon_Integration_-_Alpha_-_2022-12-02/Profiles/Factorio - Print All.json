@@ -1,0 +1,39 @@
+{
+    "name": "Factorio - Print All",
+    "description": "Prints all events very simply",
+    "reactions": [
+        {
+            "valueType": "money",
+            "filteredActions": [
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "",
+                    "action": "[BESTNAME] supported with $[VALUE]. They said, [BESTCOMMENT]"
+                }
+            ]
+        },
+        {
+            "valueType": "follow",
+            "filteredActions": [
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "",
+                    "action": "[BESTNAME] followed"
+                }
+            ]
+        },
+        {
+            "valueType": "viewer",
+            "filteredActions": [
+                {
+                    "condition": "[ALL]",
+                    "manipulator": "",
+                    "action": "[BESTNAME] hosted with [VALUE] viewers"
+                }
+            ]
+        }
+    ],
+    "options": {
+        "twitchMysterSubGiftMode": "donator"
+    }
+}

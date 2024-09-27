@@ -1,0 +1,12 @@
+{
+    "Logging DaysLogsToKeep": 7,
+    "Logging DebugLogging": true,
+    "Currency ApiLayerAccessKey": "",
+    "Streamlabs SocketApiToken": "",
+    "Profile Default": "",
+    "Rcon Server Address": "",
+    "Rcon Server Port": 25575,
+    "Rcon Server Password": "",
+    "Rcon Test Command": "/version",
+    "Rcon No Commands": false
+}
