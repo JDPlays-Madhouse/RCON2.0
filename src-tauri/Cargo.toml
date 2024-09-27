@@ -1,0 +1,36 @@
+[package]
+name = "app"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.71"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "lib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0.0-rc.12", features = [] }
+
+[dev-dependencies]
+rstest = "0.22.0"
+
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.0.0-rc.15", features = [] }
+tauri-plugin-log = "2.0.0-rc"
+uuid = { version = "1.10.0", features = ["v7", "rng"] }
+config = "0.14.0"
+twitch_api = "0.7.0-rc.7"
+google-youtube3 = "5.0.5"
+async-std = { version = "1.13.0", features = ["attributes"] }
+rcon = { version = "0.6.0", features = ["async-std", "rt-async-std", "rt-tokio"] }
+anyhow = "1.0.89"

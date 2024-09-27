@@ -14,9 +14,9 @@
 - [ ] Read from YouTube for chat/subs/memberships/supers.
 - [ ] Have a Pause button or Api end point to pause for bio breaks.
 
-- [ ] Have a separate RCON app/interface that takes in specific Factorio commands so other games can use it.
-- [ ] Rcon interface needs to take configurations for any rcon server.
-- [ ] Ensure that the amount of data is below the max per tick amount.
+- [ ] Have a RCON app/interface that takes in specific Factorio commands so other games can use it.
+- [x] Rcon interface needs to take configurations for any rcon server.
+- [?] Ensure that the amount of data is below the max per tick amount.
 
 - [ ] Provide visiual feedback through an OBS overlay (website) to give feedback on things like the boom factor.
       ![Example of OBS overlay](./docs/Example_visual_feedback.png)
