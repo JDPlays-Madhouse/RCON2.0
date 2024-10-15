@@ -2,7 +2,7 @@ use std::sync::mpsc::{channel, Receiver, RecvError, SendError, Sender};
 
 use anyhow::Result;
 
-mod twitch;
+pub mod twitch;
 pub use twitch::TwitchApiConnection;
 
 pub enum Api {
@@ -58,7 +58,7 @@ pub trait PlatformConnection {
 }
 
 pub trait PlatformAuthenticate {
-    fn authenticate(&self) -> Result<()>;
+    fn authenticate(&mut self) -> Result<()>;
 }
 
 pub trait Transmittor {
@@ -71,10 +71,10 @@ pub trait Transmittor {
 }
 
 pub trait Scopes {
-    fn has_scope(&self, scope: &'static str) -> bool;
-    fn add_scope(self, new_scope: &'static str) -> Self;
+    fn has_scope(&self, scope: String) -> bool;
+    fn add_scope(self, new_scope: String) -> Self;
     fn default_scopes(self) -> Self;
-    fn remove_scope(self, scope: &'static str) -> Self;
+    fn remove_scope(self, scope: String) -> Self;
 }
 
 pub trait IntegrationControl {
