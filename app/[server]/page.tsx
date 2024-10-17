@@ -39,17 +39,17 @@ export function findServer(id: string) {
       }
     }
   }
-  return undefined;
+  return servers[0].servers[0];
 }
 export type Servers = typeof servers;
 export type Server = (typeof servers)[number]["servers"][number];
-export default function Home() {
+export default function Home({ params }: { params: { slug: string } }) {
   const [selectedServer, setSelectedServer] = React.useState<Server>(
-    servers[0].servers[0],
+    findServer(params.slug),
   );
 
   return (
-    <div className="w-dvw h-dvh">
+    <div className="h-full">
       <MainContextMenu
         selectedServer={selectedServer}
         setSelectedServer={setSelectedServer}

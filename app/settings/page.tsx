@@ -4,6 +4,7 @@ import { MainContextMenu } from "@/components/main-context-menu";
 import MainNav from "@/components/main-navbar";
 import ServerSwitcher from "@/components/server-switcher";
 import React from "react";
+import { Server } from "../page";
 const servers = [
   {
     label: "Factorio",
@@ -31,25 +32,14 @@ const servers = [
     ],
   },
 ];
-export function findServer(id: string) {
-  for (const game of servers) {
-    for (const server of game.servers) {
-      if (id === server.id) {
-        return server;
-      }
-    }
-  }
-  return undefined;
-}
-export type Servers = typeof servers;
-export type Server = (typeof servers)[number]["servers"][number];
-export default function Home() {
+
+export default function Settings() {
   const [selectedServer, setSelectedServer] = React.useState<Server>(
     servers[0].servers[0],
   );
 
   return (
-    <div className="w-dvw h-dvh">
+    <div className="h-full">
       <MainContextMenu
         selectedServer={selectedServer}
         setSelectedServer={setSelectedServer}
@@ -65,11 +55,9 @@ export default function Home() {
           <MainNav server={selectedServer} />
         </header>
         <main className="h-full w-full">
+          Settings
           <div>Hello</div>
         </main>
-        <footer className="flex gap-6 flex-wrap items-center justify-center">
-          <DarkModeToggle />
-        </footer>
       </MainContextMenu>
     </div>
   );
