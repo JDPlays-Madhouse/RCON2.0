@@ -8,9 +8,6 @@ import {
     ContextMenuRadioItem,
     ContextMenuSeparator,
     ContextMenuShortcut,
-    ContextMenuSub,
-    ContextMenuSubContent,
-    ContextMenuSubTrigger,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 
@@ -27,7 +24,7 @@ export function MainContextMenu({
 }) {
     return (
         <ContextMenu>
-            <ContextMenuTrigger>{children}</ContextMenuTrigger>
+            <ContextMenuTrigger className="">{children}</ContextMenuTrigger>
             <ContextMenuContent className="w-64">
                 <ContextMenuItem key="Back" inset>
                     Back
@@ -57,10 +54,12 @@ export function MainContextMenu({
                 </ContextMenuSub>*/}
                 <ContextMenuSeparator />
                 <ContextMenuRadioGroup key="servers" value={selectedServer.id}>
-                    <ContextMenuLabel inset>Servers</ContextMenuLabel>
+                    <ContextMenuLabel key="serversTitle" inset>
+                        Servers
+                    </ContextMenuLabel>
                     {servers.map((group: Servers[number]) => (
                         <>
-                            <ContextMenuSeparator />
+                            <ContextMenuSeparator key={"separator" + group.label} />
                             <ContextMenuLabel key={group.label} inset>
                                 {group.label}
                             </ContextMenuLabel>

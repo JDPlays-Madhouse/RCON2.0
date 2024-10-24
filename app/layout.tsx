@@ -10,7 +10,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={``}>
+      <body className={`bg-background  text-foreground m-0 p-0`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

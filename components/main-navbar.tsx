@@ -1,7 +1,6 @@
 import { Server } from "@/app/page";
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuIndicator,
   NavigationMenuItem,
   NavigationMenuLink,

@@ -1,5 +1,4 @@
 "use client";
-import { DarkModeToggle } from "@/components/dark-mode-button";
 import { MainContextMenu } from "@/components/main-context-menu";
 import MainNav from "@/components/main-navbar";
 import ServerSwitcher from "@/components/server-switcher";
