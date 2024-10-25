@@ -58,7 +58,7 @@ pub trait PlatformConnection {
 }
 
 pub trait PlatformAuthenticate {
-    fn authenticate(&mut self) -> Result<()>;
+    async fn authenticate(&mut self) -> Result<()>;
 }
 
 pub trait Transmittor {

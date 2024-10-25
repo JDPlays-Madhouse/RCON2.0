@@ -43,7 +43,7 @@ impl Settings {
             ))
             .add_source(Environment::with_prefix(PROGRAM));
         mut_self.config_builder = builder;
-        mut_self.write();
+        let _ = mut_self.write();
 
         mut_self
     }
@@ -51,7 +51,7 @@ impl Settings {
     pub fn config_filepath(&self) -> PathBuf {
         let config_folder = &self.config_folder;
         let config_filename = Path::new(&self.config_filename);
-        PathBuf::from(config_folder.join(config_filename))
+        config_folder.join(config_filename)
     }
 
     pub fn filename(name: &'static str, file_format: FileFormat) -> String {
@@ -74,7 +74,16 @@ impl Settings {
         self.config_builder = builder;
         Ok(())
     }
-
+    pub fn get_config(&self, key: &str) -> Option<ConfigValue> {
+        let setting = match self.config().get::<Value>(key) {
+            Ok(value) => Some(ConfigValue::from(value)),
+            Err(e) => {
+                dbg!(e);
+                None
+            }
+        };
+        dbg!(setting)
+    }
     pub fn file_exists(path: &Path) -> bool {
         path.exists()
     }
@@ -142,7 +151,7 @@ impl Settings {
 
 #[derive(Debug, Clone)]
 pub struct ConfigValue {
-    kind: ValueKind,
+    pub kind: ValueKind,
 }
 
 impl From<&Value> for ConfigValue {
@@ -156,6 +165,19 @@ impl From<Value> for ConfigValue {
     fn from(value: Value) -> Self {
         Self {
             kind: value.kind.clone(),
+        }
+    }
+}
+impl ConfigValue {
+    pub fn value<T: TryFrom<ConfigValue>>(&self) -> Result<T, T::Error> {
+        self.clone().try_into()
+    }
+}
+
+impl From<bool> for ConfigValue {
+    fn from(value: bool) -> Self {
+        Self {
+            kind: ValueKind::Boolean(value),
         }
     }
 }
@@ -212,16 +234,21 @@ impl Default for Settings {
             ("auth.twitch.username", ""),
             ("auth.twitch.client_id", ""),
             ("auth.twitch.client_secret", ""),
+            (
+                "auth.twitch.redirect_url",
+                "http://localhost:27934/twitch/register",
+            ),
             ("auth.youtube.username", ""),
             ("auth.youtube.api_token", ""),
             ("servers.default", "factorio"),
             ("servers.example.address", "127.0.0.1"),
             ("servers.example.game", "factorio"),
+            ("min_log_level", "INFO"),
         ];
         builder = Settings::default_loop(builder, default_settings_str);
 
         let default_settings_bool: Vec<DefaultValue<bool>> =
-            vec![("default", true), ("servers.autostart", false)];
+            vec![("servers.autostart", false), ("debug", true)];
         builder = Settings::default_loop(builder, default_settings_bool);
 
         let default_settings_list_str = vec![("auth.platforms", vec!["Twitch", "YouTube"])];

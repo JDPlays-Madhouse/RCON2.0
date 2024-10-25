@@ -1,7 +1,13 @@
 use std::{
-    sync::mpsc::{self, RecvError},
+    borrow::Borrow,
+    sync::{
+        mpsc::{self, RecvError},
+        Arc, Mutex,
+    },
     thread::JoinHandle,
 };
+
+use crate::logging::{LogLevel, Logger};
 
 use super::{
     IntegrationChannels, IntegrationCommand, IntegrationControl, IntegrationEvent,
@@ -16,32 +22,35 @@ pub mod oauth;
 fn default_scopes_twitch() -> Vec<Scope> {
     vec![Scope::UserReadChat, Scope::ChatRead]
 }
-
+const LOGLOCATION: &str = "Twitch Integration";
 #[derive(Debug, Default)]
 pub struct TwitchApiConnection {
-    pub username: &'static str,
-    client_id: &'static str,
-    client_secret: &'static str,
+    pub username: String,
+    client_id: String,
+    client_secret: String,
     pub scope: Vec<Scope>,
     pub event_tx: Option<mpsc::Sender<IntegrationEvent>>,
     pub command_channels: IntegrationChannels<IntegrationCommand>,
     pub command_joinhandle: Option<JoinHandle<Result<(), mpsc::RecvError>>>,
     pub token: Option<UserToken>,
-    pub redirect_url: &'static str,
+    pub redirect_url: String,
+    pub logger: Arc<Mutex<Logger>>,
 }
 
 impl TwitchApiConnection {
-    pub fn new(
-        username: &'static str,
-        client_id: &'static str,
-        client_secret: &'static str,
-        redirect_url: &'static str,
+    pub fn new<T: Into<String>>(
+        username: T,
+        client_id: T,
+        client_secret: T,
+        redirect_url: T,
+        logger: Arc<Mutex<Logger>>,
     ) -> Self {
         Self {
-            username,
-            client_id,
-            client_secret,
-            redirect_url,
+            username: username.into(),
+            client_id: client_id.into(),
+            client_secret: client_secret.into(),
+            redirect_url: redirect_url.into(),
+            logger,
             ..Self::default()
         }
     }
@@ -111,16 +120,22 @@ impl PlatformConnection for TwitchApiConnection {
 }
 
 impl PlatformAuthenticate for TwitchApiConnection {
-    fn authenticate(&mut self) -> Result<()> {
+    async fn authenticate(&mut self) -> Result<()> {
         self.token = Some(
             oauth::oauth(
                 self.scope.clone(),
-                self.client_id,
-                self.client_secret,
-                self.redirect_url,
+                self.client_id.clone(),
+                self.client_secret.clone(),
+                self.redirect_url.clone(),
+                Arc::clone(&self.logger),
             )
+            .await
             .unwrap(),
         );
+        self.logger
+            .lock()
+            .unwrap()
+            .log(LogLevel::Info, LOGLOCATION, "Authenticated for Twitch.");
         dbg!(&self.token);
 
         Ok(())

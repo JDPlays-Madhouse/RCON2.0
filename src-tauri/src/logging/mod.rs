@@ -1,9 +1,17 @@
-use std::{collections::HashMap, fmt::Debug, sync::Mutex};
+use anyhow::{anyhow, bail, Context, Error, Result};
+use config::ValueKind;
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    sync::{Arc, Mutex},
+};
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
 
 use serde::{Deserialize, Serialize};
 use tauri::{ipc::Channel, State};
 use uuid::Uuid;
+
+use crate::settings::ConfigValue;
 
 #[derive(Debug, Serialize, Default, Clone, Copy, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "UPPERCASE")]
@@ -15,6 +23,56 @@ pub enum LogLevel {
     Warning = 30,
     Error = 40,
     Critical = 50,
+}
+
+impl TryFrom<ConfigValue> for LogLevel {
+    type Error = anyhow::Error;
+
+    fn try_from(value: ConfigValue) -> Result<Self, anyhow::Error> {
+        match value.kind {
+            ValueKind::String(loglevel) => match loglevel.to_uppercase().as_str() {
+                "TRACE" => Ok(LogLevel::Trace),
+                "DEBUG" => Ok(LogLevel::Debug),
+                "INFO" => Ok(LogLevel::Info),
+                "WARNING" => Ok(LogLevel::Warning),
+                "ERROR" => Ok(LogLevel::Error),
+                "CRITICAL" => Ok(LogLevel::Critical),
+                _ => bail!("Invalid log level"),
+            },
+            _ => bail!("Invalid Type"),
+        }
+    }
+}
+
+impl TryFrom<&'static str> for LogLevel {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &'static str) -> std::result::Result<Self, anyhow::Error> {
+        match value.to_uppercase().as_str() {
+            "TRACE" => Ok(LogLevel::Trace),
+            "DEBUG" => Ok(LogLevel::Debug),
+            "INFO" => Ok(LogLevel::Info),
+            "WARNING" => Ok(LogLevel::Warning),
+            "ERROR" => Ok(LogLevel::Error),
+            "CRITICAL" => Ok(LogLevel::Critical),
+            _ => bail!("Invalid log level"),
+        }
+    }
+}
+impl TryFrom<String> for LogLevel {
+    type Error = anyhow::Error;
+
+    fn try_from(value: String) -> std::result::Result<Self, anyhow::Error> {
+        match value.to_uppercase().as_str() {
+            "TRACE" => Ok(LogLevel::Trace),
+            "DEBUG" => Ok(LogLevel::Debug),
+            "INFO" => Ok(LogLevel::Info),
+            "WARNING" => Ok(LogLevel::Warning),
+            "ERROR" => Ok(LogLevel::Error),
+            "CRITICAL" => Ok(LogLevel::Critical),
+            _ => bail!("Invalid log level"),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Default, Clone)]
@@ -72,12 +130,12 @@ impl Logger {
     pub fn unsubscribe_channel(&mut self, uuid: String) -> Option<Channel<Log>> {
         self.channels.lock().unwrap().remove(&uuid)
     }
-    pub fn set_max_level(&mut self, log_level: LogLevel) {
+    pub fn set_min_level(&mut self, log_level: LogLevel) {
         self.min_display_loglevel = log_level;
         dbg!(self);
     }
-    pub fn log(&mut self, level: LogLevel, location: String, message: String) {
-        let log = Log::new(level, location, message);
+    pub fn log(&mut self, level: LogLevel, location: &str, message: &str) {
+        let log = Log::new(level, location.into(), message.into());
         self.add_log(log.clone());
         self.broadcast(log)
     }
@@ -126,7 +184,10 @@ impl Logger {
 }
 
 #[tauri::command]
-pub fn subscribe_logging_channel(logger: State<Mutex<Logger>>, channel: Channel<Log>) -> String {
+pub fn subscribe_logging_channel(
+    logger: State<Arc<Mutex<Logger>>>,
+    channel: Channel<Log>,
+) -> String {
     let uuid = logger.lock().unwrap().subscribe_to_channel(channel.clone());
 
     logger.lock().unwrap().log_to_channel(
@@ -139,7 +200,7 @@ pub fn subscribe_logging_channel(logger: State<Mutex<Logger>>, channel: Channel<
 }
 
 #[tauri::command]
-pub fn fetch_all_logs(logger_: State<Mutex<Logger>>) -> Vec<Log> {
+pub fn fetch_all_logs(logger_: State<Arc<Mutex<Logger>>>) -> Vec<Log> {
     let logger = logger_.lock().unwrap();
     logger
         .logs
@@ -152,7 +213,7 @@ pub fn fetch_all_logs(logger_: State<Mutex<Logger>>) -> Vec<Log> {
 
 #[tauri::command]
 pub fn unsubscribe_logging_channel(
-    logger: State<Mutex<Logger>>,
+    logger: State<Arc<Mutex<Logger>>>,
     uuid: String,
 ) -> Result<(), String> {
     let unsub = logger.lock().unwrap().unsubscribe_channel(uuid.clone());
@@ -174,13 +235,16 @@ pub fn unsubscribe_logging_channel(
 }
 
 #[tauri::command]
-pub fn log(logger: State<Mutex<Logger>>, level: LogLevel, location: String, message: String) {
-    logger.lock().unwrap().log(level, location, message);
+pub fn log(logger: State<Arc<Mutex<Logger>>>, level: LogLevel, location: String, message: String) {
+    logger
+        .lock()
+        .unwrap()
+        .log(level, location.as_str(), message.as_str());
 }
 
 #[tauri::command]
 pub fn log_to_channel(
-    logger: State<Mutex<Logger>>,
+    logger: State<Arc<Mutex<Logger>>>,
     uuid: String,
     level: LogLevel,
     location: String,
