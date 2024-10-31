@@ -1,31 +1,39 @@
 use std::{
-    borrow::Borrow,
     sync::{
         mpsc::{self, RecvError},
         Arc, Mutex,
     },
-    thread::JoinHandle,
+    thread::{self, JoinHandle},
 };
 
 use crate::logging::{LogLevel, Logger};
 
 use super::{
     IntegrationChannels, IntegrationCommand, IntegrationControl, IntegrationEvent,
-    PlatformAuthenticate, PlatformConnection, Scopes, Transmittor,
+    PlatformAuthenticate, PlatformConnection, TokenError, Transmittor,
 };
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
+use futures::executor;
+use reqwest::Client as ReqwestClient;
+use twitch_api::{client::ClientDefault, types::UserName, TwitchClient};
 use twitch_oauth2::UserToken;
-use twitch_oauth2::{Scope, TwitchToken};
+use twitch_oauth2::{tokens::errors::ValidationError, Scope};
 
 pub mod oauth;
+pub mod websocket;
 
+use twitch_types::UserId;
+use websocket::WebsocketClient;
 fn default_scopes_twitch() -> Vec<Scope> {
-    vec![Scope::UserReadChat, Scope::ChatRead]
+    vec![
+        Scope::UserReadChat,
+        Scope::ChatRead,
+        Scope::ChannelReadRedemptions,
+    ]
 }
 const LOGLOCATION: &str = "Twitch Integration";
-#[derive(Debug, Default)]
 pub struct TwitchApiConnection {
-    pub username: String,
+    pub username: Option<UserName>,
     client_id: String,
     client_secret: String,
     pub scope: Vec<Scope>,
@@ -35,6 +43,10 @@ pub struct TwitchApiConnection {
     pub token: Option<UserToken>,
     pub redirect_url: String,
     pub logger: Arc<Mutex<Logger>>,
+    pub client: TwitchClient<'static, ReqwestClient>,
+    pub websocket: Option<WebsocketClient>,
+    pub websocket_joinhandle: Option<tokio::task::JoinHandle<()>>,
+    pub session_id: Option<String>,
 }
 
 impl TwitchApiConnection {
@@ -46,16 +58,87 @@ impl TwitchApiConnection {
         logger: Arc<Mutex<Logger>>,
     ) -> Self {
         Self {
-            username: username.into(),
+            username: Some(UserName::new(username.into())),
             client_id: client_id.into(),
             client_secret: client_secret.into(),
             redirect_url: redirect_url.into(),
+
             logger,
-            ..Self::default()
+            scope: Default::default(),
+            event_tx: None,
+            command_channels: IntegrationChannels::default(),
+            command_joinhandle: Default::default(),
+            token: Default::default(),
+            client: twitch_api::TwitchClient::new(),
+            websocket: Default::default(),
+            websocket_joinhandle: Default::default(),
+            session_id: Default::default(),
         }
     }
 }
 
+impl TwitchApiConnection {
+    pub async fn new_websocket(&mut self) {
+        let token = self.check_token().await.unwrap();
+        self.websocket = Some(WebsocketClient::new(
+            self.session_id.clone(),
+            token,
+            self.user_id().await,
+            Arc::clone(&self.logger),
+        ));
+        let websocket = self.websocket.clone().unwrap();
+        let jh = tokio::spawn(async {
+            dbg!("thread start");
+            let _ = websocket.run().await;
+            dbg!("thread end");
+        });
+        self.websocket_joinhandle = Some(jh);
+        self.logger.lock().unwrap().log(
+            LogLevel::Info,
+            "Integration::Twitch::ApiConnection",
+            "Websocket Established!",
+        );
+    }
+}
+
+impl TwitchApiConnection {
+    pub async fn check_token(&mut self) -> anyhow::Result<UserToken, TokenError> {
+        if self.token.is_none() {
+            let _ = self.authenticate().await;
+        }
+        let token = self.token.clone().context("Token not being set.").unwrap();
+        match token.access_token.validate_token(&self.client).await {
+            Ok(_) => Ok(token),
+            Err(e) => {
+                use twitch_oauth2::tokens::errors::ValidationError;
+                match e {
+                    ValidationError::NotAuthorized => Err(TokenError::TokenNotAuthorized),
+                    ValidationError::RequestParseError(request_parse_error) => {
+                        dbg!(request_parse_error);
+                        Err(TokenError::UnknownError)
+                    }
+                    ValidationError::Request(e) => {
+                        dbg!(e);
+                        Err(TokenError::UnknownError)
+                    }
+                    ValidationError::InvalidToken(_) => Err(TokenError::InvalidToken),
+                    _ => todo!(),
+                }
+            }
+        }
+    }
+}
+
+impl TwitchApiConnection {
+    pub async fn user_id(&mut self) -> UserId {
+        if self.token.is_some() {
+            self.token.clone().unwrap().user_id
+        } else {
+            self.authenticate().await;
+            self.token.clone().unwrap().user_id
+        }
+    }
+}
 impl Transmittor for TwitchApiConnection {
     /// Adds or changes the integration event transmitor.
     ///
@@ -85,28 +168,28 @@ impl Transmittor for TwitchApiConnection {
     }
 }
 
-impl Scopes for TwitchApiConnection {
-    fn has_scope(&self, scope: String) -> bool {
+impl TwitchApiConnection {
+    pub fn has_scope(&self, scope: String) -> bool {
         let scope = Scope::from(scope);
         self.scope.iter().any(|s| *s == scope)
     }
 
-    fn add_scope(mut self, new_scope: String) -> Self {
-        let scope = Scope::from(new_scope);
+    pub fn add_scope<S: Into<Scope>>(mut self, new_scope: S) -> Self {
+        let scope: Scope = new_scope.into();
         if !self.has_scope(scope.to_string()) {
             self.scope.push(scope)
         };
         self
     }
 
-    fn default_scopes(mut self) -> Self {
+    pub fn default_scopes(mut self) -> Self {
         for scope in default_scopes_twitch() {
-            self = self.add_scope(scope.to_string());
+            self = self.add_scope(scope);
         }
         self
     }
 
-    fn remove_scope(mut self, scope: String) -> Self {
+    pub fn remove_scope(mut self, scope: String) -> Self {
         let scope = Scope::from(scope);
         self.scope.retain(|s| *s != scope);
         self
@@ -136,7 +219,6 @@ impl PlatformAuthenticate for TwitchApiConnection {
             .lock()
             .unwrap()
             .log(LogLevel::Info, LOGLOCATION, "Authenticated for Twitch.");
-        dbg!(&self.token);
 
         Ok(())
     }

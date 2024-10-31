@@ -6,6 +6,7 @@ authors = ["you"]
 license = ""
 repository = ""
 edition = "2021"
+resolver = "2"
 # rust-version = "1.71"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -15,19 +16,21 @@ name = "app_lib"
 crate-type = ["staticlib", "cdylib", "lib"]
 
 [build-dependencies]
-tauri-build = { version = "2.0.0-rc", features = [] }
+tauri-build = { version = "2.0", features = [] }
 
 
 [dependencies]
-serde_json = "1.0"
+serde_json = "1"
+http = "1.1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.0.0-rc", features = [] }
-tauri-plugin-log = "2.0.0-rc"
+tauri = { version = "2.0", features = [] }
+tauri-plugin-log = "2.0"
 uuid = { version = "1.10.0", features = ["v7", "rng", "v4"] }
 config = { version = "0.14.0", features = ["preserve_order", "toml"] }
-twitch_api = { version = "0.7.0-rc", features = ["reqwest", "helix", "twitch_oauth2", "client"] }
-twitch_oauth2 = { version ="0.14.0", features= ["all"] }
+twitch_api = { version = "0.7.0-rc.8", features = [ "reqwest", "helix", "eventsub", "hmac" ] }
+twitch_oauth2 = { version ="0.14.0", features= [ "client", "reqwest"] }
+twitch_types = "0.4.6"
 # google-youtube3 = "5.0.5"
 async-std = { version = "1.13.0", features = ["attributes"] }
 rcon = { version = "0.6.0", features = ["async-std", "rt-async-std", "rt-tokio"] }
@@ -35,8 +38,8 @@ anyhow = "1.0.89"
 dirs = "5.0.1"
 toml = "0.8.19"
 indexmap = { version = "2.5.0", features = ["serde"] }
-reqwest = { version = "0.12" }
-tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros"] }
+reqwest = { version = "0.12.2", features = ["json"] }
+tokio = { version = "1.41.0", features = ["rt-multi-thread", "macros"] }
 futures = "0.3.28"
 serde_cbor = "0.11.2"
 hyper = "1.4.1"
@@ -47,10 +50,22 @@ url = "2.5.2"
 simple-server = "0.4.0"
 env_logger = "0.11.5"
 time = { version = "0.3.36", features = ["local-offset", "formatting", "parsing"] }
-get-port = "4.0.0"
 cached = { version = "0.53.1", features = ["disk_store"] }
 thiserror = "1.0.65"
 sled = "0.34.7"
+tracing = { version = "0.1.40" }
+tracing-error = "0.2.0"
+tracing-log = "0.2.0"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+eyre = { version = "0.6" }
+tokio-tungstenite = { version = "0.24.0", features = ["native-tls", "url"] }
+crypto_hmac = { package = "hmac", version = "0.12.1"}
+sha2 = "0.10.8"
+async-trait = { version = "0.1.74"}
+clap = { version = "4.5.18", features = ["derive", "env"] }
+color-eyre = { version = "0.6", features = ["capture-spantrace"] }
+dotenvy = "0.15.7"
+
 
 [dev-dependencies]
 rstest = "0.23.0"

@@ -44,6 +44,7 @@ pub fn token_cache(key: String) -> DiskCache<String, SerializableUserToken> {
     DiskCacheBuilder::new(key)
         .set_connection_config(config)
         .set_sync_to_disk_on_cache_change(true)
+        .set_disk_directory(dirs::cache_dir().unwrap().join("RCON2.0"))
         .build()
         .context("Token cache build")
         .unwrap()
@@ -157,7 +158,6 @@ pub async fn oauth(
     dbg!(Ok(token))
 }
 
-// TODO: Pay Tax!!!
 fn response_uri(port: u16) -> String {
     env_logger::init();
     use simple_server::Server;

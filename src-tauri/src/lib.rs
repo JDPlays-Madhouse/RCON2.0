@@ -13,12 +13,13 @@ use logging::{
 };
 use settings::Settings;
 use tauri::Manager;
+use twitch_oauth2::Scope;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[allow(unused_variables)]
 pub async fn run() {
     let settings = Settings::new();
-
+    // let _ = install_utils();
     let logger = Arc::new(Mutex::new(Logger::default()));
     let config = settings.config();
     let log_level = if config.get_bool("debug").unwrap() {
@@ -45,19 +46,19 @@ pub async fn run() {
         twitch_client_secret,
         twitch_redirect_url,
         Arc::clone(&logger),
-    );
-    let _ = twitch_integration.authenticate().await;
-
-    // todo!("testing");
+    )
+    .default_scopes();
+    let _ = twitch_integration.check_token().await;
+    twitch_integration.new_websocket().await;
 
     tauri::Builder::default()
         .setup(|app| {
             if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
+                // app.handle().plugin(
+                //     tauri_plugin_log::Builder::default()
+                //         .level(log::LevelFilter::Info)
+                //         .build(),
+                // )?;
             }
             app.manage(logger);
             Ok(())
@@ -72,3 +73,56 @@ pub async fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+// Setup dotenv, tracing and error reporting with eyre
+// pub fn install_utils() -> eyre::Result<()> {
+//     let _ = dotenvy::dotenv(); //ignore error
+//     install_tracing();
+//     // install_eyre()?;
+//     Ok(())
+// }
+
+// /// Install eyre and setup a panic hook
+// fn install_eyre() -> eyre::Result<()> {
+//     let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default().into_hooks();
+//
+//     eyre_hook.install()?;
+//
+//     std::panic::set_hook(Box::new(move |pi| {
+//         tracing::error!("{}", panic_hook.panic_report(pi));
+//     }));
+//     Ok(())
+// }
+// Install tracing with a specialized filter
+// fn install_tracing() {
+//     use tracing_error::ErrorLayer;
+//     use tracing_subscriber::prelude::*;
+//     use tracing_subscriber::{fmt, EnvFilter};
+//
+//     let fmt_layer = fmt::layer()
+//         .with_file(true)
+//         .with_line_number(true)
+//         .with_target(true);
+//     #[rustfmt::skip]
+//     let filter_layer = EnvFilter::try_from_default_env()
+//         .or_else(|_| EnvFilter::try_new("info"))
+//         .map(|f| {
+//             // common filters which can be very verbose
+//             f.add_directive("hyper=error".parse().expect("could not make directive"))
+//                 .add_directive("h2=error".parse().expect("could not make directive"))
+//                 .add_directive("rustls=error".parse().expect("could not make directive"))
+//                 .add_directive("tungstenite=error".parse().expect("could not make directive"))
+//                 .add_directive("retainer=info".parse().expect("could not make directive"))
+//                 .add_directive("want=info".parse().expect("could not make directive"))
+//                 .add_directive("reqwest=info".parse().expect("could not make directive"))
+//                 .add_directive("mio=info".parse().expect("could not make directive"))
+//             //.add_directive("tower_http=error".parse().unwrap())
+//         })
+//         .expect("could not make filter layer");
+//
+//     tracing_subscriber::registry()
+//         .with(filter_layer)
+//         .with(fmt_layer)
+//         .with(ErrorLayer::default())
+//         .init();
+// }

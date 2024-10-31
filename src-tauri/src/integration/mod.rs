@@ -115,3 +115,12 @@ impl IntegrationCommand {
         matches!(self, Self::Continue)
     }
 }
+
+#[derive(Copy, Clone, Debug)]
+pub enum TokenError {
+    TokenElapsed,
+    InvalidScopes,
+    InvalidToken,
+    UnknownError,
+    TokenNotAuthorized,
+}
