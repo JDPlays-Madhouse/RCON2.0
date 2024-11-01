@@ -1,19 +1,16 @@
 use std::{
-    sync::{mpsc::channel, Arc, Mutex},
+    sync::{mpsc::channel, Arc},
     thread,
     time::Duration,
 };
 
-use crate::{logging::LogLevel, Logger};
 use anyhow::Context;
 use cached::{stores::DiskCacheBuilder, DiskCache, IOCached};
 use futures::executor;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use twitch_api::types::{UserId, UserName};
-use twitch_oauth2::{
-    tokens::UserTokenBuilder, AccessToken, ClientId, ClientSecret, RefreshToken, Scope, UserToken,
-};
+use tracing::debug;
+use twitch_oauth2::{tokens::UserTokenBuilder, AccessToken, RefreshToken, Scope, UserToken};
 use url::Url;
 
 const LOGLOCATION: &str = "Twitch OAuth";
@@ -65,7 +62,6 @@ pub async fn oauth(
     client_id: String,
     client_secret: String,
     redirect_url: String,
-    logger: Arc<Mutex<Logger>>,
 ) -> anyhow::Result<UserToken> {
     let cache = token_cache("TWITCH_OAUTH".to_string());
     let cache_key = client_id.clone() + &oauth_scope_to_string(&scopes);
@@ -141,25 +137,17 @@ pub async fn oauth(
     let serializable_token = SerializableUserToken::from(token.clone());
     match cache.cache_set(cache_key, serializable_token) {
         Ok(_) => {
-            logger
-                .lock()
-                .unwrap()
-                .log(LogLevel::Debug, "Twitch OAuth", "Stored key in cache.");
+            debug!(target = "Twitch OAuth", "Stored key in cache.");
         }
         Err(e) => {
             dbg!(&e);
-            logger.lock().unwrap().log(
-                LogLevel::Error,
-                LOGLOCATION,
-                format!("Disk Cache failure: {}", e).as_str(),
-            )
+            debug!(target = "Twitch OAuth", "Disk Cache failure: {}", e);
         }
     }
     dbg!(Ok(token))
 }
 
 fn response_uri(port: u16) -> String {
-    env_logger::init();
     use simple_server::Server;
     let (tx, rx) = channel::<String>();
     let host = "localhost";
@@ -167,7 +155,7 @@ fn response_uri(port: u16) -> String {
     let _ = thread::spawn(move || {
         let tx_thread = tx.clone();
         let server = Server::with_timeout(Duration::from_secs(60), move |request, mut response| {
-            dbg!(request.uri());
+            // dbg!(request.uri());
             let url = Url::parse("http://localhost")
                 .unwrap()
                 .join(&request.uri().to_string())

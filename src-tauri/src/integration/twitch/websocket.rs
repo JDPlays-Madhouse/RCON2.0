@@ -1,8 +1,8 @@
-use std::sync::{Arc, Mutex};
-
 use crate::logging::{LogLevel, Logger};
 use anyhow::{bail, Context, Error, Result};
+use std::sync::Arc;
 use tokio_tungstenite::tungstenite;
+use tracing::{error, info};
 // use tracing::Instrument;
 use twitch_api::{
     client::ClientDefault,
@@ -18,8 +18,8 @@ use twitch_oauth2::{TwitchToken, UserToken};
 
 #[derive(Debug)]
 pub enum WebSocketError {
-    TokenElapsed(UserToken),
-    InvaildToken(UserToken),
+    TokenElapsed,
+    InvaildToken,
     FailedToConnect(String),
     FailedToRun(String),
     InvailURL(String),
@@ -39,7 +39,6 @@ pub struct WebsocketClient {
     pub client: HelixClient<'static, reqwest::Client>,
     pub user_id: types::UserId,
     pub connect_url: url::Url,
-    pub logger: Arc<Mutex<Logger>>,
 }
 
 impl std::fmt::Debug for WebsocketClient {
@@ -49,7 +48,6 @@ impl std::fmt::Debug for WebsocketClient {
             .field("token", &self.token)
             .field("user_id", &self.user_id)
             .field("connect_url", &self.connect_url)
-            .field("logger", &self.logger)
             .finish()
     }
 }
@@ -60,7 +58,6 @@ impl WebsocketClient {
         token: UserToken,
         // client: HelixClient<'static, reqwest::Client>,
         user_id: types::UserId,
-        logger: Arc<Mutex<Logger>>,
     ) -> Self {
         let client: HelixClient<_> = twitch_api::HelixClient::with_client(
             <reqwest::Client>::default_client_with_name(Some(
@@ -75,7 +72,6 @@ impl WebsocketClient {
             client,
             user_id,
             connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
-            logger,
         }
     }
 
@@ -101,7 +97,7 @@ impl WebsocketClient {
         {
             Ok((socket, _)) => Ok(socket),
             Err(e) => {
-                dbg!(e);
+                error!("{}", e);
                 Err(WebSocketError::FailedToConnect("Can't Connect".into()))
             }
         }
@@ -115,12 +111,10 @@ impl WebsocketClient {
             Ok(s) => s,
             Err(e) => return Err(e),
         };
-        self.logger.lock().unwrap().log(
-            LogLevel::Info,
-            "Twitch::Integration::Websocket",
+        info!(
+            target = "Twitch::Integration::Websocket",
             "Connected to Websocket",
         );
-        dbg!("Connected to Websocket");
         // Loop over the stream, processing messages as they come in.
         loop {
             tokio::select!(
@@ -179,11 +173,7 @@ impl WebsocketClient {
                                         let chat_log = chat_payload.chatter_user_name.to_string()
                                             + " - "
                                             + &chat_payload.message.text;
-                                        self.logger.lock().unwrap().log(
-                                            LogLevel::Info,
-                                            "Twitch Chat",
-                                            chat_log.as_str(),
-                                        );
+                                        info!(target = "Twitch Chat", chat_log);
                                     }
                                     eventsub::Message::VerificationRequest(
                                         verification_request,
@@ -195,6 +185,54 @@ impl WebsocketClient {
                                 };
                                 // tracing::info!(?message, "Chat Message");
                             }
+                            Event::ChannelPointsCustomRewardRedemptionAddV1(
+                                eventsub::Payload { message, .. },
+                            ) => {
+                                match message.clone() {
+                                    eventsub::Message::Notification(reward_payload) => {
+                                        let chat_log = format!(
+                                            "New: {}({}) redeemed by {}: {}",
+                                            reward_payload.reward.title,
+                                            reward_payload.reward.id,
+                                            reward_payload.user_name,
+                                            reward_payload.user_input
+                                        );
+                                        info!(target = "Twitch Channel Points Reward", chat_log,);
+                                    }
+                                    eventsub::Message::VerificationRequest(
+                                        verification_request,
+                                    ) => {
+                                        dbg!("Verification request: {}", verification_request);
+                                    }
+                                    // eventsub::Message::Revocation() => todo!(),
+                                    _ => {}
+                                }
+                            }
+                            Event::ChannelPointsCustomRewardRedemptionUpdateV1(
+                                eventsub::Payload { message, .. },
+                            ) => {
+                                match message.clone() {
+                                    eventsub::Message::Notification(reward_payload) => {
+                                        let chat_log = format!(
+                                            "Update: {}({}) redeemed by {}: {}",
+                                            reward_payload.reward.title,
+                                            reward_payload.reward.id,
+                                            reward_payload.user_name,
+                                            reward_payload.user_input
+                                        );
+
+                                        info!(target = "Twitch Channel Points Reward", chat_log,);
+                                    }
+                                    eventsub::Message::VerificationRequest(
+                                        verification_request,
+                                    ) => {
+                                        dbg!("Verification request: {}", verification_request);
+                                    }
+                                    // eventsub::Message::Revocation() => todo!(),
+                                    _ => {}
+                                }
+                            }
+
                             m => {
                                 dbg!(m);
                             }
@@ -229,21 +267,21 @@ impl WebsocketClient {
         }
         // check if the token is expired, if it is, request a new token. This only works if using a oauth service for getting a token
         if self.token.is_elapsed() {
-            return Err(WebSocketError::TokenElapsed(self.token.clone()));
+            return Err(WebSocketError::TokenElapsed);
         }
 
         let transport = eventsub::Transport::websocket(data.id.clone());
-        self.client
-            .create_eventsub_subscription(
-                eventsub::channel::ChannelChatMessageV1::new(
-                    self.user_id.clone(),
-                    self.user_id.clone(),
-                ),
-                transport.clone(),
-                &self.token,
-            )
-            .await
-            .unwrap();
+        // self.client
+        //     .create_eventsub_subscription(
+        //         eventsub::channel::ChannelChatMessageV1::new(
+        //             self.user_id.clone(),
+        //             self.user_id.clone(),
+        //         ),
+        //         transport.clone(),
+        //         &self.token,
+        //     )
+        //     .await
+        //     .unwrap();
 
         // TODO: add specific ones but log all.
         self.client
@@ -251,7 +289,17 @@ impl WebsocketClient {
                 eventsub::channel::ChannelPointsCustomRewardRedemptionAddV1::broadcaster_user_id(
                     self.user_id.clone(),
                 ),
-                transport,
+                transport.clone(),
+                &self.token,
+            )
+            .await
+            .unwrap();
+        self.client
+            .create_eventsub_subscription(
+                eventsub::channel::ChannelPointsCustomRewardRedemptionUpdateV1::broadcaster_user_id(
+                    self.user_id.clone(),
+                ),
+                transport.clone(),
                 &self.token,
             )
             .await

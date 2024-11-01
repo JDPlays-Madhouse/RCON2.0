@@ -3,7 +3,7 @@ mod integration;
 mod logging;
 mod rcon2;
 mod settings;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use anyhow::Context;
 use integration::{PlatformAuthenticate, TwitchApiConnection};
@@ -12,15 +12,16 @@ use logging::{
     LogLevel, Logger,
 };
 use settings::Settings;
+use tauri::async_runtime::Mutex;
 use tauri::Manager;
-use twitch_oauth2::Scope;
+use tracing::info;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[allow(unused_variables)]
 pub async fn run() {
     let settings = Settings::new();
     // let _ = install_utils();
-    let logger = Arc::new(Mutex::new(Logger::default()));
+
     let config = settings.config();
     let log_level = if config.get_bool("debug").unwrap() {
         LogLevel::Debug
@@ -34,7 +35,37 @@ pub async fn run() {
             .context("Log level Conversion")
             .unwrap_or(LogLevel::default())
     };
-    logger.lock().unwrap().set_min_level(log_level);
+    let logger: Logger = Logger::new(&settings.config_folder, log_level);
+    use log;
+    use tracing_log::LogTracer;
+
+    LogTracer::init();
+    // use tauri_plugin_log::;
+    use tracing_appender::rolling::{RollingFileAppender, Rotation};
+    use tracing_subscriber::fmt;
+    use tracing_subscriber::prelude::*;
+
+    let logfile =
+        RollingFileAppender::new(Rotation::DAILY, logger.log_folder.clone(), "rcon2.0.log");
+
+    let (non_blocking_std_out, _guard) = tracing_appender::non_blocking(std::io::stdout());
+    let (non_blocking_logfile, _guard) = tracing_appender::non_blocking(logfile);
+
+    let logfile_layer = fmt::layer()
+        .with_writer(non_blocking_logfile)
+        .with_ansi(false)
+        .with_thread_ids(true);
+
+    let stdout_layer = fmt::layer()
+        .with_writer(non_blocking_std_out)
+        .with_thread_ids(true);
+
+    tracing_subscriber::registry()
+        .with(logfile_layer)
+        .with(stdout_layer)
+        .init();
+
+    info!("Log Established");
     let twitch_username = config.get_string("auth.twitch.username").unwrap();
 
     let twitch_client_id = config.get_string("auth.twitch.client_id").unwrap();
@@ -45,22 +76,19 @@ pub async fn run() {
         twitch_client_id,
         twitch_client_secret,
         twitch_redirect_url,
-        Arc::clone(&logger),
     )
     .default_scopes();
     let _ = twitch_integration.check_token().await;
     twitch_integration.new_websocket().await;
-
     tauri::Builder::default()
         .setup(|app| {
             if cfg!(debug_assertions) {
-                // app.handle().plugin(
-                //     tauri_plugin_log::Builder::default()
-                //         .level(log::LevelFilter::Info)
-                //         .build(),
-                // )?;
+                app.handle().plugin(
+                    tauri_plugin_log::Builder::default()
+                        .level(log::LevelFilter::Info)
+                        .build(),
+                )?;
             }
-            app.manage(logger);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -68,7 +96,8 @@ pub async fn run() {
             unsubscribe_logging_channel,
             log,
             log_to_channel,
-            fetch_all_logs
+            fetch_all_logs,
+            // get_channel_point_rewards
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

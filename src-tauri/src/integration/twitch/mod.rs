@@ -1,21 +1,27 @@
+use crate::logging::{LogLevel, Logger};
 use std::{
     sync::{
         mpsc::{self, RecvError},
-        Arc, Mutex,
+        Arc,
     },
     thread::{self, JoinHandle},
 };
-
-use crate::logging::{LogLevel, Logger};
+use tauri::async_runtime::Mutex;
+use tracing::info;
 
 use super::{
     IntegrationChannels, IntegrationCommand, IntegrationControl, IntegrationEvent,
     PlatformAuthenticate, PlatformConnection, TokenError, Transmittor,
 };
 use anyhow::{bail, Context, Result};
-use futures::executor;
 use reqwest::Client as ReqwestClient;
-use twitch_api::{client::ClientDefault, types::UserName, TwitchClient};
+use twitch_api::{
+    client::ClientDefault,
+    helix::points::{CustomReward, GetCustomRewardRequest},
+    types::UserName,
+    TwitchClient,
+};
+
 use twitch_oauth2::UserToken;
 use twitch_oauth2::{tokens::errors::ValidationError, Scope};
 
@@ -32,6 +38,7 @@ fn default_scopes_twitch() -> Vec<Scope> {
     ]
 }
 const LOGLOCATION: &str = "Twitch Integration";
+
 pub struct TwitchApiConnection {
     pub username: Option<UserName>,
     client_id: String,
@@ -42,7 +49,6 @@ pub struct TwitchApiConnection {
     pub command_joinhandle: Option<JoinHandle<Result<(), mpsc::RecvError>>>,
     pub token: Option<UserToken>,
     pub redirect_url: String,
-    pub logger: Arc<Mutex<Logger>>,
     pub client: TwitchClient<'static, ReqwestClient>,
     pub websocket: Option<WebsocketClient>,
     pub websocket_joinhandle: Option<tokio::task::JoinHandle<()>>,
@@ -55,7 +61,6 @@ impl TwitchApiConnection {
         client_id: T,
         client_secret: T,
         redirect_url: T,
-        logger: Arc<Mutex<Logger>>,
     ) -> Self {
         Self {
             username: Some(UserName::new(username.into())),
@@ -63,7 +68,6 @@ impl TwitchApiConnection {
             client_secret: client_secret.into(),
             redirect_url: redirect_url.into(),
 
-            logger,
             scope: Default::default(),
             event_tx: None,
             command_channels: IntegrationChannels::default(),
@@ -84,18 +88,15 @@ impl TwitchApiConnection {
             self.session_id.clone(),
             token,
             self.user_id().await,
-            Arc::clone(&self.logger),
         ));
         let websocket = self.websocket.clone().unwrap();
-        let jh = tokio::spawn(async {
-            dbg!("thread start");
+        self.websocket_joinhandle = Some(tokio::spawn(async {
+            info!("websocket thread start");
             let _ = websocket.run().await;
-            dbg!("thread end");
-        });
-        self.websocket_joinhandle = Some(jh);
-        self.logger.lock().unwrap().log(
-            LogLevel::Info,
-            "Integration::Twitch::ApiConnection",
+            info!("websocket thread end");
+        }));
+        info!(
+            target = "Integration::Twitch::ApiConnection",
             "Websocket Established!",
         );
     }
@@ -134,9 +135,26 @@ impl TwitchApiConnection {
         if self.token.is_some() {
             self.token.clone().unwrap().user_id
         } else {
-            self.authenticate().await;
+            let _ = self.check_token().await;
             self.token.clone().unwrap().user_id
         }
+    }
+
+    pub async fn custom_rewards(&mut self) -> Vec<CustomReward> {
+        let _ = self.check_token().await;
+        let request = GetCustomRewardRequest::broadcaster_id(self.user_id().await);
+        let rewards = self
+            .client
+            .helix
+            .req_get(request, &(self.token.clone()).unwrap())
+            .await
+            .unwrap()
+            .data;
+        info!(
+            Location = "Integration::Twitch::CustomPoints",
+            "{:?}", &rewards,
+        );
+        rewards
     }
 }
 impl Transmittor for TwitchApiConnection {
@@ -210,15 +228,11 @@ impl PlatformAuthenticate for TwitchApiConnection {
                 self.client_id.clone(),
                 self.client_secret.clone(),
                 self.redirect_url.clone(),
-                Arc::clone(&self.logger),
             )
             .await
             .unwrap(),
         );
-        self.logger
-            .lock()
-            .unwrap()
-            .log(LogLevel::Info, LOGLOCATION, "Authenticated for Twitch.");
+        info!("Twitch Authenticated");
 
         Ok(())
     }
@@ -234,7 +248,7 @@ impl IntegrationControl for TwitchApiConnection {
             return Err(RecvError);
         }
         let command_rx = self.command_channels.rx.take().unwrap();
-        self.command_joinhandle = Some(std::thread::spawn(move || {
+        std::thread::spawn(move || {
             loop {
                 match command_rx.recv() {
                     Ok(cmd) => match cmd {
@@ -253,10 +267,15 @@ impl IntegrationControl for TwitchApiConnection {
                 }
             }
             Ok(())
-        }));
+        });
         Ok(())
     }
 }
+
+// #[tauri::command]
+// pub async fn get_channel_point_rewards(twitch: Arc<TwitchApiConnection>) -> Vec<CustomReward> {
+//     twitch.lock().await.custom_rewards().await
+// }
 
 // #[cfg(test)]
 // mod tests {
