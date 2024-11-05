@@ -1,6 +1,6 @@
 [package]
 name = "RCON2"
-version = "0.1.0"
+version = "0.2.0"
 description = "Rcon integration"
 authors = ["Ozy_Viking<admin@hankin.io>"]
 license = ""
@@ -18,7 +18,6 @@ lto = true # Enables link-time-optimizations.
 opt-level = "s" # Prioritizes small binary size. Use `3` if you prefer speed.
 panic = "abort" # Higher performance by disabling panic handlers.
 strip = true # Ensures debug symbols are removed.
-
 [lib]
 name = "app_lib"
 crate-type = ["staticlib", "cdylib", "lib"]
