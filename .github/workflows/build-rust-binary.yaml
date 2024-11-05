@@ -24,8 +24,8 @@ jobs:
       - name: install frontend dependencies
         run: npm install
 
-      - name: install Rust ${{ env.RUST_VERSION }}
-        uses: dtolnay/rust-toolchain@${{ env.RUST_VERSION }}
+      - name: install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
         with:
           targets: ""
 
@@ -69,8 +69,8 @@ jobs:
         with:
           node-version: lts/*
 
-      - name: install Rust ${{ env.RUST_VERSION }}
-        uses: dtolnay/rust-toolchain@${{ env.RUST_VERSION }}
+      - name: install Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
         with:
           # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
