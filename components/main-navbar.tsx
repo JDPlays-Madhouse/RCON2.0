@@ -1,3 +1,4 @@
+"use client";
 import { Server } from "@/app/page";
 import {
   NavigationMenu,

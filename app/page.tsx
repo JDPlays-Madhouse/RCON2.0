@@ -68,7 +68,6 @@ export default function Home() {
       <ServerDashboard
         className="flex-auto h-full"
         showLog={showLog}
-      // setShowLog={setShowLog}
       />
       {/* </MainContextMenu> */}
     </div>

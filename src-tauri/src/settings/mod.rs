@@ -12,10 +12,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::PROGRAM;
 use config::{Config, Environment, File, FileFormat};
 use dirs::config_dir;
 
-const PROGRAM: &'static str = "RCON2.0";
 pub enum FileType {
     Dir,
     File,
@@ -26,6 +26,7 @@ pub struct Settings {
     pub name: &'static str,
     pub config_builder: ConfigBuilder<DefaultState>,
     pub config_folder: PathBuf,
+    pub log_folder: PathBuf,
     pub config_filename: String,
     pub config_fileformat: FileFormat,
 }
@@ -226,6 +227,7 @@ impl Default for Settings {
             .join(PROGRAM);
         let config_filename = Settings::filename("config", config_fileformat);
         let config_filepath = PathBuf::from(&config_folder).join(&config_filename);
+        let default_log_path = config_folder.join("logs");
 
         let mut builder: ConfigBuilder<config::builder::DefaultState> = Config::builder();
 
@@ -243,7 +245,8 @@ impl Default for Settings {
             ("servers.default", "factorio"),
             ("servers.example.address", "127.0.0.1"),
             ("servers.example.game", "factorio"),
-            ("min_log_level", "INFO"),
+            ("log_folder", default_log_path.to_str().unwrap()),
+            ("max_log_level", "Info"),
         ];
         builder = Settings::default_loop(builder, default_settings_str);
 
@@ -251,11 +254,19 @@ impl Default for Settings {
             vec![("servers.autostart", false), ("debug", true)];
         builder = Settings::default_loop(builder, default_settings_bool);
 
-        let default_settings_list_str = vec![("auth.platforms", vec!["Twitch", "YouTube"])];
+        let default_settings_list_str = vec![("auth.platforms", vec!["Twitch", "YouTube"]), ("auth.twitch.websocket_subscription", vec!["channel.chat.message", "channel.channel_points_custom_reward_redemption.add", "channel.channel_points_custom_reward_redemption.update"])];
         builder = Settings::default_loop(builder, default_settings_list_str);
 
         let default_settings_int: Vec<DefaultValue<u16>> = vec![("servers.example.port", 4312)];
         builder = Settings::default_loop(builder, default_settings_int);
+
+        let log_folder = PathBuf::from(
+            builder
+                .build_cloned()
+                .unwrap()
+                .get_string("log_folder")
+                .expect("Getting log folder path"),
+        );
 
         let settings = Self {
             name: PROGRAM,
@@ -263,8 +274,10 @@ impl Default for Settings {
             config_folder: config_folder.clone(),
             config_filename,
             config_fileformat,
+            log_folder: log_folder.clone(),
         };
         let _ = settings.make_config_exists(config_folder.as_path(), FileType::Dir);
+        let _ = settings.make_config_exists(log_folder.as_path(), FileType::Dir);
         let _ = settings.make_config_exists(&config_filepath, FileType::File);
         settings
     }

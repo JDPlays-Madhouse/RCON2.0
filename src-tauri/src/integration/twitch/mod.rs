@@ -1,29 +1,24 @@
-use crate::logging::{LogLevel, Logger};
 use std::{
-    sync::{
-        mpsc::{self, RecvError},
-        Arc,
-    },
-    thread::{self, JoinHandle},
+    str::FromStr,
+    sync::mpsc::{self, RecvError},
+    thread::JoinHandle,
 };
-use tauri::async_runtime::Mutex;
-use tracing::info;
+use tracing::{debug, error, info, instrument, trace};
 
 use super::{
     IntegrationChannels, IntegrationCommand, IntegrationControl, IntegrationEvent,
     PlatformAuthenticate, PlatformConnection, TokenError, Transmittor,
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
+use config::Config;
 use reqwest::Client as ReqwestClient;
 use twitch_api::{
-    client::ClientDefault,
     helix::points::{CustomReward, GetCustomRewardRequest},
     types::UserName,
     TwitchClient,
 };
-
+use twitch_oauth2::Scope;
 use twitch_oauth2::UserToken;
-use twitch_oauth2::{tokens::errors::ValidationError, Scope};
 
 pub mod oauth;
 pub mod websocket;
@@ -37,7 +32,6 @@ fn default_scopes_twitch() -> Vec<Scope> {
         Scope::ChannelReadRedemptions,
     ]
 }
-const LOGLOCATION: &str = "Twitch Integration";
 
 pub struct TwitchApiConnection {
     pub username: Option<UserName>,
@@ -53,6 +47,25 @@ pub struct TwitchApiConnection {
     pub websocket: Option<WebsocketClient>,
     pub websocket_joinhandle: Option<tokio::task::JoinHandle<()>>,
     pub session_id: Option<String>,
+}
+
+impl std::fmt::Debug for TwitchApiConnection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TwitchApiConnection")
+            .field("username", &self.username)
+            .field("client_id", &self.client_id)
+            .field("client_secret", &self.client_secret)
+            .field("scope", &self.scope)
+            .field("event_tx", &self.event_tx)
+            .field("command_channels", &self.command_channels)
+            .field("command_joinhandle", &self.command_joinhandle)
+            .field("token", &self.token)
+            .field("redirect_url", &self.redirect_url)
+            .field("websocket", &self.websocket)
+            .field("websocket_joinhandle", &self.websocket_joinhandle)
+            .field("session_id", &self.session_id)
+            .finish()
+    }
 }
 
 impl TwitchApiConnection {
@@ -82,20 +95,38 @@ impl TwitchApiConnection {
 }
 
 impl TwitchApiConnection {
-    pub async fn new_websocket(&mut self) {
+    #[instrument]
+    pub async fn new_websocket(&mut self, config: Config) {
+        use twitch_api::eventsub::EventType;
         let token = self.check_token().await.unwrap();
+        let subscriptions_string: Vec<String> =
+            config.get("auth.twitch.websocket_subscription").unwrap();
+        let channel_points_enabled = subscriptions_string
+            .iter()
+            .any(|s| s.contains("channel_points_custom_reward"));
+        let subscriptions: Vec<EventType> = subscriptions_string
+            .iter()
+            .map(|s| EventType::from_str(s).unwrap())
+            .collect();
+dbg!(channel_points_enabled);
+        if channel_points_enabled {
+            let _active_channel_point_custom_reward = self.custom_rewards().await;
+        }
+
         self.websocket = Some(WebsocketClient::new(
             self.session_id.clone(),
             token,
             self.user_id().await,
+            subscriptions,
         ));
+
         let websocket = self.websocket.clone().unwrap();
         self.websocket_joinhandle = Some(tokio::spawn(async {
-            info!("websocket thread start");
+            trace!("websocket thread start");
             let _ = websocket.run().await;
-            info!("websocket thread end");
+            trace!("websocket thread end");
         }));
-        info!(
+        debug!(
             target = "Integration::Twitch::ApiConnection",
             "Websocket Established!",
         );
@@ -143,13 +174,20 @@ impl TwitchApiConnection {
     pub async fn custom_rewards(&mut self) -> Vec<CustomReward> {
         let _ = self.check_token().await;
         let request = GetCustomRewardRequest::broadcaster_id(self.user_id().await);
-        let rewards = self
+        let rewards = match self
             .client
             .helix
             .req_get(request, &(self.token.clone()).unwrap())
             .await
-            .unwrap()
-            .data;
+        {
+            Ok(twitch_api::helix::Response { data, .. }) => data,
+            Err(e) => {
+                let message = e.to_string();
+                error!(message);
+                vec![]
+            }
+        };
+
         info!(
             Location = "Integration::Twitch::CustomPoints",
             "{:?}", &rewards,

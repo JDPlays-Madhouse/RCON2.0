@@ -9,7 +9,6 @@ import LogArea from "./server-log";
 
 interface ServerDashBoardProps extends React.ComponentProps<"div"> {
     showLog: boolean;
-    setShowLog: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export type ImperativePanelHandle = {

@@ -1,21 +1,20 @@
-use crate::settings::{self, ConfigValue};
-use anyhow::{anyhow, bail, Context, Error, Result};
+use crate::settings::ConfigValue;
+use anyhow::{bail, Error, Result};
 use config::ValueKind;
-use futures::executor;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 use std::sync::Mutex;
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
-    path::{Path, PathBuf},
     sync::Arc,
 };
-use tauri::{ipc::Channel, State};
+use tauri::ipc::Channel;
+use tauri::State;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
-use tracing::instrument::WithSubscriber;
-use tracing::{info, Level};
-use tracing_subscriber::fmt::MakeWriter;
-use tracing_subscriber::layer::SubscriberExt;
+use tracing::{debug, info, Subscriber};
+use tracing_subscriber::registry::LookupSpan;
+use tracing_subscriber::Layer;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Default, Clone, Copy, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -29,6 +28,10 @@ pub enum LogLevel {
     Error = 40,
 }
 
+static FRONTEND_CHANNELS: LazyLock<Mutex<HashMap<String, Channel<Log>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+static LOGS: LazyLock<Arc<Mutex<Vec<Log>>>> = LazyLock::new(|| Arc::new(Mutex::new(Vec::new())));
+
 impl Display for LogLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.clone().to_string().to_uppercase())
@@ -39,6 +42,18 @@ impl From<tracing::Level> for LogLevel {
     fn from(value: tracing::Level) -> Self {
         use tracing::Level;
         match value {
+            Level::TRACE => LogLevel::Trace,
+            Level::DEBUG => LogLevel::Debug,
+            Level::INFO => LogLevel::Info,
+            Level::WARN => LogLevel::Warning,
+            Level::ERROR => LogLevel::Error,
+        }
+    }
+}
+impl From<&tracing::Level> for LogLevel {
+    fn from(value: &tracing::Level) -> Self {
+        use tracing::Level;
+        match *value {
             Level::TRACE => LogLevel::Trace,
             Level::DEBUG => LogLevel::Debug,
             Level::INFO => LogLevel::Info,
@@ -175,171 +190,165 @@ impl Display for Log {
 
 #[allow(dead_code)]
 #[derive(Clone)]
-pub struct Logger {
-    pub channels: Arc<Mutex<HashMap<String, Channel<Log>>>>,
-    pub logs: Arc<Mutex<Vec<Log>>>,
-    pub min_display_loglevel: LogLevel,
-    pub log_folder: PathBuf,
-}
-
-impl Debug for Logger {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Logger")
-            .field("channels", &(self.channels.lock().unwrap()).keys())
-            .field("logs", &self.logs)
-            .field("min_display_loglevel", &self.min_display_loglevel)
-            .field("log_folder", &self.log_folder)
-            .finish()
-    }
-}
+pub struct Logger {}
 
 #[allow(dead_code)]
 impl Logger {
-    pub fn new<T: Into<PathBuf>, L: Into<LogLevel>>(
-        config_folder_name: T,
-        min_display_loglevel: L,
-    ) -> Self {
-        let log_folder = dirs::config_dir()
-            .unwrap()
-            .join(config_folder_name.into())
-            .join("logs");
-        if !log_folder.exists() {
-            std::fs::create_dir_all(&log_folder);
-        }
-        Self {
-            log_folder: log_folder.clone(),
-            channels: Default::default(),
-            logs: Default::default(),
-            min_display_loglevel: min_display_loglevel.into(),
-        }
+    pub fn new() -> Self {
+        Self {}
     }
 
-    pub fn subscribe_to_channel(&mut self, channel: Channel<Log>) -> String {
+    pub fn subscribe_to_channel(channel: Channel<Log>) -> String {
         let uuid: String = Uuid::new_v4().into();
-        self.channels.lock().unwrap().insert(uuid.clone(), channel);
+        FRONTEND_CHANNELS
+            .lock()
+            .unwrap()
+            .insert(uuid.clone(), channel);
         uuid
     }
-    pub fn unsubscribe_channel(&mut self, uuid: String) -> Option<Channel<Log>> {
-        self.channels.lock().unwrap().remove(&uuid)
-    }
-    pub fn set_min_level(&mut self, log_level: LogLevel) {
-        self.min_display_loglevel = log_level;
-        // dbg!(self);
+
+    pub fn unsubscribe_channel(uuid: String) -> Option<Channel<Log>> {
+        FRONTEND_CHANNELS.lock().unwrap().remove(&uuid)
     }
 
-    fn log_level_high_enough(&self, log: &Log) -> bool {
-        log.level >= self.min_display_loglevel
-    }
-    fn add_log(&mut self, log: Log) {
-        if !self.log_exists(&log.uuid) {
-            self.logs.lock().unwrap().push(log.clone());
-            self.log_to_file(log);
+    fn add_log(log: Log) {
+        if !Logger::log_exists(&log.uuid) {
+            LOGS.lock().unwrap().push(log.clone());
         }
     }
 
-    pub fn log_to_file(&mut self, log: Log) {
-        // writeln!(self.log_file, "{}", log);
-    }
-
-    fn find_log(&self, uuid: String) -> Option<Log> {
-        self.logs
-            .lock()
+    fn find_log(uuid: String) -> Option<Log> {
+        LOGS.lock()
             .unwrap()
             .iter()
             .find(|l| l.uuid == uuid)
             .cloned()
     }
-    fn log_exists(&self, uuid: &str) -> bool {
-        self.logs.lock().unwrap().iter().any(|l| l.uuid == uuid)
-    }
-    pub fn log_to_channel(
-        &mut self,
-        uuid: String,
-        level: LogLevel,
-        target: String,
-        message: String,
-    ) {
-        let log = Log::new(level, target, message);
-        self.add_log(log.clone());
-        if self.log_level_high_enough(&log) {
-            // dbg!(&self);
-            // dbg!(&log);
-            let _ = match self.channels.lock().unwrap().get(&uuid) {
-                Some(channel) => channel.send(log),
-                None => Ok(()),
-            };
-        }
+
+    fn log_exists(uuid: &str) -> bool {
+        LOGS.lock().unwrap().iter().any(|l| l.uuid == uuid)
     }
 
-    pub fn broadcast(&self, log: Log) {
-        if self.log_level_high_enough(&log) {
-            for channel in self.channels.lock().unwrap().values() {
-                let _ = channel.send(log.clone());
-            }
+    pub fn log_to_channel(uuid: String, level: LogLevel, target: String, message: String) {
+        let log = Log::new(level, target, message);
+        Logger::add_log(log.clone());
+
+        let _ = match FRONTEND_CHANNELS.lock().unwrap().get(&uuid) {
+            Some(channel) => channel.send(log),
+            None => Ok(()),
         };
     }
-}
-
-impl log::Log for Logger {
-    fn enabled(&self, _metadata: &log::Metadata) -> bool {
-        true
+    pub fn log(level: LogLevel, target: String, message: String) {
+        let log = Log::new(level, target, message);
+        Logger::add_log(log.clone());
+        Logger::broadcast(log);
     }
 
-    fn log(&self, record: &log::Record) {
-        let log_ = Log::new(
-            record.level().into(),
-            record.target().into(),
-            record.args().to_string(),
-        );
-        self.logs.lock().unwrap().push(log_.clone());
-        self.broadcast(log_);
-        // record
-    }
-
-    fn flush(&self) {
-        todo!("logger::flush")
+    pub fn broadcast(log: Log) {
+        for channel in FRONTEND_CHANNELS.lock().unwrap().values() {
+            let _ = channel.send(log.clone());
+        }
     }
 }
-// pub fn log(&mut self, level: LogLevel, target: &str, message: &str) {
-//     let log = Log::new(level, target.into(), message.into());
-//     self.add_log(log.clone());
-//     self.broadcast(log);
-// }
+
+impl<S> Layer<S> for Logger
+where
+    S: Subscriber + for<'lookup> LookupSpan<'lookup>,
+{
+    fn on_event(
+        &self,
+        event: &tracing::Event<'_>,
+        _ctx: tracing_subscriber::layer::Context<'_, S>,
+    ) {
+        let meta = event.metadata();
+        let mut visitor = FrontendVisitor::new();
+        let visitor_ref: &mut dyn tracing::field::Visit = &mut visitor;
+        event.record(visitor_ref);
+
+        let target: String = visitor
+            .map
+            .get("target")
+            .unwrap_or(&meta.target().to_string())
+            .clone();
+        let level: LogLevel = meta.level().into();
+        let message = visitor
+            .map
+            .get("message")
+            .expect("Event should have message.")
+            .to_owned();
+
+        match visitor.map.get("channel") {
+            Some(channel) => {
+                Logger::log_to_channel(channel.to_string(), level, target, message);
+            }
+            None => Logger::log(level, target, message),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct FrontendVisitor {
+    map: HashMap<String, String>,
+}
+
+impl FrontendVisitor {
+    fn new() -> Self {
+        Self {
+            map: HashMap::new(),
+        }
+    }
+}
+
+impl tracing::field::Visit for FrontendVisitor {
+    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+        self.map.insert(field.to_string(), format!("{:?}", value));
+    }
+
+    fn record_f64(&mut self, field: &tracing::field::Field, value: f64) {
+        self.map.insert(field.to_string(), value.to_string());
+    }
+
+    fn record_i64(&mut self, field: &tracing::field::Field, value: i64) {
+        self.map.insert(field.to_string(), value.to_string());
+    }
+
+    fn record_u64(&mut self, field: &tracing::field::Field, value: u64) {
+        self.map.insert(field.to_string(), value.to_string());
+    }
+
+    fn record_i128(&mut self, field: &tracing::field::Field, value: i128) {
+        self.map.insert(field.to_string(), value.to_string());
+    }
+
+    fn record_u128(&mut self, field: &tracing::field::Field, value: u128) {
+        self.map.insert(field.to_string(), value.to_string());
+    }
+
+    fn record_bool(&mut self, field: &tracing::field::Field, value: bool) {
+        self.map.insert(field.to_string(), value.to_string());
+    }
+
+    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+        self.map.insert(field.to_string(), value.to_string());
+    }
+}
 
 #[tauri::command]
-pub fn subscribe_logging_channel(
-    logger_: State<'_, Arc<Mutex<Logger>>>,
-    channel: Channel<Log>,
-) -> String {
-    let mut logger = logger_.lock().unwrap();
-    let uuid = logger.subscribe_to_channel(channel.clone());
+pub fn subscribe_logging_channel(channel: Channel<Log>) -> String {
+    let uuid = Logger::subscribe_to_channel(channel.clone());
 
-    logger.log_to_channel(
-        uuid.clone(),
-        LogLevel::Debug,
-        "Logger".into(),
-        format!("Subscribed to channel: {}", uuid.clone()),
-    );
+    debug!("Subscribed to channel: {}", uuid.clone());
     uuid
 }
 
 #[tauri::command]
-pub fn fetch_all_logs(logger_: State<'_, Arc<Mutex<Logger>>>) -> Vec<Log> {
-    let logger = logger_.lock().unwrap();
-    let logs = logger.logs.lock().unwrap().clone();
-    logs.iter()
-        .filter(|l| logger.min_display_loglevel <= l.level)
-        .cloned()
-        .collect::<Vec<Log>>()
+pub fn fetch_all_logs() -> Vec<Log> {
+    LOGS.lock().unwrap().clone()
 }
 
 #[tauri::command]
-pub fn unsubscribe_logging_channel(
-    logger_: State<'_, Arc<Mutex<Logger>>>,
-    uuid: String,
-) -> Result<(), String> {
-    let mut logger = logger_.lock().unwrap();
-    let unsub = logger.unsubscribe_channel(uuid.clone());
+pub fn unsubscribe_logging_channel(uuid: String) -> Result<(), String> {
+    let unsub = Logger::unsubscribe_channel(uuid.clone());
 
     match unsub {
         Some(channel) => {
@@ -348,9 +357,9 @@ pub fn unsubscribe_logging_channel(
                 "Logger".into(),
                 format!("Unsubscribed from channel: {}", uuid.clone()),
             );
-            if logger.log_level_high_enough(&log) {
-                let _ = channel.send(log);
-            }
+            let _ = channel.send(log);
+            debug!("Unsubscribed from channel: {}", uuid.clone());
+
             Ok(())
         }
         None => Err("No channel under that id.".into()),
@@ -359,21 +368,28 @@ pub fn unsubscribe_logging_channel(
 
 #[tauri::command]
 pub fn log(level: LogLevel, target: String, message: String) {
-    log::log!(level.into(), "{} - {}", target, message)
+    use tracing::{debug, error, info, trace, warn};
+    use LogLevel::*;
+    match level {
+        Trace => trace!(target = target, message),
+        Debug => debug!(target = target, message),
+        Info => info!(target = target, message),
+        Warning => warn!(target = target, message),
+        Error => error!(target = target, message),
+    }
 }
 
 #[tauri::command]
-pub fn log_to_channel(
-    logger: State<'_, Arc<Mutex<Logger>>>,
-    uuid: String,
-    level: LogLevel,
-    target: String,
-    message: String,
-) {
-    logger
-        .lock()
-        .unwrap()
-        .log_to_channel(uuid, level, target, message);
+pub fn log_to_channel(uuid: String, level: LogLevel, target: String, message: String) {
+    use tracing::{debug, error, info, trace, warn};
+    use LogLevel::*;
+    match level {
+        Trace => trace!(target = target, channel = uuid, message),
+        Debug => debug!(target = target, channel = uuid, message),
+        Info => info!(target = target, channel = uuid, message),
+        Warning => warn!(target = target, channel = uuid, message),
+        Error => error!(target = target, channel = uuid, message),
+    }
 }
 
 #[cfg(test)]
@@ -385,7 +401,7 @@ mod tests {
     fn compare_log_levels() {
         assert!(LogLevel::Debug >= LogLevel::Trace);
         assert!(LogLevel::Debug >= LogLevel::Debug);
-        assert!(!(LogLevel::Debug >= LogLevel::Info));
+        assert!(LogLevel::Debug < LogLevel::Info);
         assert!(LogLevel::default() < LogLevel::Warning);
     }
 }

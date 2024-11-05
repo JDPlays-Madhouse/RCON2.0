@@ -9,7 +9,15 @@ edition = "2021"
 resolver = "2"
 # rust-version = "1.71"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.dev]
+incremental = true # Compile your binary in smaller steps.
+
+[profile.release]
+codegen-units = 1 # Allows LLVM to perform better optimization.
+lto = true # Enables link-time-optimizations.
+opt-level = "s" # Prioritizes small binary size. Use `3` if you prefer speed.
+panic = "abort" # Higher performance by disabling panic handlers.
+strip = true # Ensures debug symbols are removed.
 
 [lib]
 name = "app_lib"
@@ -23,8 +31,8 @@ tauri-build = { version = "2.0.2", features = [] }
 serde_json = "1.0.132"
 http = "1.1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "2.0.6", features = ["tracing" ] }
-tauri-plugin-log = "2.0.1"
+tauri = { version = "2.0.6", features = [] }
+# tauri-plugin-log = "2.0.1"
 uuid = { version = "1.11.0", features = ["v7", "rng", "v4"] }
 config = { version = "0.14.1", features = ["preserve_order", "toml"] }
 twitch_api = { version = "0.7.0-rc.8", features = [ "reqwest", "helix", "eventsub", "hmac" ] }

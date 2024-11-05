@@ -7,7 +7,7 @@ export type Log = {
     uuid: string;
     time: string;
     level: "TRACE" | "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL";
-    location: string;
+    target: string;
     message: string;
 };
 interface LogAreaProps {
@@ -43,7 +43,7 @@ export default function LogArea({ className }: LogAreaProps) {
             .then((uuid) => {
                 invoke("log_to_channel", {
                     level: "DEBUG",
-                    location: "Logs",
+                    target: "UI::Logs",
                     message: "Connected to logger.",
                     uuid,
                 });
@@ -73,7 +73,7 @@ export default function LogArea({ className }: LogAreaProps) {
                         level={log.level}
                         time={log.time}
                         message={log.message}
-                        location={log.location}
+                        location={log.target}
                         className="mx-3"
                     />
                 ))}

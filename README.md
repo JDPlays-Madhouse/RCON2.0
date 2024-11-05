@@ -2,10 +2,10 @@
 
 ## Requirements
 
-- [ ] Read twitch events directly i.e. no Streamer.bot etc.
+- [x] Read twitch events directly i.e. no Streamer.bot etc.
   - [ ] Events including subs/bits/follows/hype trains
-  - [ ] Channel Points
-  - [ ] Chat messages
+  - [x] Channel Points
+  - [x] Chat messages
 - [ ] Detect certain messages and parse the message for battleship. (Only 1 command)
   - [ ] Example: /muppet_streamer_schedule_explosive_delivery target targetPosition
 - [ ] Convert the parsed message into a valid command.
@@ -24,8 +24,8 @@
   - JDGOESBoom with count down, if redeamed again dead factor goes up and restart count down.
 - [ ] Be able to add RCON commands, modify, delete, display (CRUD), including default values like deadliness.
 - [ ] Be able to test when adding commands.
-- [ ] Output a log with raw output for debugging
-  - [ ] ESPECIALLY "custom-reward-id" from twitch channel points as ill need that data for adding new points rewards through streamer.bot. Or Work out what the ID code.
+- [x] Output a log with raw output for debugging
+  - [x] ESPECIALLY "custom-reward-id" from twitch channel points as ill need that data for adding new points rewards through streamer.bot. Or Work out what the ID code.
 - [ ] Has to support some sort of user comments in the script so i can keep track/notes on new code.
 
 ### Definitions
