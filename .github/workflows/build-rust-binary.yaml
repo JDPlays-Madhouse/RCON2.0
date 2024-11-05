@@ -38,11 +38,10 @@ jobs:
 
       - name: npm lint
         run: npm run lint
-      - name: Change to rust directory
-        run: cd ./src-tauri
+
       - name: Run tests
         run: cargo test --verbose
-
+        working-directory: ./src-tauri
 
   build-and-upload:
     needs: test
