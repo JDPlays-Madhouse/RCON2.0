@@ -1,3 +1,25 @@
 {
-  "cSpell.words": ["appender", "logfile", "loglevel", "RCON", "tauri"]
+  "cSpell.words": [
+    "appender",
+    "eventsub",
+    "eventtype",
+    "Factorio",
+    "indexmap",
+    "initilization",
+    "itertools",
+    "joinhandle",
+    "logfile",
+    "loglevel",
+    "RCON",
+    "reqwest",
+    "Reqwest",
+    "rstest",
+    "Shoutout",
+    "Shoutouts",
+    "tauri",
+    "transmitor",
+    "transmittor",
+    "Transmittor",
+    "Unban"
+  ]
 }

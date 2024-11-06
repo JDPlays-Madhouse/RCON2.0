@@ -41,4 +41,33 @@
 
 ## Todo
 
-1. Start with youtube and twitch
+1. Start with twitch
+2. Be able to send commands to server over rcon.
+3. Meet in middle with UI.
+4. Add more integration.
+
+-----
+
+## Integrations
+
+### Twitch
+
+1. Get a Client ID and Client Secret from [dev.twitch.tv/console/apps/](https://dev.twitch.tv/console/apps/).
+2. For the redirect url make sure they are exactly the same e.g. `http://localhost:27934/twitch/register`. The port can be changed but both the dev console and the config file need to match.
+3. Run the application once and the config file will generate.
+   1. Windows: ~\AppData\roaming\RCON2.0
+   2. Linux: ~/.config/RCON2.0
+   3. Apple: ~/Library/Application Support/RCON2.0
+4. Add the credentials to auth.twitch.
+5. websocket_subscription are the websocket events that you want to track defined by [twitch docs](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/). Currently implemented are listed below, if there any not listed that you want, start an issue [JDPlays-Madhouse/RCON2.0/issues](https://github.com/JDPlays-Madhouse/RCON2.0/issues).
+   1. channel.chat.message
+   2. channel.channel_points_custom_reward_redemption.add
+   3. channel.channel_points_custom_reward_redemption.update
+
+### YouTube
+
+Not yet implemented.
+
+### Patreon
+
+Not yet implemented.

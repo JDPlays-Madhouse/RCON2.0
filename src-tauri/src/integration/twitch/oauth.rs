@@ -6,14 +6,13 @@ use std::{
 
 use anyhow::Context;
 use cached::{stores::DiskCacheBuilder, DiskCache, IOCached};
+use clap::error;
 use futures::executor;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 use twitch_oauth2::{tokens::UserTokenBuilder, AccessToken, RefreshToken, Scope, UserToken};
 use url::Url;
-
-const LOGLOCATION: &str = "Twitch OAuth";
 
 #[derive(Error, Debug, PartialEq, Clone)]
 enum OAuthError {
@@ -68,7 +67,7 @@ pub async fn oauth(
     let cached_token_option = match cache.cache_get(&cache_key) {
         Ok(value) => value,
         Err(e) => {
-            dbg!(e);
+            error!("DiskCacheError: {:?}", e);
             None
         }
     };
@@ -78,7 +77,7 @@ pub async fn oauth(
         .build()
         .unwrap();
 
-    let client_secret = twitch_oauth2::ClientSecret::new(client_secret.to_string());
+    let client_secret = twitch_oauth2::ClientSecret::new(client_secret);
 
     if let Some(token) = cached_token_option {
         match UserToken::from_existing(
@@ -91,11 +90,14 @@ pub async fn oauth(
         {
             Ok(t) => return Ok(t),
             Err(e) => {
-                error!("{}", e.to_string());
+                error!("Token Validation Error: {}", e.to_string());
             }
         }
     }
-    debug!(target = "Twitch OAuth", "No cached token found, generating new token.");
+    debug!(
+        target = "Twitch OAuth",
+        "No cached token found, generating new token."
+    );
     let client_id = twitch_oauth2::ClientId::new(client_id.to_string());
     let redirect_url = twitch_oauth2::url::Url::parse(&redirect_url).unwrap();
     let response_port = redirect_url.port().unwrap_or(27934);
@@ -107,6 +109,7 @@ pub async fn oauth(
 
     // Generate the URL, this is the url that the user should visit to authenticate.
     let (url, _csrf_code) = builder.generate_url();
+    info!("Generated URL: {}", &url);
     let _ = webbrowser::open(url.as_str());
 
     let input = response_uri(response_port);
@@ -121,12 +124,22 @@ pub async fn oauth(
     let token = match (map.get("state"), map.get("code")) {
         (Some(state), Some(code)) => {
             // Finish the builder with `get_user_token`
-            executor::block_on(builder.get_user_token(&reqwest, state, code)).unwrap()
+            match builder.get_user_token(&reqwest, state, code).await {
+                Ok(token) => token,
+                Err(e) => {
+                    error!("Error getting user token: {}", e);
+                    anyhow::bail!("Error getting user token: {}", e);
+                }
+            }
         }
         _ => match (map.get("error"), map.get("error_description")) {
             (std::option::Option::Some(error), std::option::Option::Some(error_description)) => {
+                error!(
+                    "twitch oauth errored with error: {} - {}",
+                    error, error_description
+                );
                 anyhow::bail!(
-                    "twitch errored with error: {} - {}",
+                    "twitch oauth errored with error: {} - {}",
                     error,
                     error_description
                 );

@@ -274,7 +274,7 @@ where
         let message = visitor
             .map
             .get("message")
-            .expect("Event should have message.")
+            .map_or(format!("{:?}", visitor.map).to_string(), |v| v.clone())
             .to_owned();
 
         match visitor.map.get("channel") {

@@ -43,19 +43,21 @@ pub async fn run() {
 
     let (non_blocking_std_out, _guard) = tracing_appender::non_blocking(std::io::stdout());
     let (non_blocking_logfile, _guard) = tracing_appender::non_blocking(logfile);
+    use tracing_subscriber::fmt::time::OffsetTime;
 
     let logfile_layer = fmt::layer()
         .with_writer(non_blocking_logfile)
         .with_ansi(false)
+        .with_timer(OffsetTime::local_rfc_3339().expect("could not get local offset!"))
         .with_thread_ids(true);
 
     let stdout_layer = fmt::layer()
         .with_writer(non_blocking_std_out)
-        .with_thread_ids(true);
+        .with_timer(OffsetTime::local_rfc_3339().expect("could not get local offset!"))
+        .with_thread_ids(false);
 
     let level_filter = tracing_subscriber::filter::LevelFilter::from_level(log_level.into());
 
-    // let (frontend_log_layer, log_rx) = logging::FrontendLogger::new(log_level);
     let logger_layer: Logger = Logger::new();
     tracing_subscriber::Registry::default()
         .with(level_filter)
@@ -66,20 +68,13 @@ pub async fn run() {
 
     info!("Log Established");
 
-    let twitch_username = config.get_string("auth.twitch.username").unwrap();
-
-    let twitch_client_id = config.get_string("auth.twitch.client_id").unwrap();
-    let twitch_client_secret = config.get_string("auth.twitch.client_secret").unwrap();
-    let twitch_redirect_url = config.get_string("auth.twitch.redirect_url").unwrap();
     tokio::spawn(async {
-        let mut twitch_integration = TwitchApiConnection::new(
-            twitch_username,
-            twitch_client_id,
-            twitch_client_secret,
-            twitch_redirect_url,
-        )
-        .default_scopes();
-        let _ = twitch_integration.check_token().await;
+        let mut twitch_integration =
+            TwitchApiConnection::new(config.get_table("auth.twitch").unwrap());
+        match twitch_integration.check_token().await {
+            Ok(_) => info!("Twitch Token is valid"),
+            Err(e) => info!("Twitch Token is invalid: {:?}", e),
+        };
         twitch_integration.new_websocket(config).await;
     });
     tauri::Builder::default()

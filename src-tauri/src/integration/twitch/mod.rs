@@ -1,18 +1,22 @@
+use clap::error;
+use indexmap::IndexMap;
+use permissions::get_eventsub_consolidated_scopes;
 use std::{
     str::FromStr,
     sync::mpsc::{self, RecvError},
     thread::JoinHandle,
 };
-use tracing::{debug, error, info, instrument, trace};
+use tracing::{debug, error, info, trace};
 
 use super::{
     IntegrationChannels, IntegrationCommand, IntegrationControl, IntegrationEvent,
     PlatformAuthenticate, PlatformConnection, TokenError, Transmittor,
 };
 use anyhow::{Context, Result};
-use config::Config;
+use config::{Config, Value};
 use reqwest::Client as ReqwestClient;
 use twitch_api::{
+    eventsub::EventType,
     helix::points::{CustomReward, GetCustomRewardRequest},
     types::UserName,
     TwitchClient,
@@ -21,23 +25,16 @@ use twitch_oauth2::Scope;
 use twitch_oauth2::UserToken;
 
 pub mod oauth;
+pub mod permissions;
 pub mod websocket;
 
 use twitch_types::UserId;
 use websocket::WebsocketClient;
-fn default_scopes_twitch() -> Vec<Scope> {
-    vec![
-        Scope::UserReadChat,
-        Scope::ChatRead,
-        Scope::ChannelReadRedemptions,
-    ]
-}
 
 pub struct TwitchApiConnection {
     pub username: Option<UserName>,
     client_id: String,
     client_secret: String,
-    pub scope: Vec<Scope>,
     pub event_tx: Option<mpsc::Sender<IntegrationEvent>>,
     pub command_channels: IntegrationChannels<IntegrationCommand>,
     pub command_joinhandle: Option<JoinHandle<Result<(), mpsc::RecvError>>>,
@@ -47,6 +44,7 @@ pub struct TwitchApiConnection {
     pub websocket: Option<WebsocketClient>,
     pub websocket_joinhandle: Option<tokio::task::JoinHandle<()>>,
     pub session_id: Option<String>,
+    pub scope: Vec<Scope>,
 }
 
 impl std::fmt::Debug for TwitchApiConnection {
@@ -54,12 +52,12 @@ impl std::fmt::Debug for TwitchApiConnection {
         f.debug_struct("TwitchApiConnection")
             .field("username", &self.username)
             .field("client_id", &self.client_id)
-            .field("client_secret", &self.client_secret)
+            // .field("client_secret", &self.client_secret)
             .field("scope", &self.scope)
             .field("event_tx", &self.event_tx)
             .field("command_channels", &self.command_channels)
             .field("command_joinhandle", &self.command_joinhandle)
-            .field("token", &self.token)
+            // .field("token", &self.token)
             .field("redirect_url", &self.redirect_url)
             .field("websocket", &self.websocket)
             .field("websocket_joinhandle", &self.websocket_joinhandle)
@@ -69,19 +67,57 @@ impl std::fmt::Debug for TwitchApiConnection {
 }
 
 impl TwitchApiConnection {
-    pub fn new<T: Into<String>>(
-        username: T,
-        client_id: T,
-        client_secret: T,
-        redirect_url: T,
-    ) -> Self {
+    pub fn new(config: IndexMap<String, Value>) -> Self {
+        let username = config
+            .get("username")
+            .unwrap()
+            .clone()
+            .into_string()
+            .expect("Unpacking twitch username");
+        let client_id = config
+            .get("client_id")
+            .unwrap()
+            .clone()
+            .into_string()
+            .expect("Unpacking twitch client_id");
+        let client_secret = config
+            .get("client_secret")
+            .unwrap()
+            .clone()
+            .into_string()
+            .expect("Unpacking twitch client_secret");
+        let redirect_url = config
+            .get("redirect_url")
+            .unwrap()
+            .clone()
+            .into_string()
+            .expect("Unpacking twitch redirect_url");
+        let websocket_subs: Vec<EventType> = config
+            .get("websocket_subscription")
+            .unwrap()
+            .clone()
+            .into_array()
+            .expect("Unpacking twitch websocket_subscription")
+            .iter()
+            .filter_map(
+                |v| match EventType::from_str(v.clone().into_string().unwrap().as_str()) {
+                    Ok(event) => Some(event),
+                    Err(e) => {
+                        error!("Error parsing event type: {:?}", e);
+                        None
+                    }
+                },
+            )
+            .collect();
+        let scope = get_eventsub_consolidated_scopes(websocket_subs);
+        debug!("Scope: {:?}", scope);
         Self {
             username: Some(UserName::new(username.into())),
             client_id: client_id.into(),
             client_secret: client_secret.into(),
             redirect_url: redirect_url.into(),
 
-            scope: Default::default(),
+            scope,
             event_tx: None,
             command_channels: IntegrationChannels::default(),
             command_joinhandle: Default::default(),
@@ -95,7 +131,6 @@ impl TwitchApiConnection {
 }
 
 impl TwitchApiConnection {
-    #[instrument]
     pub async fn new_websocket(&mut self, config: Config) {
         use twitch_api::eventsub::EventType;
         let token = self.check_token().await.unwrap();
@@ -108,10 +143,11 @@ impl TwitchApiConnection {
             .iter()
             .map(|s| EventType::from_str(s).unwrap())
             .collect();
-dbg!(channel_points_enabled);
+        info!("Channel point rewards: {}", channel_points_enabled);
         if channel_points_enabled {
             let _active_channel_point_custom_reward = self.custom_rewards().await;
         }
+        info!("Websocket Subscriptions: {:?}", subscriptions);
 
         self.websocket = Some(WebsocketClient::new(
             self.session_id.clone(),
@@ -136,7 +172,15 @@ dbg!(channel_points_enabled);
 impl TwitchApiConnection {
     pub async fn check_token(&mut self) -> anyhow::Result<UserToken, TokenError> {
         if self.token.is_none() {
-            let _ = self.authenticate().await;
+            match self.authenticate().await {
+                Ok(_) => {
+                    info!("Twitch Token Authenticated")
+                }
+                Err(e) => {
+                    error!("{:?}", e);
+                    return Err(TokenError::UnknownError);
+                }
+            };
         }
         let token = self.token.clone().context("Token not being set.").unwrap();
         match token.access_token.validate_token(&self.client).await {
@@ -144,17 +188,23 @@ impl TwitchApiConnection {
             Err(e) => {
                 use twitch_oauth2::tokens::errors::ValidationError;
                 match e {
-                    ValidationError::NotAuthorized => Err(TokenError::TokenNotAuthorized),
+                    ValidationError::NotAuthorized => {
+                        error!("Token not authorized");
+                        Err(TokenError::TokenNotAuthorized)
+                    }
                     ValidationError::RequestParseError(request_parse_error) => {
-                        dbg!(request_parse_error);
+                        error!("{:?}", request_parse_error);
                         Err(TokenError::UnknownError)
                     }
                     ValidationError::Request(e) => {
-                        dbg!(e);
+                        error!("{:?}", e);
                         Err(TokenError::UnknownError)
                     }
                     ValidationError::InvalidToken(_) => Err(TokenError::InvalidToken),
-                    _ => todo!(),
+                    _ => {
+                        error!("Unknown Error");
+                        Err(TokenError::UnknownError)
+                    }
                 }
             }
         }
@@ -235,13 +285,6 @@ impl TwitchApiConnection {
         if !self.has_scope(scope.to_string()) {
             self.scope.push(scope)
         };
-        self
-    }
-
-    pub fn default_scopes(mut self) -> Self {
-        for scope in default_scopes_twitch() {
-            self = self.add_scope(scope);
-        }
         self
     }
 
