@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "RCON2"
-version = "0.2.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-std",
@@ -4512,6 +4512,7 @@ dependencies = [
  "tauri-utils",
  "thiserror",
  "tokio",
+ "tracing",
  "tray-icon",
  "url",
  "urlpattern",
@@ -4622,6 +4623,7 @@ dependencies = [
  "tao",
  "tauri-runtime",
  "tauri-utils",
+ "tracing",
  "url",
  "webkit2gtk",
  "webview2-com",
@@ -5123,6 +5125,7 @@ dependencies = [
  "sha2",
  "thiserror",
  "tower",
+ "tracing",
  "twitch_oauth2",
  "twitch_types",
  "url",
@@ -6002,6 +6005,7 @@ dependencies = [
  "soup3",
  "tao-macros",
  "thiserror",
+ "tracing",
  "webkit2gtk",
  "webkit2gtk-sys",
  "webview2-com",

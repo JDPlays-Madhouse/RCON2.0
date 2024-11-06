@@ -45,7 +45,7 @@ export type Servers = typeof servers;
 export type Server = (typeof servers)[number]["servers"][number];
 export default function Home() {
   const [selectedServer, setSelectedServer] = React.useState<Server>(
-    servers[0].servers[0],
+    servers[0].servers[0]
   );
   const [showLog, setShowLog] = React.useState(true);
 
@@ -65,10 +65,7 @@ export default function Home() {
         />
         <MainNav server={selectedServer} />
       </header>
-      <ServerDashboard
-        className="flex-auto h-full"
-        showLog={showLog}
-      />
+      <ServerDashboard className="flex-auto h-full" showLog={showLog} />
       {/* </MainContextMenu> */}
     </div>
   );

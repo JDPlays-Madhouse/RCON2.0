@@ -2,7 +2,7 @@ use crate::logging::{LogLevel, Logger};
 use anyhow::{bail, Context, Error, Result};
 use std::sync::Arc;
 use tokio_tungstenite::tungstenite;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 // use tracing::Instrument;
 use twitch_api::{
     client::ClientDefault,
@@ -294,7 +294,7 @@ impl WebsocketClient {
                         )
                     .await
                     .unwrap();
-                    debug!("Subscribed to {}", subscription);
+                    info!("Subscribed to {}", subscription);
                 }
                 ChannelPointsCustomRewardRedemptionUpdate => {
                     self.client
@@ -307,7 +307,7 @@ impl WebsocketClient {
                     )
                     .await
                     .unwrap();
-                    debug!("Subscribed to {}", subscription);
+                    info!("Subscribed to {}", subscription);
                 }
                 ChannelChatMessage => {
                     self.client
@@ -321,7 +321,7 @@ impl WebsocketClient {
                         )
                         .await
                         .unwrap();
-                    debug!("Subscribed to {}", subscription);
+                    info!("Subscribed to {}", subscription);
                 }
                 _ => {
                     error!(target:"Twitch::websocket::subscription", "Tried to subscribe to unimplemented subscription: {}", subscription)

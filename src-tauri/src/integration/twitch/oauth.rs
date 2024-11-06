@@ -9,7 +9,7 @@ use cached::{stores::DiskCacheBuilder, DiskCache, IOCached};
 use futures::executor;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing::debug;
+use tracing::{debug, error};
 use twitch_oauth2::{tokens::UserTokenBuilder, AccessToken, RefreshToken, Scope, UserToken};
 use url::Url;
 
@@ -91,11 +91,11 @@ pub async fn oauth(
         {
             Ok(t) => return Ok(t),
             Err(e) => {
-                dbg!(e);
+                error!("{}", e.to_string());
             }
         }
     }
-
+    debug!(target = "Twitch OAuth", "No cached token found, generating new token.");
     let client_id = twitch_oauth2::ClientId::new(client_id.to_string());
     let redirect_url = twitch_oauth2::url::Url::parse(&redirect_url).unwrap();
     let response_port = redirect_url.port().unwrap_or(27934);
