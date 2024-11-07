@@ -5,7 +5,6 @@
     "eventtype",
     "Factorio",
     "indexmap",
-    "initilization",
     "itertools",
     "joinhandle",
     "logfile",
@@ -17,9 +16,6 @@
     "Shoutout",
     "Shoutouts",
     "tauri",
-    "transmitor",
-    "transmittor",
-    "Transmittor",
     "Unban"
   ]
 }

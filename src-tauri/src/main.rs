@@ -3,5 +3,5 @@
 
 #[tokio::main]
 async fn main() {
-    app_lib::run().await;
+    rcon2::run().await;
 }

@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use tracing::info;
 use tracing::warn;
 use twitch_api::eventsub::EventType::{self, *};
 use twitch_oauth2::Scope::{self, *};
@@ -67,9 +66,8 @@ pub fn get_eventsub_eventtype_scopes(event_type: EventType) -> Option<Vec<Scope>
 pub fn get_eventsub_consolidated_scopes(subscriptions: Vec<EventType>) -> Vec<Scope> {
     let mut scopes: Vec<Scope> = Vec::new();
     for subscription in subscriptions {
-        match get_eventsub_eventtype_scopes(subscription) {
-            Some(s) => scopes.extend(s),
-            None => (),
+        if let Some(s) = get_eventsub_eventtype_scopes(subscription) {
+            scopes.extend(s);
         }
     }
     scopes = scopes.into_iter().unique_by(|s| s.to_string()).collect();

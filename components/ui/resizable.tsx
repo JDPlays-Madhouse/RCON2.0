@@ -41,5 +41,19 @@ const ResizableHandle = ({
     )}
   </ResizablePrimitive.PanelResizeHandle>
 );
+type ImperativePanelHandle = {
+  collapse: () => void;
+  expand: (minSize?: number) => void;
+  getId(): string;
+  getSize(): number;
+  isCollapsed: () => boolean;
+  isExpanded: () => boolean;
+  resize: (size: number) => void;
+};
 
-export { ResizablePanelGroup, ResizablePanel, ResizableHandle };
+export {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+  type ImperativePanelHandle,
+};

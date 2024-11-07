@@ -4,6 +4,7 @@ import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
+  type ImperativePanelHandle,
 } from "@/components/ui/resizable";
 import { useEffect, useRef } from "react";
 import LogArea from "./server-log";
@@ -12,16 +13,6 @@ import { invoke } from "@tauri-apps/api/core";
 interface ServerDashBoardProps extends React.ComponentProps<"div"> {
   showLog: boolean;
 }
-
-export type ImperativePanelHandle = {
-  collapse: () => void;
-  expand: (minSize?: number) => void;
-  getId(): string;
-  getSize(): number;
-  isCollapsed: () => boolean;
-  isExpanded: () => boolean;
-  resize: (size: number) => void;
-};
 
 export default function ServerDashboard({
   className,

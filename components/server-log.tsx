@@ -3,20 +3,14 @@ import { cn } from "@/lib/utils";
 import { ComponentProps, useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { Log, LogLevel, LogLevelColors, Logs } from "@/types";
 
-export type Log = {
-  uuid: string;
-  time: string;
-  level: "TRACE" | "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL";
-  target: string;
-  message: string;
-};
 interface LogAreaProps {
   className?: string;
 }
 
 export default function LogArea({ className }: LogAreaProps) {
-  const [logs, setLogs] = useState<Log[]>([]);
+  const [logs, setLogs] = useState<Logs>([]);
 
   const handleSetLogs = (new_log: Log) => {
     setLogs((current_logs) => {
@@ -36,7 +30,7 @@ export default function LogArea({ className }: LogAreaProps) {
     })
       .then((uuid) => {
         invoke("fetch_all_logs").then((old_logs) => {
-          setLogs(old_logs as Log[]);
+          setLogs(old_logs as Logs);
         });
 
         return uuid;
@@ -64,12 +58,12 @@ export default function LogArea({ className }: LogAreaProps) {
       <ScrollArea
         className={cn(
           "w-full py-2 border flex-auto h-full rounded-md",
-          className
+          className,
         )}
       >
         <div className="mx-3">Welcome to RCON2.0</div>
         {logs.map((log) => (
-          <Log
+          <LogLine
             key={`${log.uuid}`}
             level={log.level}
             time={log.time}
@@ -85,13 +79,13 @@ export default function LogArea({ className }: LogAreaProps) {
 }
 
 interface LogProps extends ComponentProps<"div"> {
-  level: string;
+  level: LogLevel;
   time: string;
   message: string;
   location: string;
 }
 
-export function Log({
+export function LogLine({
   className,
   level,
   time,
@@ -105,14 +99,31 @@ export function Log({
   } else {
     parsedtime = new Date(Date.parse(time));
   }
+  const levelColor: LogLevelColors = {
+    INFO: "RoyalBlue",
+    ERROR: "red",
+    WARNING: "orange",
+    CRITICAL: "red",
+    DEBUG: "green",
+    TRACE: "blue",
+  };
+  const classes = cn(`text-${levelColor[level]}`);
   return (
-    <div className={cn("", className)} suppressHydrationWarning {...props}>
-      {parsedtime.toLocaleString()} - {level} - {location} - {message}
+    <div
+      className={cn("font-normal tracking-wide", className)}
+      suppressHydrationWarning
+      {...props}
+    >
+      {parsedtime.toLocaleTimeString()} -{" "}
+      <span style={{ color: levelColor[level] }} className="font-bold">
+        {level}
+      </span>{" "}
+      - {location} - {message}
     </div>
   );
 }
 
-const filterLogs = (logs: Log[]) => {
+const filterLogs = (logs: Logs) => {
   const uuids = new Set();
 
   const log_filtered = logs.filter((log, idx, arr) => {

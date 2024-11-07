@@ -1,5 +1,5 @@
 "use client";
-import { Server, Servers } from "@/app/page";
+import { Server, Servers } from "@/types";
 import {
   ContextMenu,
   ContextMenuContent,

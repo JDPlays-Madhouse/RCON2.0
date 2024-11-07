@@ -1,4 +1,3 @@
-"use client";
 import * as React from "react";
 import {
   CaretSortIcon,
@@ -42,21 +41,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import FactorioLogo from "@/app/images/factorio.ico";
-import { Server, Servers } from "@/app/page";
+import { GameString, Server, Servers, games } from "@/types";
 
 type PopoverTriggerProps = React.ComponentPropsWithoutRef<
   typeof PopoverTrigger
 >;
 
 interface ServerSwitcherProps extends PopoverTriggerProps {
-  selectedServer: Server;
-  setSelectedServer: React.Dispatch<
-    React.SetStateAction<{
-      label: string;
-      id: string;
-      game: string;
-    }>
-  >;
+  selectedServer?: Server;
+  setSelectedServer: React.Dispatch<React.SetStateAction<Server | undefined>>;
   servers: Servers;
 }
 
@@ -81,10 +74,10 @@ export default function ServerSwitcher({
             className={cn("w-[200px] justify-between", className)}
           >
             <Avatar className="mr-2 h-5 w-5">
-              <AvatarImage src={FactorioLogo.src} alt={selectedServer.label} />
+              <AvatarImage src={FactorioLogo.src} alt={selectedServer?.name} />
               <AvatarFallback>Fa</AvatarFallback>
             </Avatar>
-            {selectedServer.label}
+            {selectedServer ? selectedServer.name : "Select a Server"}
             <CaretSortIcon className="ml-auto h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -93,9 +86,9 @@ export default function ServerSwitcher({
             <CommandInput placeholder="Search server..." />
             <CommandList>
               <CommandEmpty>No server found.</CommandEmpty>
-              {servers.map((group) => (
-                <CommandGroup key={group.label} heading={group.label}>
-                  {group.servers.map((server) => (
+              {games.map((game: GameString) => (
+                <CommandGroup key={game} heading={game}>
+                  {servers[game].servers.map((server: Server) => (
                     <CommandItem
                       key={server.id}
                       onSelect={() => {
@@ -108,19 +101,19 @@ export default function ServerSwitcher({
                         <>
                           <AvatarImage
                             src={FactorioLogo.src}
-                            alt={server.label}
+                            alt={server.name}
                           />
                           <AvatarFallback>SC</AvatarFallback>
                         </>
                         <AvatarFallback>SC</AvatarFallback>
                       </Avatar>
-                      {server.label}
+                      {server.name}
                       <CheckIcon
                         className={cn(
                           "ml-auto h-4 w-4",
-                          selectedServer.id === server.id
+                          selectedServer?.id === server.id
                             ? "opacity-100"
-                            : "opacity-0"
+                            : "opacity-0",
                         )}
                       />
                     </CommandItem>

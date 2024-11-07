@@ -3,54 +3,25 @@
 import MainNav from "@/components/main-navbar";
 import ServerDashboard from "@/components/server-dashboard";
 import ServerSwitcher from "@/components/server-switcher";
-import React from "react";
-const servers = [
-  {
-    label: "Factorio",
-    servers: [
-      {
-        label: "Local Server",
-        id: "factorio1",
-        game: "Factorio",
-      },
-      {
-        label: "Bilbo's Server",
-        id: "factorio2",
-        game: "Factorio",
-      },
-    ],
-  },
-  {
-    label: "Satisfactory",
-    servers: [
-      {
-        label: "Bilbo's Sat Server",
-        id: "sat2",
-        game: "Satisfactory",
-      },
-    ],
-  },
-];
-function findServer(id: string) {
-  for (const game of servers) {
-    for (const server of game.servers) {
-      if (id === server.id) {
-        return server;
-      }
-    }
-  }
-  return undefined;
-}
-export type Servers = typeof servers;
-export type Server = (typeof servers)[number]["servers"][number];
+import { defaultServers } from "@/lib/utils";
+import { Server, Servers } from "@/types";
+import { invoke } from "@tauri-apps/api/core";
+import React, { useEffect } from "react";
+
 export default function Home() {
-  const [selectedServer, setSelectedServer] = React.useState<Server>(
-    servers[0].servers[0]
-  );
+  const [selectedServer, setSelectedServer] = React.useState<Server>();
+  const servers: Servers = defaultServers();
   const [showLog, setShowLog] = React.useState(true);
+  useEffect(() => {
+    invoke<Server[]>("list_game_servers").then((list_of_servers: Server[]) => {
+      list_of_servers.map((server) =>
+        servers[server.game].servers.push(server),
+      );
+    });
+  });
 
   return (
-    <div className="flex flex-col h-dvh ">
+    <div className="flex flex-col h-dvh bg-background">
       {/*<MainContextMenu
         selectedServer={selectedServer}
         setSelectedServer={setSelectedServer}

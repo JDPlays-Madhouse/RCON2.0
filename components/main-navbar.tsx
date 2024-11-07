@@ -1,5 +1,5 @@
 "use client";
-import { Server } from "@/app/page";
+import { Server } from "@/types";
 import {
   NavigationMenu,
   NavigationMenuIndicator,
@@ -27,7 +27,7 @@ export default function MainNav({
   server,
 }: {
   className?: string;
-  server: Server;
+  server?: Server;
 }) {
   return (
     <NavigationMenu
@@ -38,7 +38,7 @@ export default function MainNav({
           <Link href={"/"}>Dashboard</Link>
         </NavigationMenuItem>
         <NavigationMenuItem key="mainnavServerSettings">
-          <Link href={"/settings/" + server.id}>Server Config</Link>
+          <Link href={"/settings/" + server?.id}>Server Config</Link>
         </NavigationMenuItem>
         <NavigationMenuItem key="mainnavSettings">
           <Link href="/settings">Settings</Link>

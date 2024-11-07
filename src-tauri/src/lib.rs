@@ -1,7 +1,7 @@
 mod command;
 mod integration;
 mod logging;
-mod rcon2;
+mod servers;
 mod settings;
 
 use anyhow::Context;
@@ -10,8 +10,10 @@ use logging::{
     fetch_all_logs, log, log_to_channel, subscribe_logging_channel, unsubscribe_logging_channel,
     LogLevel, Logger,
 };
+use servers::{list_game_servers, servers_from_settings};
 use settings::Settings;
-use tracing::info;
+use time::UtcOffset;
+use tracing::{debug, error, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::fmt;
 use tracing_subscriber::layer::SubscriberExt;
@@ -45,15 +47,24 @@ pub async fn run() {
     let (non_blocking_logfile, _guard) = tracing_appender::non_blocking(logfile);
     use tracing_subscriber::fmt::time::OffsetTime;
 
+    let offset = match UtcOffset::current_local_offset() {
+        Ok(tz) => tz,
+        Err(e) => {
+            error!("Failed to get local timezone");
+            UtcOffset::UTC
+        }
+    };
+    let timer = OffsetTime::new(offset, time::format_description::well_known::Rfc3339);
+
     let logfile_layer = fmt::layer()
         .with_writer(non_blocking_logfile)
         .with_ansi(false)
-        .with_timer(OffsetTime::local_rfc_3339().expect("could not get local offset!"))
+        .with_timer(timer.clone())
         .with_thread_ids(true);
 
     let stdout_layer = fmt::layer()
         .with_writer(non_blocking_std_out)
-        .with_timer(OffsetTime::local_rfc_3339().expect("could not get local offset!"))
+        .with_timer(timer)
         .with_thread_ids(false);
 
     let level_filter = tracing_subscriber::filter::LevelFilter::from_level(log_level.into());
@@ -66,8 +77,14 @@ pub async fn run() {
         .with(stdout_layer)
         .init();
 
-    info!("Log Established");
-
+    debug!("Log Established");
+    match servers_from_settings(config.clone()) {
+        Ok(_) => {}
+        Err(e) => {
+            error!("{:?}", e)
+        }
+    };
+    error!("after config");
     tokio::spawn(async {
         let mut twitch_integration =
             TwitchApiConnection::new(config.get_table("auth.twitch").unwrap());
@@ -88,7 +105,7 @@ pub async fn run() {
             log,
             log_to_channel,
             fetch_all_logs,
-            // get_channel_point_rewards
+            list_game_servers // get_channel_point_rewards
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
