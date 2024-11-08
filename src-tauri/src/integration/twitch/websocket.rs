@@ -1,6 +1,4 @@
-use crate::logging::{LogLevel, Logger};
 use anyhow::{bail, Context, Error, Result};
-use std::sync::Arc;
 use tokio_tungstenite::tungstenite;
 use tracing::{debug, error, info, warn};
 // use tracing::Instrument;
@@ -107,7 +105,7 @@ impl WebsocketClient {
     }
 
     /// Run the websocket subscriber
-    // #[tracing::instrument(name = "subscriber", skip_all, fields())]
+    #[tracing::instrument(name = "subscriber", skip_all, fields())]
     pub async fn run(mut self) -> Result<(), WebSocketError> {
         // Establish the stream
         let mut s = match self.connect().await {
@@ -122,17 +120,17 @@ impl WebsocketClient {
         loop {
             tokio::select!(
             Some(msg) = futures::StreamExt::next(&mut s) => {
-                // let span = tracing::info_span!("message received", raw_message = ?msg);
+                let span = tracing::info_span!("message received", raw_message = ?msg);
                 let msg = match msg {
                     Err(tungstenite::Error::Protocol(
                         tungstenite::error::ProtocolError::ResetWithoutClosingHandshake,
                     )) => {
-                        // tracing::warn!(
-                        //     "connection was sent with an unexpected frame or was reset, reestablishing it"
-                        // );
+                        tracing::warn!(
+                            "connection was sent with an unexpected frame or was reset, reestablishing it"
+                        );
                         s = WebSocketError::FailedToRun("when reestablishing connection".into()).map_err(self
                             .connect()
-                            // .instrument(span)
+                            .instrument(span)
                             .await
                             ).unwrap();
                         continue
@@ -140,7 +138,7 @@ impl WebsocketClient {
                     _ => msg.map_err(|_e| WebSocketError::FailedToConnect("When getting message".into()))?,
                 };
                 WebSocketError::FailedToRun("Processing Message".into()).map_err(self.process_message(msg)
-                    // .instrument(span)
+                    .instrument(span)
                     .await).unwrap()
             })
         }
@@ -275,6 +273,7 @@ impl WebsocketClient {
         }
         // check if the token is expired, if it is, request a new token. This only works if using a oauth service for getting a token
         if self.token.is_elapsed() {
+            error!("Token is elapsed");
             return Err(WebSocketError::TokenElapsed);
         }
 

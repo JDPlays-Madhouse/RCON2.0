@@ -1,4 +1,4 @@
-use clap::error;
+use futures::executor::block_on;
 use indexmap::IndexMap;
 use permissions::get_eventsub_consolidated_scopes;
 use std::{
@@ -6,7 +6,9 @@ use std::{
     sync::mpsc::{self, RecvError},
     thread::JoinHandle,
 };
+use tokio::spawn;
 use tracing::{debug, error, info, trace};
+use tracing_subscriber::field::debug;
 
 use super::{
     IntegrationChannels, IntegrationCommand, IntegrationControl, IntegrationEvent,
@@ -29,7 +31,7 @@ pub mod permissions;
 pub mod websocket;
 
 use twitch_types::UserId;
-use websocket::WebsocketClient;
+use websocket::{WebSocketError, WebsocketClient};
 
 pub struct TwitchApiConnection {
     pub username: Option<UserName>,
@@ -157,10 +159,21 @@ impl TwitchApiConnection {
         ));
 
         let websocket = self.websocket.clone().unwrap();
-        self.websocket_joinhandle = Some(tokio::spawn(async {
-            trace!("websocket thread start");
-            let _ = websocket.run().await;
-            trace!("websocket thread end");
+        self.websocket_joinhandle = Some(spawn(async move {
+            let websocket = websocket;
+            debug!("Websocket Connecting");
+            loop {
+                match block_on(websocket.clone().run()) {
+                    Ok(_) => {
+                        debug!("Websocket Connection Closed");
+                        break;
+                    }
+                    Err(e) => {
+                        error!("{:?}", e);
+                        continue;
+                    }
+                }
+            }
         }));
         debug!(
             target = "Integration::Twitch::ApiConnection",

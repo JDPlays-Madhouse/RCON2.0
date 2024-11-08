@@ -85,6 +85,8 @@ pub async fn run() {
         }
     };
     debug!("after config");
+
+    // TODO: Multi-threading needs to be implemented hear.
     // let twitch_jh = tokio::spawn(async {
     let mut twitch_integration = TwitchApiConnection::new(config.get_table("auth.twitch").unwrap());
     match twitch_integration.check_token().await {
