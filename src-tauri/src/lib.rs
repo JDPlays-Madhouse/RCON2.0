@@ -85,15 +85,15 @@ pub async fn run() {
         }
     };
     debug!("after config");
-    tokio::spawn(async {
-        let mut twitch_integration =
-            TwitchApiConnection::new(config.get_table("auth.twitch").unwrap());
-        match twitch_integration.check_token().await {
-            Ok(_) => info!("Twitch Token is valid"),
-            Err(e) => info!("Twitch Token is invalid: {:?}", e),
-        };
-        twitch_integration.new_websocket(config).await;
-    });
+    // let twitch_jh = tokio::spawn(async {
+    let mut twitch_integration = TwitchApiConnection::new(config.get_table("auth.twitch").unwrap());
+    match twitch_integration.check_token().await {
+        Ok(_) => info!("Twitch Token is valid"),
+        Err(e) => info!("Twitch Token is invalid: {:?}", e),
+    };
+    twitch_integration.new_websocket(config).await;
+    // });
+    // let _ = twitch_jh.await;
     tauri::Builder::default()
         // .setup(move |app| {
         //     if cfg!(debug_assertions) {}
