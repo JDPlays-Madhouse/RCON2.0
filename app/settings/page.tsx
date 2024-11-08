@@ -1,63 +1,46 @@
 "use client";
-import { MainContextMenu } from "@/components/main-context-menu";
+// import { MainContextMenu } from "@/components/main-context-menu";
 import MainNav from "@/components/main-navbar";
+import ServerDashboard from "@/components/server-dashboard";
 import ServerSwitcher from "@/components/server-switcher";
-import React from "react";
-import { Server } from "../page";
-const servers = [
-  {
-    label: "Factorio",
-    servers: [
-      {
-        label: "Local Server",
-        id: "factorio1",
-        game: "Factorio",
-      },
-      {
-        label: "Bilbo's Server",
-        id: "factorio2",
-        game: "Factorio",
-      },
-    ],
-  },
-  {
-    label: "Satisfactory",
-    servers: [
-      {
-        label: "Bilbo's Sat Server",
-        id: "sat2",
-        game: "Satisfactory",
-      },
-    ],
-  },
-];
+import { defaultServers } from "@/lib/utils";
+import { Server, Servers } from "@/types";
+import { invoke } from "@tauri-apps/api/core";
+import React, { useEffect } from "react";
 
 export default function Settings() {
-  const [selectedServer, setSelectedServer] = React.useState<Server>(
-    servers[0].servers[0],
-  );
+  const [selectedServer, setSelectedServer] = React.useState<Server>();
+  const servers: Servers = defaultServers();
+  const [showLog, setShowLog] = React.useState(true);
+  useEffect(() => {
+    invoke<Server[]>("list_game_servers").then((list_of_servers: Server[]) => {
+      list_of_servers.map((server) =>
+        servers[server.game].servers.push(server),
+      );
+    });
+  });
 
   return (
-    <div className="h-full">
-      <MainContextMenu
+    <div className="flex flex-col h-dvh bg-background">
+      {/*<MainContextMenu
         selectedServer={selectedServer}
         setSelectedServer={setSelectedServer}
         servers={servers}
-      >
-        <header className="p-10 flex flex-row justify-between w-full max-w-[2560px] mx-auto">
-          <ServerSwitcher
-            className=""
-            selectedServer={selectedServer}
-            setSelectedServer={setSelectedServer}
-            servers={servers}
-          />
-          <MainNav server={selectedServer} />
-        </header>
-        <main className="h-full w-full">
-          Settings
-          <div>Hello</div>
-        </main>
-      </MainContextMenu>
+      >*/}
+      <header className="px-10 py-5 flex flex-row justify-between w-full max-w-[2560px] mx-auto border border-t-none border-x-none flex-initial">
+        <ServerSwitcher
+          className=""
+          selectedServer={selectedServer}
+          setSelectedServer={setSelectedServer}
+          servers={servers}
+        />
+        <MainNav server={selectedServer} />
+      </header>
+      <main className="h-full w-full">
+        Settings
+        <div>Hello</div>
+      </main>
+      {/* </MainContextMenu> */}
     </div>
   );
 }

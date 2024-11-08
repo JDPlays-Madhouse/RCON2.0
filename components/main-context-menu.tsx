@@ -54,7 +54,7 @@ export function MainContextMenu({
                     </ContextMenuSubContent>
                 </ContextMenuSub>*/}
         <ContextMenuSeparator />
-        <ContextMenuRadioGroup key="servers" value={selectedServer.id}>
+        {/* <ContextMenuRadioGroup key="servers" value={selectedServer.id}>
           <ContextMenuLabel key="serversTitle" inset>
             Servers
           </ContextMenuLabel>
@@ -77,7 +77,7 @@ export function MainContextMenu({
               ))}
             </>
           ))}
-        </ContextMenuRadioGroup>
+        </ContextMenuRadioGroup> */}
       </ContextMenuContent>
     </ContextMenu>
   );

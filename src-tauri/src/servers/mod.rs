@@ -7,10 +7,7 @@ use anyhow::{bail, Result};
 use config::{Config, Value};
 use rcon::{AsyncStdStream, Connection};
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
-use tauri::Runtime;
-use tracing::{error, info};
-
-use crate::settings::Settings;
+use tracing::{debug, error, info};
 
 pub static SERVERS: LazyLock<Mutex<HashMap<String, GameServer>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -167,11 +164,6 @@ impl GameServer {
         server_name: String,
         server_config: Value,
     ) -> std::result::Result<Self, anyhow::Error> {
-        tracing::error!("Starting tryfrom");
-        tracing::error!("value: {:?}", &server_config);
-        tracing::error!("origin: {:?}", &server_config.origin());
-        tracing::error!("origin: {:?}", &server_name);
-
         let map = match server_config.clone().into_table() {
             Ok(t) => t,
             Err(e) => {
@@ -188,7 +180,7 @@ impl GameServer {
     }
 }
 
-pub fn servers_from_settings(config: Config) -> Result<()> {
+pub fn servers_from_settings(config: Config) -> Result<Vec<GameServer>> {
     match config.get_table("servers") {
         Ok(servers_conf) => {
             let mut servers_conf = servers_conf.clone();
@@ -207,11 +199,11 @@ pub fn servers_from_settings(config: Config) -> Result<()> {
                 let server = GameServer::try_from_config(name, server).unwrap();
                 SERVERS.lock().unwrap().insert(server.id(), server);
             }
-            info!("{:?}", SERVERS.lock().unwrap())
+            debug!("{:?}", SERVERS.lock().unwrap());
+            Ok(SERVERS.lock().unwrap().clone().into_values().collect())
         }
         Err(_) => todo!(),
     }
-    Ok(())
 }
 
 #[tauri::command]

@@ -84,7 +84,7 @@ pub async fn run() {
             error!("{:?}", e)
         }
     };
-    error!("after config");
+    debug!("after config");
     tokio::spawn(async {
         let mut twitch_integration =
             TwitchApiConnection::new(config.get_table("auth.twitch").unwrap());
