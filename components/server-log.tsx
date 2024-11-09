@@ -1,6 +1,6 @@
 "use client";
 import { cn } from "@/lib/utils";
-import { ComponentProps, useEffect, useState } from "react";
+import { ComponentProps, forwardRef, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { Log, LogLevel, LogLevelColors, Logs } from "@/types";
@@ -18,7 +18,8 @@ export default function LogArea({ className }: LogAreaProps) {
       return filterLogs(current_logs);
     });
   };
-
+  const nullRef = useRef(null);
+  const lastLineRef = useRef(null);
   useEffect(() => {
     const onEvent = new Channel<Log>();
     onEvent.onmessage = (message) => {
@@ -51,6 +52,12 @@ export default function LogArea({ className }: LogAreaProps) {
         .catch((err) => console.error(err));
     };
   }, []);
+  useEffect(() => {
+    if (logs.length > 0) {
+      // @ts-expect-error(doesn't like the null)
+      lastLineRef.current?.scrollIntoView({ behavior: "smooth" }); //Use scrollIntoView to automatically scroll to my ref
+    }
+  }, [logs.length]);
 
   return (
     <div className="m-5 w-full flex flex-col">
@@ -62,7 +69,7 @@ export default function LogArea({ className }: LogAreaProps) {
         )}
       >
         <div className="mx-3">Welcome to RCON2.0</div>
-        {logs.map((log) => (
+        {logs.map((log, index, logs) => (
           <LogLine
             key={`${log.uuid}`}
             level={log.level}
@@ -70,6 +77,7 @@ export default function LogArea({ className }: LogAreaProps) {
             message={log.message}
             location={log.target}
             className="mx-3"
+            ref={index + 1 === logs.length ? lastLineRef : null}
           />
         ))}
         <div>&nbsp;</div>
@@ -85,14 +93,14 @@ interface LogProps extends ComponentProps<"div"> {
   location: string;
 }
 
-export function LogLine({
+export const LogLine = ({
   className,
   level,
   time,
   message,
   location,
   ...props
-}: LogProps) {
+}: LogProps) => {
   let parsedtime;
   if (time === "") {
     parsedtime = new Date(Date.now());
@@ -107,7 +115,7 @@ export function LogLine({
     DEBUG: "green",
     TRACE: "blue",
   };
-  const classes = cn(`text-${levelColor[level]}`);
+
   return (
     <div
       className={cn("font-normal tracking-wide", className)}
@@ -121,12 +129,12 @@ export function LogLine({
       - {location} - {message}
     </div>
   );
-}
+};
 
 const filterLogs = (logs: Logs) => {
   const uuids = new Set();
 
-  const log_filtered = logs.filter((log, idx, arr) => {
+  const log_filtered = logs.filter((log) => {
     if (uuids.has(log.uuid)) {
       return false;
     }

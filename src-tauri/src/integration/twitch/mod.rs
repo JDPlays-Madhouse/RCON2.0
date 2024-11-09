@@ -111,7 +111,8 @@ impl TwitchApiConnection {
                 },
             )
             .collect();
-        let scope = get_eventsub_consolidated_scopes(websocket_subs);
+        let mut scope = get_eventsub_consolidated_scopes(websocket_subs);
+        // get_all_required_scopes(scope);
         debug!("Scope: {:?}", scope);
         Self {
             username: Some(UserName::new(username.into())),
@@ -159,26 +160,21 @@ impl TwitchApiConnection {
         ));
 
         let websocket = self.websocket.clone().unwrap();
-        self.websocket_joinhandle = Some(spawn(async move {
-            let websocket = websocket;
-            debug!("Websocket Connecting");
-            loop {
-                match block_on(websocket.clone().run()) {
-                    Ok(_) => {
-                        debug!("Websocket Connection Closed");
-                        break;
-                    }
-                    Err(e) => {
-                        error!("{:?}", e);
-                        continue;
-                    }
+        self.websocket_joinhandle = Some(tokio::spawn(async {
+            trace!("websocket thread start");
+            match websocket.run().await {
+                Ok(_) => {
+                    debug!(
+                        target = "Integration::Twitch::ApiConnection",
+                        "Websocket Established!",
+                    );
                 }
-            }
+                Err(e) => {
+                    error!("Websocket Failed: {:?}", e)
+                }
+            };
+            trace!("websocket thread end");
         }));
-        debug!(
-            target = "Integration::Twitch::ApiConnection",
-            "Websocket Established!",
-        );
     }
 }
 

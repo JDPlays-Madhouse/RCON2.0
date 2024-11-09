@@ -1,7 +1,7 @@
 use anyhow::{bail, Context, Error, Result};
 use tokio_tungstenite::tungstenite;
 use tracing::{debug, error, info, warn};
-// use tracing::Instrument;
+use tracing::{trace, Instrument};
 use twitch_api::{
     client::ClientDefault,
     eventsub::{
@@ -26,7 +26,7 @@ pub enum WebSocketError {
 
 impl WebSocketError {
     pub fn map_err<T, E>(self, result: Result<T, E>) -> Result<T, WebSocketError> {
-        result.map_err(|_e| return self)
+        result.map_err(|_e| self)
     }
 }
 
@@ -55,15 +55,14 @@ impl WebsocketClient {
     pub fn new(
         session_id: Option<String>,
         token: UserToken,
-        // client: HelixClient<'static, reqwest::Client>,
         user_id: types::UserId,
         subscriptions: Vec<eventsub::EventType>,
     ) -> Self {
         let client: HelixClient<_> = twitch_api::HelixClient::with_client(
             <reqwest::Client>::default_client_with_name(Some(
-                "twitch-rs/eventsub".parse().unwrap(),
+                "twitch-rs/eventsub".parse().expect("parsing name"),
             ))
-            .unwrap(),
+            .expect("Default client with name"),
         );
 
         Self {
@@ -85,7 +84,7 @@ impl WebsocketClient {
         >,
         WebSocketError,
     > {
-        // tracing::info!("connecting to twitch");
+        tracing::info!("connecting to twitch");
         let config = tungstenite::protocol::WebSocketConfig {
             max_message_size: Some(64 << 20), // 64 MiB
             max_frame_size: Some(16 << 20),   // 16 MiB
@@ -94,7 +93,6 @@ impl WebsocketClient {
         };
         match tokio_tungstenite::connect_async_with_config(&self.connect_url, Some(config), false)
             .await
-            .context("Can't connect")
         {
             Ok((socket, _)) => Ok(socket),
             Err(e) => {
@@ -148,7 +146,7 @@ impl WebsocketClient {
     pub async fn process_message(&mut self, msg: tungstenite::Message) -> Result<(), Error> {
         match msg {
             tungstenite::Message::Text(s) => {
-                // tracing::info!("{s}");
+                tracing::trace!("{s}");
                 // Parse the message into a [twitch_api::eventsub::EventsubWebsocketData]
                 match Event::parse_websocket(&s).unwrap() {
                     EventsubWebsocketData::Welcome {
@@ -179,63 +177,46 @@ impl WebsocketClient {
                                             message
                                         );
                                     }
-                                    eventsub::Message::VerificationRequest(
-                                        verification_request,
-                                    ) => {
-                                        dbg!("Verification request: {}", verification_request);
+                                    _ => {
+                                        error! {"Unhandled Message Payload: {:?}", message}
                                     }
-                                    // eventsub::Message::Revocation() => todo!(),
-                                    _ => {}
                                 };
-                                // tracing::info!(?message, "Chat Message");
                             }
                             Event::ChannelPointsCustomRewardRedemptionAddV1(
                                 eventsub::Payload { message, .. },
-                            ) => {
-                                match message.clone() {
-                                    eventsub::Message::Notification(reward_payload) => {
-                                        let message = format!(
-                                            "New: {}({}) redeemed by {}: {}",
-                                            reward_payload.reward.title,
-                                            reward_payload.reward.id,
-                                            reward_payload.user_name,
-                                            reward_payload.user_input
-                                        );
-                                        info!(target = "Twitch::websocket::ChannelPointsCustomRewardRedemptionAdd", message);
-                                    }
-                                    eventsub::Message::VerificationRequest(
-                                        verification_request,
-                                    ) => {
-                                        dbg!("Verification request: {}", verification_request);
-                                    }
-                                    // eventsub::Message::Revocation() => todo!(),
-                                    _ => {}
+                            ) => match message.clone() {
+                                eventsub::Message::Notification(reward_payload) => {
+                                    let message = format!(
+                                        "New: {}({}) redeemed by {}: {}",
+                                        reward_payload.reward.title,
+                                        reward_payload.reward.id,
+                                        reward_payload.user_name,
+                                        reward_payload.user_input
+                                    );
+                                    info!(target = "Twitch::websocket::ChannelPointsCustomRewardRedemptionAdd", message);
                                 }
-                            }
+                                _ => {
+                                    error! {"Unhandled ChannelPointsCustomRewardRedemptionAddV1 Payload: {:?}", message}
+                                }
+                            },
                             Event::ChannelPointsCustomRewardRedemptionUpdateV1(
                                 eventsub::Payload { message, .. },
-                            ) => {
-                                match message.clone() {
-                                    eventsub::Message::Notification(reward_payload) => {
-                                        let message = format!(
-                                            "Update: {}({}) redeemed by {}: {}",
-                                            reward_payload.reward.title,
-                                            reward_payload.reward.id,
-                                            reward_payload.user_name,
-                                            reward_payload.user_input
-                                        );
+                            ) => match message.clone() {
+                                eventsub::Message::Notification(reward_payload) => {
+                                    let message = format!(
+                                        "Update: {}({}) redeemed by {}: {}",
+                                        reward_payload.reward.title,
+                                        reward_payload.reward.id,
+                                        reward_payload.user_name,
+                                        reward_payload.user_input
+                                    );
 
-                                        info!(target = "Twitch::websocket::ChannelPointsCustomRewardRedemptionUpdate", message);
-                                    }
-                                    eventsub::Message::VerificationRequest(
-                                        verification_request,
-                                    ) => {
-                                        dbg!("Verification request: {}", verification_request);
-                                    }
-                                    // eventsub::Message::Revocation() => todo!(),
-                                    _ => {}
+                                    info!(target = "Twitch::websocket::ChannelPointsCustomRewardRedemptionUpdate", message);
                                 }
-                            }
+                                _ => {
+                                    error! {"Unhandled ChannelPointsCustomRewardRedemptionUpdateV1 Payload: {:?}", message}
+                                }
+                            },
 
                             m => {
                                 let message =
@@ -248,16 +229,34 @@ impl WebsocketClient {
                     EventsubWebsocketData::Revocation {
                         metadata,
                         payload: _,
-                    } => bail!("got revocation event: {metadata:?}"),
+                    } => {
+                        error!("got revocation event: {metadata:?}");
+                        bail!("got revocation event: {metadata:?}")
+                    }
                     EventsubWebsocketData::Keepalive {
                         metadata: _,
                         payload: _,
                     } => Ok(()),
-                    _ => Ok(()),
+                    data => {
+                        error!("Unexpected EventsubWebsocketData {:?}", data);
+                        bail!("Unexpected EventsubWebsocketData {:?}", data)
+                    }
                 }
             }
-            tungstenite::Message::Close(_) => todo!(),
-            _ => Ok(()),
+            tungstenite::Message::Close(close) => {
+                error!("Close frame: {:?}", close);
+                bail!("Close frame: {:?}", close)
+            }
+            tungstenite::Message::Binary(vec) => todo!("Binary"),
+            tungstenite::Message::Frame(frame) => todo!("frame"),
+            tungstenite::Message::Ping(vec) => {
+                trace!("Ping");
+                Ok(())
+            }
+            tungstenite::Message::Pong(vec) => {
+                trace!("Pong");
+                Ok(())
+            }
         }
     }
 
@@ -283,7 +282,7 @@ impl WebsocketClient {
             use eventsub::EventType::*;
             match subscription {
                 ChannelPointsCustomRewardRedemptionAdd => {
-                    self.client
+                    match self.client
                         .create_eventsub_subscription(
                         eventsub::channel::ChannelPointsCustomRewardRedemptionAddV1::broadcaster_user_id(
                                 self.user_id.clone(),
@@ -292,11 +291,16 @@ impl WebsocketClient {
                             &self.token,
                         )
                     .await
-                    .unwrap();
-                    info!("Subscribed to {}", subscription);
+                    {
+                        Ok(sub)  =>  {
+                            info!("Subscribed to {}", subscription);
+                            debug!{"Subscription: {:?}", sub};
+                        },
+                        Err(e) => {error!("Failed to subscribe to {}: {}", subscription, e)},
+                    }
                 }
                 ChannelPointsCustomRewardRedemptionUpdate => {
-                    self.client
+                    match self.client
                     .create_eventsub_subscription(
                         eventsub::channel::ChannelPointsCustomRewardRedemptionUpdateV1::broadcaster_user_id(
                             self.user_id.clone(),
@@ -305,11 +309,16 @@ impl WebsocketClient {
                         &self.token,
                     )
                     .await
-                    .unwrap();
-                    info!("Subscribed to {}", subscription);
+                    {
+                        Ok(sub)  =>  {
+                            info!("Subscribed to {}", subscription);
+                            debug!{"Subscription: {:?}", sub};
+                        },
+                        Err(e) => {error!("Failed to subscribe to {}: {}", subscription, e)},
+                    }
                 }
                 ChannelChatMessage => {
-                    self.client
+                    match self.client
                         .create_eventsub_subscription(
                             eventsub::channel::ChannelChatMessageV1::new(
                                 self.user_id.clone(),
@@ -319,8 +328,13 @@ impl WebsocketClient {
                             &self.token,
                         )
                         .await
-                        .unwrap();
-                    info!("Subscribed to {}", subscription);
+                    {
+                        Ok(sub)  =>  {
+                            info!("Subscribed to {}", subscription);
+                            debug!{"Subscription: {:?}", sub};
+                        },
+                        Err(e) => {error!("Failed to subscribe to {}: {}", subscription, e)},
+                    }
                 }
                 _ => {
                     error!(target:"Twitch::websocket::subscription", "Tried to subscribe to unimplemented subscription: {}", subscription)

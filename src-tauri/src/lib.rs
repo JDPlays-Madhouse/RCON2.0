@@ -15,6 +15,7 @@ use settings::Settings;
 use time::UtcOffset;
 use tracing::{debug, error, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_error::ErrorLayer;
 use tracing_subscriber::fmt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::prelude::*;
@@ -75,6 +76,7 @@ pub async fn run() {
         .with(logger_layer)
         .with(logfile_layer)
         .with(stdout_layer)
+        .with(ErrorLayer::default())
         .init();
 
     debug!("Log Established");
@@ -84,18 +86,12 @@ pub async fn run() {
             error!("{:?}", e)
         }
     };
-    debug!("after config");
-
-    // TODO: Multi-threading needs to be implemented hear.
-    // let twitch_jh = tokio::spawn(async {
     let mut twitch_integration = TwitchApiConnection::new(config.get_table("auth.twitch").unwrap());
     match twitch_integration.check_token().await {
         Ok(_) => info!("Twitch Token is valid"),
         Err(e) => info!("Twitch Token is invalid: {:?}", e),
     };
     twitch_integration.new_websocket(config).await;
-    // });
-    // let _ = twitch_jh.await;
     tauri::Builder::default()
         // .setup(move |app| {
         //     if cfg!(debug_assertions) {}

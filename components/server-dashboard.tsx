@@ -33,7 +33,7 @@ export default function ServerDashboard({
       level: "INFO",
       target: "Server_Dashboard",
       message: "Hello from the renderer process!",
-    });
+    }).then();
   };
   return (
     <div className={cn("", className)} {...props}>

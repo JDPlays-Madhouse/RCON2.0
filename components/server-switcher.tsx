@@ -86,40 +86,45 @@ export default function ServerSwitcher({
             <CommandInput placeholder="Search server..." />
             <CommandList>
               <CommandEmpty>No server found.</CommandEmpty>
-              {games.map((game: GameString) => (
-                <CommandGroup key={game} heading={game}>
-                  {servers[game].servers.map((server: Server) => (
-                    <CommandItem
-                      key={server.id}
-                      onSelect={() => {
-                        setSelectedServer(server);
-                        setOpen(false);
-                      }}
-                      className="text-sm"
-                    >
-                      <Avatar className="mr-2 h-5 w-5">
-                        <>
-                          <AvatarImage
-                            src={FactorioLogo.src}
-                            alt={server.name}
-                          />
+              {games.map((game: GameString) => {
+                if (servers[game].servers.length === 0) {
+                  return;
+                }
+                return (
+                  <CommandGroup key={game} heading={game}>
+                    {servers[game].servers.map((server: Server) => (
+                      <CommandItem
+                        key={server.id}
+                        onSelect={() => {
+                          setSelectedServer(server);
+                          setOpen(false);
+                        }}
+                        className="text-sm"
+                      >
+                        <Avatar className="mr-2 h-5 w-5">
+                          <>
+                            <AvatarImage
+                              src={FactorioLogo.src}
+                              alt={server.name}
+                            />
+                            <AvatarFallback>SC</AvatarFallback>
+                          </>
                           <AvatarFallback>SC</AvatarFallback>
-                        </>
-                        <AvatarFallback>SC</AvatarFallback>
-                      </Avatar>
-                      {server.name}
-                      <CheckIcon
-                        className={cn(
-                          "ml-auto h-4 w-4",
-                          selectedServer?.id === server.id
-                            ? "opacity-100"
-                            : "opacity-0",
-                        )}
-                      />
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              ))}
+                        </Avatar>
+                        {server.name}
+                        <CheckIcon
+                          className={cn(
+                            "ml-auto h-4 w-4",
+                            selectedServer?.id === server.id
+                              ? "opacity-100"
+                              : "opacity-0",
+                          )}
+                        />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                );
+              })}
             </CommandList>
             <CommandSeparator />
             <CommandList>

@@ -16,7 +16,7 @@
         "resizable": true,
         "fullscreen": false,
         "maximized": false,
-        "focus": true
+        "focus": false
       }
     ],
     "security": {
