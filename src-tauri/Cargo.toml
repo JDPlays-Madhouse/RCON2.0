@@ -53,6 +53,7 @@ sha2 = "0.10.8"
 simple-server = "0.4.0"
 sled = "0.34.7"
 tauri = { version = "2.0.6", features = ["tracing"] }
+tauri-plugin-websocket = "2"
 thiserror = "2.0.0"
 time = { version = "0.3.36", features = ["local-offset", "formatting", "parsing"] }
 tokio = { version = "1.41.0", features = ["full", "tracing"] }
@@ -73,3 +74,6 @@ webbrowser = "1.0.2"
 
 [dev-dependencies]
 rstest = "0.23.0"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-cli = "2"

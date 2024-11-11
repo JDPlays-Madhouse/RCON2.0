@@ -1,7 +1,10 @@
 use crate::settings::ConfigValue;
+use crate::PROGRAM;
 use anyhow::{bail, Error, Result};
 use config::ValueKind;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::LazyLock;
 use std::sync::Mutex;
 use std::{
@@ -11,8 +14,16 @@ use std::{
 };
 use tauri::ipc::Channel;
 use tauri::State;
+use time::UtcOffset;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
+use tracing::error;
 use tracing::{debug, info, Subscriber};
+use tracing_appender::rolling::RollingFileAppender;
+use tracing_appender::rolling::Rotation;
+use tracing_error::ErrorLayer;
+use tracing_subscriber::fmt;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::prelude::*;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 use uuid::Uuid;

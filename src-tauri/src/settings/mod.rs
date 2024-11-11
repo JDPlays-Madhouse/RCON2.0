@@ -20,7 +20,6 @@ pub enum FileType {
 
 #[derive(Debug)]
 pub struct Settings {
-    pub name: &'static str,
     pub config_builder: ConfigBuilder<DefaultState>,
     pub config_folder: PathBuf,
     pub log_folder: PathBuf,
@@ -282,7 +281,6 @@ impl Default for Settings {
         );
 
         let settings = Self {
-            name: PROGRAM,
             config_builder: builder,
             config_folder: config_folder.clone(),
             config_filename,

@@ -1,3 +1,4 @@
+mod cli;
 mod command;
 mod integration;
 mod logging;
@@ -5,6 +6,7 @@ mod servers;
 mod settings;
 
 use anyhow::Context;
+use cli::handle_cli_matches;
 use integration::TwitchApiConnection;
 use logging::{
     fetch_all_logs, log, log_to_channel, subscribe_logging_channel, unsubscribe_logging_channel,
@@ -12,13 +14,17 @@ use logging::{
 };
 use servers::{list_game_servers, servers_from_settings};
 use settings::Settings;
+use tauri::async_runtime::block_on;
+use tauri_plugin_cli::CliExt;
 use time::UtcOffset;
 use tracing::{debug, error, info};
-use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_appender::rolling::RollingFileAppender;
+use tracing_appender::rolling::Rotation;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::fmt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::prelude::*;
+use tracing_subscriber::util::SubscriberInitExt;
 
 pub const PROGRAM: &str = "RCON2.0";
 
@@ -39,6 +45,7 @@ pub async fn run() {
             .context("Log level Conversion")
             .unwrap_or(LogLevel::default())
     };
+
     let file_prefix = String::from(PROGRAM) + ".log";
     // use tauri_plugin_log::;
     let logfile =
@@ -51,7 +58,7 @@ pub async fn run() {
     let offset = match UtcOffset::current_local_offset() {
         Ok(tz) => tz,
         Err(e) => {
-            error!("Failed to get local timezone");
+            error!("Failed to get local timezone: {:?}", e);
             UtcOffset::UTC
         }
     };
@@ -71,32 +78,49 @@ pub async fn run() {
     let level_filter = tracing_subscriber::filter::LevelFilter::from_level(log_level.into());
 
     let logger_layer: Logger = Logger::new();
-    tracing_subscriber::Registry::default()
-        .with(level_filter)
-        .with(logger_layer)
-        .with(logfile_layer)
-        .with(stdout_layer)
-        .with(ErrorLayer::default())
-        .init();
 
     debug!("Log Established");
     match servers_from_settings(config.clone()) {
-        Ok(_) => {}
+        Ok(servers) => {
+            let server_names: Vec<&str> =
+                servers.iter().map(|server| server.name.as_str()).collect();
+            info!("Retrieved configs for servers: {:?}", server_names)
+        }
         Err(e) => {
             error!("{:?}", e)
         }
     };
     let mut twitch_integration = TwitchApiConnection::new(config.get_table("auth.twitch").unwrap());
-    match twitch_integration.check_token().await {
-        Ok(_) => info!("Twitch Token is valid"),
-        Err(e) => info!("Twitch Token is invalid: {:?}", e),
-    };
-    twitch_integration.new_websocket(config).await;
     tauri::Builder::default()
-        // .setup(move |app| {
-        //     if cfg!(debug_assertions) {}
-        //     Ok(())
-        // })
+        .plugin(tauri_plugin_websocket::init())
+        .plugin(tauri_plugin_cli::init())
+        .setup(move |app| {
+            match app.cli().matches() {
+                Ok(matches) => {
+                    handle_cli_matches(matches, app, &mut twitch_integration);
+                }
+                Err(e) => {
+                    println!("{}", e);
+
+                    std::process::exit(1);
+                }
+            }
+            // todo!();
+            tracing_subscriber::Registry::default()
+                .with(level_filter)
+                .with(logger_layer)
+                .with(logfile_layer)
+                .with(stdout_layer)
+                .with(ErrorLayer::default())
+                .init();
+
+            match block_on(twitch_integration.check_token()) {
+                Ok(_) => info!("Twitch Token is valid"),
+                Err(e) => info!("Twitch Token is invalid: {:?}", e),
+            };
+            block_on(twitch_integration.new_websocket(config));
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             subscribe_logging_channel,
             unsubscribe_logging_channel,

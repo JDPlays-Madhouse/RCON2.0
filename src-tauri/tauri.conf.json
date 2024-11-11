@@ -32,5 +32,32 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "cli": {
+      "description": "RCON2.0 is a interface program between games and streaming platforms.",
+      "beforeHelp": "",
+      "afterHelp": "",
+      "args": [],
+      "subcommands": {
+        "token": {
+          "description": "Print valid auth token/s to stdout.",
+          "args": [
+            {
+              "name": "twitch",
+              "short": "t",
+              "description": "Twitch OAuth Token.",
+              "requiredUnlessPresentAny": ["youtube"]
+            },
+            {
+              "name": "youtube",
+              "short": "y",
+              "description": "YouTube OAuth Token.",
+              "requiredUnlessPresentAny": ["twitch"]
+            }
+          ]
+        }
+      }
+    }
   }
 }
