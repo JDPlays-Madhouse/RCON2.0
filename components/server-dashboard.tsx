@@ -28,21 +28,12 @@ export default function ServerDashboard({
       logRef.current.collapse();
     }
   }, [showLog]);
-  const handleOnClick = () => {
-    invoke("log", {
-      level: "INFO",
-      target: "Server_Dashboard",
-      message: "Hello from the renderer process!",
-    }).then();
-  };
+
   return (
     <div className={cn("", className)} {...props}>
       <ResizablePanelGroup direction="vertical" className="border max-w-dvw">
         <ResizablePanel defaultSize={50}>
-          <div
-            className="flex h-full items-center justify-center p-6 my-auto"
-            onClick={handleOnClick}
-          >
+          <div className="flex h-full items-center justify-center p-6 my-auto">
             <span className="font-semibold">Dashboard</span>
           </div>
         </ResizablePanel>

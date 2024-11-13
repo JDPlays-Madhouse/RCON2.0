@@ -3,12 +3,16 @@ use std::sync::mpsc::{channel, Receiver, RecvError, SendError, Sender};
 use anyhow::Result;
 
 pub mod twitch;
+use config::Value;
+use indexmap::IndexMap;
 pub use twitch::TwitchApiConnection;
 
 pub enum Api {
     Twitch,
     YouTube,
 }
+
+pub type APIConnectionConfig = IndexMap<String, Value>;
 
 pub enum Connection {
     Stream,

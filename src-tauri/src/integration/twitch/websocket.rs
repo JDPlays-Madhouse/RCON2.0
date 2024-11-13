@@ -1,6 +1,9 @@
-use anyhow::{bail, Context, Error, Result};
+use std::time::Duration;
+
+use anyhow::{bail, Error, Result};
+use futures::stream::FusedStream;
 use tokio_tungstenite::tungstenite;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 use tracing::{trace, Instrument};
 use twitch_api::{
     client::ClientDefault,
@@ -15,17 +18,18 @@ use twitch_api::{
 use twitch_oauth2::{TwitchToken, UserToken};
 
 #[derive(Debug)]
-pub enum WebSocketError {
+pub enum WebsocketError {
     TokenElapsed,
-    InvaildToken,
+    InvalidToken,
+    Terminated,
     FailedToConnect(String),
     FailedToRun(String),
     InvailURL(String),
     ProcessMessage(String),
 }
 
-impl WebSocketError {
-    pub fn map_err<T, E>(self, result: Result<T, E>) -> Result<T, WebSocketError> {
+impl WebsocketError {
+    pub fn map_err<T, E>(self, result: Result<T, E>) -> Result<T, WebsocketError> {
         result.map_err(|_e| self)
     }
 }
@@ -38,6 +42,7 @@ pub struct WebsocketClient {
     pub user_id: types::UserId,
     pub connect_url: url::Url,
     pub subscriptions: Vec<eventsub::EventType>,
+    keep_alive_seconds: Duration,
 }
 
 impl std::fmt::Debug for WebsocketClient {
@@ -47,6 +52,7 @@ impl std::fmt::Debug for WebsocketClient {
             .field("token", &self.token)
             .field("user_id", &self.user_id)
             .field("connect_url", &self.connect_url)
+            .field("keep_alive_seconds", &self.keep_alive_seconds)
             .finish()
     }
 }
@@ -72,6 +78,7 @@ impl WebsocketClient {
             user_id,
             connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
             subscriptions,
+            keep_alive_seconds: Duration::from_secs(10),
         }
     }
 
@@ -82,7 +89,7 @@ impl WebsocketClient {
         tokio_tungstenite::WebSocketStream<
             tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
         >,
-        WebSocketError,
+        WebsocketError,
     > {
         tracing::info!("connecting to twitch");
         let config = tungstenite::protocol::WebSocketConfig {
@@ -94,51 +101,81 @@ impl WebsocketClient {
         match tokio_tungstenite::connect_async_with_config(&self.connect_url, Some(config), false)
             .await
         {
-            Ok((socket, _)) => Ok(socket),
+            Ok((socket, _response)) => Ok(socket),
             Err(e) => {
                 error!("{}", e);
-                Err(WebSocketError::FailedToConnect("Can't Connect".into()))
+                Err(WebsocketError::FailedToConnect("Can't Connect".into()))
             }
         }
     }
 
     /// Run the websocket subscriber
     #[tracing::instrument(name = "subscriber", skip_all, fields())]
-    pub async fn run(mut self) -> Result<(), WebSocketError> {
+    pub async fn run(mut self) -> Result<(), WebsocketError> {
         // Establish the stream
         let mut s = match self.connect().await {
             Ok(s) => s,
             Err(e) => return Err(e),
         };
-        info!(
-            target = "Twitch::Integration::Websocket",
-            "Connected to Twitch's Websocket",
-        );
+        info!("Connected to Twitch's Websocket",);
         // Loop over the stream, processing messages as they come in.
+
         loop {
+            if s.is_terminated() {
+                error!("Websocket Terminated");
+                return Err(WebsocketError::Terminated);
+            }
+
+            if self.token.is_elapsed() {
+                error!("Token Expired!!");
+                return Err(WebsocketError::TokenElapsed);
+            }
+            let next = futures::StreamExt::next(&mut s);
+            let next = async_std::future::timeout(self.keep_alive_seconds, next);
             tokio::select!(
-            Some(msg) = futures::StreamExt::next(&mut s) => {
-                let span = tracing::info_span!("message received", raw_message = ?msg);
-                let msg = match msg {
-                    Err(tungstenite::Error::Protocol(
-                        tungstenite::error::ProtocolError::ResetWithoutClosingHandshake,
-                    )) => {
-                        tracing::warn!(
-                            "connection was sent with an unexpected frame or was reset, reestablishing it"
-                        );
-                        s = WebSocketError::FailedToRun("when reestablishing connection".into()).map_err(self
-                            .connect()
-                            .instrument(span)
-                            .await
-                            ).unwrap();
-                        continue
+                msg_result = next => {
+                    match msg_result {
+                        Ok(Some(msg)) => {
+                            let span = tracing::info_span!("message received", raw_message = ?msg);
+                            let msg = match msg {
+                                Err(tungstenite::Error::Protocol(
+                                    tungstenite::error::ProtocolError::ResetWithoutClosingHandshake,
+                                )) => {
+                                    tracing::warn!(
+                                        "connection was sent with an unexpected frame or was reset, reestablishing it"
+                                    );
+                                    s = WebsocketError::FailedToRun("when reestablishing connection".into()).map_err(self
+                                        .connect()
+                                        .instrument(span)
+                                        .await
+                                        ).unwrap();
+                                    continue
+                                }
+                                _ => msg.map_err(|_e| WebsocketError::FailedToConnect("When getting message".into()))?,
+                            };
+                            WebsocketError::FailedToRun("Processing Message".into()).map_err(self.process_message(msg)
+                                .instrument(span)
+                                .await).unwrap()
+                            }
+                        Ok(None) => {
+                            error!("Received none");
+                        }
+                        Err(timeout_error) => {
+                            debug!("Twitch websocket has timed out, restablishing now...");
+                            s = WebsocketError::FailedToRun("when reestablishing connection after timeout".into()).map_err(self
+                                        .connect()
+                                        .await
+                                        ).unwrap();
+                            continue
+                        }
+
                     }
-                    _ => msg.map_err(|_e| WebSocketError::FailedToConnect("When getting message".into()))?,
-                };
-                WebSocketError::FailedToRun("Processing Message".into()).map_err(self.process_message(msg)
-                    .instrument(span)
-                    .await).unwrap()
-            })
+                },
+                else => {
+                    error!("Websocket Terminated");
+                    return Err(WebsocketError::Terminated);
+                }
+            );
         }
     }
 
@@ -173,7 +210,7 @@ impl WebsocketClient {
                                             + " - "
                                             + &chat_payload.message.text;
                                         info!(
-                                            target = "Twitch::websocket::ChannelChatMessage",
+                                            target = "rcon2::integration::twitch::websocket::ChannelChatMessage",
                                             message
                                         );
                                     }
@@ -193,7 +230,7 @@ impl WebsocketClient {
                                         reward_payload.user_name,
                                         reward_payload.user_input
                                     );
-                                    info!(target = "Twitch::websocket::ChannelPointsCustomRewardRedemptionAdd", message);
+                                    info!(target = "rcon2::integration::twitch::websocket::ChannelPointsCustomRewardRedemptionAdd", message);
                                 }
                                 _ => {
                                     error! {"Unhandled ChannelPointsCustomRewardRedemptionAddV1 Payload: {:?}", message}
@@ -211,7 +248,7 @@ impl WebsocketClient {
                                         reward_payload.user_input
                                     );
 
-                                    info!(target = "Twitch::websocket::ChannelPointsCustomRewardRedemptionUpdate", message);
+                                    info!(target = "rcon2::integration::twitch::websocket::ChannelPointsCustomRewardRedemptionUpdate", message);
                                 }
                                 _ => {
                                     error! {"Unhandled ChannelPointsCustomRewardRedemptionUpdateV1 Payload: {:?}", message}
@@ -221,7 +258,10 @@ impl WebsocketClient {
                             m => {
                                 let message =
                                     format!("Received an unimplemented websocket event: {:?}", m);
-                                error!(target = "Twitch::websocket::Event", message);
+                                error!(
+                                    target = "rcon2::integration::twitch::websocket::Event",
+                                    message
+                                );
                             }
                         }
                         Ok(())
@@ -263,19 +303,22 @@ impl WebsocketClient {
     pub async fn process_welcome_message(
         &mut self,
         data: SessionData<'_>,
-    ) -> Result<(), WebSocketError> {
+    ) -> Result<(), WebsocketError> {
         self.session_id = Some(data.id.to_string());
         if let Some(url) = data.reconnect_url {
-            self.connect_url = WebSocketError::InvailURL(url.to_string())
+            self.connect_url = WebsocketError::InvailURL(url.to_string())
                 .map_err(url.parse())
                 .unwrap();
         }
         // check if the token is expired, if it is, request a new token. This only works if using a oauth service for getting a token
         if self.token.is_elapsed() {
             error!("Token is elapsed");
-            return Err(WebSocketError::TokenElapsed);
+            return Err(WebsocketError::TokenElapsed);
         }
-
+        if let Some(keep_alive) = data.keepalive_timeout_seconds {
+            self.keep_alive_seconds =
+                Duration::from_secs(keep_alive as u64) + Duration::from_millis(200);
+        };
         let transport = eventsub::Transport::websocket(data.id.clone());
 
         for subscription in self.subscriptions.clone() {
@@ -337,7 +380,7 @@ impl WebsocketClient {
                     }
                 }
                 _ => {
-                    error!(target:"Twitch::websocket::subscription", "Tried to subscribe to unimplemented subscription: {}", subscription)
+                    error!(target:"rcon2::integration::twitch::websocket::subscription", "Tried to subscribe to unimplemented subscription: {}", subscription)
                 }
             }
         }

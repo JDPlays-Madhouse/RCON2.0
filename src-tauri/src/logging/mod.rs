@@ -363,14 +363,7 @@ pub fn unsubscribe_logging_channel(uuid: String) -> Result<(), String> {
 
     match unsub {
         Some(channel) => {
-            let log = Log::new(
-                LogLevel::Debug,
-                "Logger".into(),
-                format!("Unsubscribed from channel: {}", uuid.clone()),
-            );
-            let _ = channel.send(log);
             debug!("Unsubscribed from channel: {}", uuid.clone());
-
             Ok(())
         }
         None => Err("No channel under that id.".into()),

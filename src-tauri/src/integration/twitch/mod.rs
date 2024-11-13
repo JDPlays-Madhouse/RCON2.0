@@ -1,9 +1,11 @@
-use futures::executor::block_on;
 use indexmap::IndexMap;
 use permissions::get_eventsub_consolidated_scopes;
 use std::{
     str::FromStr,
-    sync::mpsc::{self, RecvError},
+    sync::{
+        mpsc::{self, RecvError},
+        Arc, LazyLock, Mutex,
+    },
     thread::JoinHandle,
 };
 use tokio::spawn;
@@ -11,8 +13,8 @@ use tracing::{debug, error, info, trace};
 use tracing_subscriber::field::debug;
 
 use super::{
-    IntegrationChannels, IntegrationCommand, IntegrationControl, IntegrationEvent,
-    PlatformAuthenticate, PlatformConnection, TokenError, Transmittor,
+    APIConnectionConfig, IntegrationChannels, IntegrationCommand, IntegrationControl,
+    IntegrationEvent, PlatformAuthenticate, PlatformConnection, TokenError, Transmittor,
 };
 use anyhow::{Context, Result};
 use config::{Config, Value};
@@ -31,7 +33,10 @@ pub mod permissions;
 pub mod websocket;
 
 use twitch_types::UserId;
-use websocket::{WebSocketError, WebsocketClient};
+use websocket::{WebsocketClient, WebsocketError};
+
+static TOKEN: LazyLock<Arc<Mutex<Option<UserToken>>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(None)));
 
 pub struct TwitchApiConnection {
     pub username: Option<UserName>,
@@ -62,14 +67,13 @@ impl std::fmt::Debug for TwitchApiConnection {
             // .field("token", &self.token)
             .field("redirect_url", &self.redirect_url)
             .field("websocket", &self.websocket)
-            .field("websocket_joinhandle", &self.websocket_joinhandle)
             .field("session_id", &self.session_id)
             .finish()
     }
 }
 
 impl TwitchApiConnection {
-    pub fn new(config: IndexMap<String, Value>) -> Self {
+    pub fn new(config: APIConnectionConfig) -> Self {
         let username = config
             .get("username")
             .unwrap()
@@ -111,7 +115,7 @@ impl TwitchApiConnection {
                 },
             )
             .collect();
-        let mut scope = get_eventsub_consolidated_scopes(websocket_subs);
+        let scope = get_eventsub_consolidated_scopes(websocket_subs);
         // get_all_required_scopes(scope);
         debug!("Scope: {:?}", scope);
         Self {
@@ -135,7 +139,13 @@ impl TwitchApiConnection {
 
 impl TwitchApiConnection {
     pub async fn new_websocket(&mut self, config: Config) {
-        use twitch_api::eventsub::EventType;
+        if let Some(joinhandle) = self.websocket_joinhandle.take() {
+            joinhandle.abort();
+            debug!(
+                "Old Twitch Websocket is finished: {}",
+                joinhandle.is_finished()
+            );
+        }
         let token = self.check_token().await.unwrap();
         let subscriptions_string: Vec<String> =
             config.get("auth.twitch.websocket_subscription").unwrap();
@@ -146,11 +156,15 @@ impl TwitchApiConnection {
             .iter()
             .map(|s| EventType::from_str(s).unwrap())
             .collect();
+        info!("Websocket Subscriptions: {:?}", subscriptions);
         info!("Channel point rewards: {}", channel_points_enabled);
         if channel_points_enabled {
-            let _active_channel_point_custom_reward = self.custom_rewards().await;
+            let active_channel_point_custom_reward = self.custom_rewards().await;
+            info!(
+                "Current channel point rewards: {:?}",
+                active_channel_point_custom_reward
+            );
         }
-        info!("Websocket Subscriptions: {:?}", subscriptions);
 
         self.websocket = Some(WebsocketClient::new(
             self.session_id.clone(),
@@ -158,22 +172,26 @@ impl TwitchApiConnection {
             self.user_id().await,
             subscriptions,
         ));
-
         let websocket = self.websocket.clone().unwrap();
-        self.websocket_joinhandle = Some(tokio::spawn(async {
-            trace!("websocket thread start");
-            match websocket.run().await {
-                Ok(_) => {
-                    debug!(
-                        target = "Integration::Twitch::ApiConnection",
-                        "Websocket Established!",
-                    );
+        self.websocket_joinhandle = Some(tokio::spawn(async move {
+            use websocket::WebsocketError::*;
+            loop {
+                match websocket.clone().run().await {
+                    Ok(_) => {}
+                    Err(TokenElapsed) => {
+                        error!("{:?}", TokenElapsed);
+                        break;
+                    }
+                    Err(InvalidToken) => {
+                        error!("{:?}", InvalidToken);
+                        break;
+                    }
+                    Err(e) => {
+                        error!("{:?}", e);
+                        break;
+                    }
                 }
-                Err(e) => {
-                    error!("Websocket Failed: {:?}", e)
-                }
-            };
-            trace!("websocket thread end");
+            }
         }));
     }
 }

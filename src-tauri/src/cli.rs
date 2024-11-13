@@ -1,7 +1,7 @@
-use futures::executor::block_on;
 use std::{
     io::{self, Write},
     process,
+    sync::Arc,
 };
 use tauri::App;
 use tauri_plugin_cli::{CliExt, Matches};
@@ -9,10 +9,10 @@ use tracing::error;
 
 use crate::integration::{PlatformAuthenticate, TwitchApiConnection};
 
-pub fn handle_cli_matches(
+pub async fn handle_cli_matches(
     matches: Matches,
     app: &App,
-    twitch_integration: &mut TwitchApiConnection,
+    twitch_integration: Arc<futures::lock::Mutex<TwitchApiConnection>>,
 ) {
     let mut exit: bool = false;
     for (name, arg_data) in matches.args.into_iter() {
@@ -55,11 +55,11 @@ pub fn handle_cli_matches(
                 "twitch" => {
                     if arg_data.value.as_bool().expect("Tried to parse as boolean") {
                         exit = true;
-                        if let Err(err) = block_on(twitch_integration.authenticate()) {
+                        if let Err(err) = twitch_integration.lock().await.authenticate().await {
                             error!("{}", err);
                             process::exit(1);
                         };
-                        match &twitch_integration.token {
+                        match &twitch_integration.lock().await.token {
                             Some(token) => {
                                 let _ =
                                     writeln!(token_buf, "Twitch: {}", token.access_token.secret());

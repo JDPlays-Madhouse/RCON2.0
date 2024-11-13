@@ -7,6 +7,13 @@ import { defaultServers } from "@/lib/utils";
 import { Server, Servers } from "@/types";
 import { invoke } from "@tauri-apps/api/core";
 import React, { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function Settings() {
   const [selectedServer, setSelectedServer] = React.useState<Server>();
@@ -19,7 +26,9 @@ export default function Settings() {
       );
     });
   });
-
+  const handleOnClick = () => {
+    invoke("restart").then();
+  };
   return (
     <div className="flex flex-col h-dvh bg-background">
       {/*<MainContextMenu
@@ -36,9 +45,26 @@ export default function Settings() {
         />
         <MainNav server={selectedServer} />
       </header>
-      <main className="h-full w-full">
-        Settings
-        <div>Hello</div>
+      <main className="h-full w-full flex">
+        <div className="m-auto">
+          {" "}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="destructive"
+                  className="text-7xl h-max pt-6 px-9 rounded-full"
+                  onClick={handleOnClick}
+                >
+                  Restart Application
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="text-5xl bg-destructive text-white rounded-full pt-4">
+                <p>This will restart the app!!!! Also this button is in beta...</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </main>
       {/* </MainContextMenu> */}
     </div>

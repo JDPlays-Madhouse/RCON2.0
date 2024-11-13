@@ -5,6 +5,9 @@ mod logging;
 mod servers;
 mod settings;
 
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use anyhow::Context;
 use cli::handle_cli_matches;
 use integration::TwitchApiConnection;
@@ -14,7 +17,7 @@ use logging::{
 };
 use servers::{list_game_servers, servers_from_settings};
 use settings::Settings;
-use tauri::async_runtime::block_on;
+use tauri::AppHandle;
 use tauri_plugin_cli::CliExt;
 use time::UtcOffset;
 use tracing::{debug, error, info};
@@ -90,14 +93,26 @@ pub async fn run() {
             error!("{:?}", e)
         }
     };
-    let mut twitch_integration = TwitchApiConnection::new(config.get_table("auth.twitch").unwrap());
+    let mut twitch_integration = Arc::new(futures::lock::Mutex::new(TwitchApiConnection::new(
+        config.get_table("auth.twitch").unwrap(),
+    )));
+    let twitch_int_clone = Arc::clone(&twitch_integration);
+    tokio::spawn(async move {
+        match twitch_int_clone.lock().await.check_token().await {
+            Ok(_) => info!("Twitch Token is valid"),
+            Err(e) => info!("Twitch Token is invalid: {:?}", e),
+        };
+
+        twitch_int_clone.lock().await.new_websocket(config).await
+    });
+    let twitch_int_clone = Arc::clone(&twitch_integration);
     tauri::Builder::default()
         .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_cli::init())
         .setup(move |app| {
             match app.cli().matches() {
                 Ok(matches) => {
-                    handle_cli_matches(matches, app, &mut twitch_integration);
+                    futures::executor::block_on(handle_cli_matches(matches, app, twitch_int_clone));
                 }
                 Err(e) => {
                     println!("{}", e);
@@ -114,11 +129,6 @@ pub async fn run() {
                 .with(ErrorLayer::default())
                 .init();
 
-            match block_on(twitch_integration.check_token()) {
-                Ok(_) => info!("Twitch Token is valid"),
-                Err(e) => info!("Twitch Token is invalid: {:?}", e),
-            };
-            block_on(twitch_integration.new_websocket(config));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -127,8 +137,15 @@ pub async fn run() {
             log,
             log_to_channel,
             fetch_all_logs,
-            list_game_servers // get_channel_point_rewards
+            list_game_servers, // get_channel_point_rewards
+            restart
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn restart(app: AppHandle) {
+    use tauri::{process::restart, Manager};
+    restart(&app.env())
 }
