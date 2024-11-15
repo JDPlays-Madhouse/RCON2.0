@@ -14,7 +14,7 @@ use tracing_subscriber::field::debug;
 
 use super::{
     APIConnectionConfig, IntegrationChannels, IntegrationCommand, IntegrationControl,
-    IntegrationEvent, PlatformAuthenticate, PlatformConnection, TokenError, Transmittor,
+    IntegrationEvent, PlatformAuthenticate, PlatformConnection, TokenError, Transmitter,
 };
 use anyhow::{Context, Result};
 use config::{Config, Value};
@@ -272,11 +272,11 @@ impl TwitchApiConnection {
         rewards
     }
 }
-impl Transmittor for TwitchApiConnection {
+impl Transmitter for TwitchApiConnection {
     /// Adds or changes the integration event transmitor.
     ///
     /// Returns the old transmittor in an option.
-    fn add_transmitor(
+    fn add_transmitter(
         &mut self,
         tx: mpsc::Sender<IntegrationEvent>,
     ) -> Option<mpsc::Sender<IntegrationEvent>> {
@@ -285,7 +285,7 @@ impl Transmittor for TwitchApiConnection {
         old_tx
     }
 
-    fn remove_transmitor(&mut self) -> Option<mpsc::Sender<IntegrationEvent>> {
+    fn remove_transmitter(&mut self) -> Option<mpsc::Sender<IntegrationEvent>> {
         self.event_tx.take()
     }
 

@@ -8,6 +8,7 @@ use serde::{
     Serialize,
 };
 use std::path::{Path, PathBuf};
+use tracing::error;
 
 use crate::PROGRAM;
 use config::{Config, Environment, File, FileFormat};
@@ -69,18 +70,21 @@ impl Settings {
             .set_override(key, value)
             .context("Setting value in config")?;
         self.config_builder = builder;
+        self.write().context("Writing config")?;
         Ok(())
     }
+
     pub fn get_config(&self, key: &str) -> Option<ConfigValue> {
         let setting = match self.config().get::<Value>(key) {
             Ok(value) => Some(ConfigValue::from(value)),
             Err(e) => {
-                dbg!(e);
+                error!("{:?}", e);
                 None
             }
         };
-        dbg!(setting)
+        setting
     }
+
     pub fn file_exists(path: &Path) -> bool {
         path.exists()
     }
@@ -239,7 +243,7 @@ impl Default for Settings {
             ),
             ("auth.youtube.username", ""),
             ("auth.youtube.api_token", ""),
-            ("servers.default", "factorio"),
+            ("servers.default", "factorio:example"),
             ("servers.example.address", "127.0.0.1"),
             ("servers.example.game", "factorio"),
             ("servers.example.password", "totally_secure_password"),
@@ -276,8 +280,8 @@ impl Default for Settings {
         );
         let script_folder = PathBuf::from(
             config
-                .get_string("log_folder")
-                .expect("Getting log folder path"),
+                .get_string("script_folder")
+                .expect("Getting script folder path"),
         );
 
         let settings = Self {

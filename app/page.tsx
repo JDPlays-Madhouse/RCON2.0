@@ -13,9 +13,14 @@ export default function Home() {
   const servers: Servers = defaultServers();
   const [showLog, setShowLog] = React.useState(true);
   useEffect(() => {
+    invoke<Server>("get_default_server").then((server: Server) => {
+      setSelectedServer(server);
+    });
+  }, []);
+  useEffect(() => {
     invoke<Server[]>("list_game_servers").then((list_of_servers: Server[]) => {
       list_of_servers.map((server) =>
-        servers[server.game].servers.push(server),
+        servers[server.game].servers.push(server)
       );
     });
   });

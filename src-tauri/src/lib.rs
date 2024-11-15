@@ -15,6 +15,8 @@ use logging::{
     fetch_all_logs, log, log_to_channel, subscribe_logging_channel, unsubscribe_logging_channel,
     LogLevel, Logger,
 };
+use servers::get_default_server;
+use servers::set_default_server;
 use servers::{list_game_servers, servers_from_settings};
 use settings::Settings;
 use tauri::AppHandle;
@@ -138,7 +140,9 @@ pub async fn run() {
             log_to_channel,
             fetch_all_logs,
             list_game_servers, // get_channel_point_rewards
-            restart
+            restart,
+            get_default_server,
+            set_default_server,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

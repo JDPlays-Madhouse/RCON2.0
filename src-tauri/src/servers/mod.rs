@@ -7,6 +7,7 @@ use anyhow::{bail, Result};
 use config::{Config, Value};
 use rcon::{AsyncStdStream, Connection};
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
+use tauri::AppHandle;
 use tracing::{debug, error, info};
 
 pub static SERVERS: LazyLock<Mutex<HashMap<String, GameServer>>> =
@@ -206,6 +207,20 @@ pub fn servers_from_settings(config: Config) -> Result<Vec<GameServer>> {
     }
 }
 
+pub fn server_from_settings(config: Config, name: String) -> Option<GameServer> {
+    match config.get_table("servers") {
+        Ok(servers_conf) => {
+            if let Some(server) = servers_conf.get(&name) {
+                let server = GameServer::try_from_config(name, server.clone()).unwrap();
+                Some(server)
+            } else {
+                None
+            }
+        }
+        Err(_) => None,
+    }
+}
+
 #[tauri::command]
 pub async fn list_game_servers(// app: tauri::AppHandle<R>,
     // window: tauri::Window<R>,
@@ -213,4 +228,34 @@ pub async fn list_game_servers(// app: tauri::AppHandle<R>,
     let servers = SERVERS.lock().unwrap();
     let servers: Vec<GameServer> = servers.values().cloned().collect();
     Ok(servers)
+}
+
+#[tauri::command]
+pub fn get_default_server(app_handle: AppHandle) -> Result<GameServer, String> {
+    let settings = crate::settings::Settings::new();
+    let config = settings.config();
+    let default_server = match config.get_string("servers.default") {
+        Ok(server) => server,
+        Err(_) => {
+            return Err(
+                "No default server found. Select a sever to set it as the default.".to_string(),
+            )
+        }
+    };
+    app_handle.send_tao_window_event(window_id, WindowMessage::RequestRedraw);
+    match server_from_settings(config, default_server) {
+        Some(server) => Ok(server),
+        None => {
+            Err("No default server found. Select a sever to set it as the default.".to_string())
+        }
+    }
+}
+
+#[tauri::command]
+pub fn set_default_server(server_name: String) -> Result<String, String> {
+    let mut settings = crate::settings::Settings::new();
+    match settings.set_config("servers.default", server_name) {
+        Ok(_) => Ok("Default server set".to_string()),
+        Err(e) => Err(format!("Failed to set default server: {:?}", e)),
+    }
 }

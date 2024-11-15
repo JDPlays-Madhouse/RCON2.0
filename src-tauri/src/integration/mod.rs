@@ -65,12 +65,13 @@ pub trait PlatformAuthenticate {
     async fn authenticate(&mut self) -> Result<()>;
 }
 
-pub trait Transmittor {
-    /// Adds or changes the integration event transmitor.
+pub trait Transmitter {
+    /// Adds or changes the integration event transmitter.
     ///
-    /// Returns the old transmittor in an option.
-    fn add_transmitor(&mut self, tx: Sender<IntegrationEvent>) -> Option<Sender<IntegrationEvent>>;
-    fn remove_transmitor(&mut self) -> Option<Sender<IntegrationEvent>>;
+    /// Returns the old transmitter in an option.
+    fn add_transmitter(&mut self, tx: Sender<IntegrationEvent>)
+        -> Option<Sender<IntegrationEvent>>;
+    fn remove_transmitter(&mut self) -> Option<Sender<IntegrationEvent>>;
     fn transmit_event(&self, event: IntegrationEvent) -> Result<(), SendError<IntegrationEvent>>;
 }
 

@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/select";
 import FactorioLogo from "@/app/images/factorio.ico";
 import { GameString, Server, Servers, games } from "@/types";
+import { invoke } from "@tauri-apps/api/core";
 
 type PopoverTriggerProps = React.ComponentPropsWithoutRef<
   typeof PopoverTrigger
@@ -61,7 +62,11 @@ export default function ServerSwitcher({
 }: ServerSwitcherProps) {
   const [open, setOpen] = React.useState(false);
   const [showNewServerDialog, setShowNewServerDialog] = React.useState(false);
-
+  const handleServerSwitch = (server: Server) => {
+    invoke("set_default_server", server);
+    setSelectedServer(server);
+    setOpen(false);
+  };
   return (
     <Dialog open={showNewServerDialog} onOpenChange={setShowNewServerDialog}>
       <Popover open={open} onOpenChange={setOpen}>
@@ -96,8 +101,7 @@ export default function ServerSwitcher({
                       <CommandItem
                         key={server.id}
                         onSelect={() => {
-                          setSelectedServer(server);
-                          setOpen(false);
+                          handleServerSwitch(server);
                         }}
                         className="text-sm"
                       >
@@ -117,7 +121,7 @@ export default function ServerSwitcher({
                             "ml-auto h-4 w-4",
                             selectedServer?.id === server.id
                               ? "opacity-100"
-                              : "opacity-0",
+                              : "opacity-0"
                           )}
                         />
                       </CommandItem>

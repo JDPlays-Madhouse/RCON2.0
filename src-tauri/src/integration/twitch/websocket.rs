@@ -24,7 +24,7 @@ pub enum WebsocketError {
     Terminated,
     FailedToConnect(String),
     FailedToRun(String),
-    InvailURL(String),
+    InvalidURL(String),
     ProcessMessage(String),
 }
 
@@ -161,7 +161,7 @@ impl WebsocketClient {
                             error!("Received none");
                         }
                         Err(timeout_error) => {
-                            debug!("Twitch websocket has timed out, restablishing now...");
+                            debug!("Twitch websocket has timed out, reestablishing now...");
                             s = WebsocketError::FailedToRun("when reestablishing connection after timeout".into()).map_err(self
                                         .connect()
                                         .await
@@ -306,7 +306,7 @@ impl WebsocketClient {
     ) -> Result<(), WebsocketError> {
         self.session_id = Some(data.id.to_string());
         if let Some(url) = data.reconnect_url {
-            self.connect_url = WebsocketError::InvailURL(url.to_string())
+            self.connect_url = WebsocketError::InvalidURL(url.to_string())
                 .map_err(url.parse())
                 .unwrap();
         }
