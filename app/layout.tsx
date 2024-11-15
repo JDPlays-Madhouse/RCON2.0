@@ -1,6 +1,10 @@
-"use client";
+import { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+
+export const metadata: Metadata = {
+  title: "mmmmm",
+};
 
 export default function RootLayout({
   children,

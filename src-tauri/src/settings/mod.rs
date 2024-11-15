@@ -84,6 +84,23 @@ impl Settings {
         };
         setting
     }
+    /// BUG: Doesn't work unless its a top level config.
+    pub fn remove_config(self, key: &str) -> Self {
+        let serializable: Map<String, ConfigValue> = self
+            .config()
+            .try_deserialize::<Map<String, Value>>()
+            .context("deserializing config")
+            .unwrap()
+            .iter()
+            .filter(|(k, _)| key.starts_with(*k))
+            .map(|(k, v)| (k.clone(), ConfigValue::from(v)))
+            .collect();
+        let toml_out = toml::to_string_pretty(&serializable)
+            .context("Convert to Toml")
+            .unwrap();
+        std::fs::write(self.config_filepath(), toml_out).expect("Writing to file");
+        Self::new()
+    }
 
     pub fn file_exists(path: &Path) -> bool {
         path.exists()

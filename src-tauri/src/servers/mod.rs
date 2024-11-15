@@ -231,31 +231,88 @@ pub async fn list_game_servers(// app: tauri::AppHandle<R>,
 }
 
 #[tauri::command]
-pub fn get_default_server(app_handle: AppHandle) -> Result<GameServer, String> {
+pub fn get_default_server(_app_handle: AppHandle) -> Result<GameServer, String> {
     let settings = crate::settings::Settings::new();
     let config = settings.config();
     let default_server = match config.get_string("servers.default") {
         Ok(server) => server,
         Err(_) => {
             return Err(
-                "No default server found. Select a sever to set it as the default.".to_string(),
+                "No default server found. Select a server to set it as the default.".to_string(),
             )
         }
     };
-    app_handle.send_tao_window_event(window_id, WindowMessage::RequestRedraw);
+
+    dbg!(&default_server);
+    // app_handle.send_tao_window_event(window_id, WindowMessage::RequestRedraw);
     match server_from_settings(config, default_server) {
         Some(server) => Ok(server),
         None => {
-            Err("No default server found. Select a sever to set it as the default.".to_string())
+            Err("No default server found. Select a server to set it as the default.".to_string())
         }
     }
 }
 
 #[tauri::command]
 pub fn set_default_server(server_name: String) -> Result<String, String> {
+    dbg!(&server_name);
     let mut settings = crate::settings::Settings::new();
     match settings.set_config("servers.default", server_name) {
         Ok(_) => Ok("Default server set".to_string()),
         Err(e) => Err(format!("Failed to set default server: {:?}", e)),
     }
+}
+
+#[tauri::command]
+pub fn new_server(server: GameServer) -> Result<(), String> {
+    info! {"adding new rcon server: {:?}", server};
+
+    let mut settings = crate::settings::Settings::new();
+    settings
+        .set_config(&format!("servers.{}.address", server.name), server.address)
+        .unwrap();
+    settings
+        .set_config(
+            &format!("servers.{}.game", server.name),
+            server.game.to_string(),
+        )
+        .unwrap();
+    settings
+        .set_config(
+            &format!("servers.{}.password", server.name),
+            server.password,
+        )
+        .unwrap();
+    settings
+        .set_config(&format!("servers.{}.port", server.name), server.port)
+        .unwrap();
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_server(server: GameServer, old_server_name: String) -> Result<(), String> {
+    info! {"updating rcon server {old_server_name}: {:?}", server};
+
+    let mut settings = crate::settings::Settings::new();
+    // settings = settings.remove_config(&format!("servers.{}", old_server_name)); // BUG: Doesn't
+    // remove old server if name change.
+    settings
+        .set_config(&format!("servers.{}.address", server.name), server.address)
+        .unwrap();
+    settings
+        .set_config(
+            &format!("servers.{}.game", server.name),
+            server.game.to_string(),
+        )
+        .unwrap();
+    settings
+        .set_config(
+            &format!("servers.{}.password", server.name),
+            server.password,
+        )
+        .unwrap();
+    settings
+        .set_config(&format!("servers.{}.port", server.name), server.port)
+        .unwrap();
+    Ok(())
 }

@@ -16,7 +16,9 @@ use logging::{
     LogLevel, Logger,
 };
 use servers::get_default_server;
+use servers::new_server;
 use servers::set_default_server;
+use servers::update_server;
 use servers::{list_game_servers, servers_from_settings};
 use settings::Settings;
 use tauri::AppHandle;
@@ -143,6 +145,8 @@ pub async fn run() {
             restart,
             get_default_server,
             set_default_server,
+            new_server,
+            update_server
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

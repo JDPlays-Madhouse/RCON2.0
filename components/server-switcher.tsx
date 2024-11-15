@@ -43,6 +43,7 @@ import {
 import FactorioLogo from "@/app/images/factorio.ico";
 import { GameString, Server, Servers, games } from "@/types";
 import { invoke } from "@tauri-apps/api/core";
+import { ServerConfigForm } from "./forms/server-config-form";
 
 type PopoverTriggerProps = React.ComponentPropsWithoutRef<
   typeof PopoverTrigger
@@ -63,7 +64,7 @@ export default function ServerSwitcher({
   const [open, setOpen] = React.useState(false);
   const [showNewServerDialog, setShowNewServerDialog] = React.useState(false);
   const handleServerSwitch = (server: Server) => {
-    invoke("set_default_server", server);
+    invoke("set_default_server", { serverName: server.name });
     setSelectedServer(server);
     setOpen(false);
   };
@@ -121,7 +122,7 @@ export default function ServerSwitcher({
                             "ml-auto h-4 w-4",
                             selectedServer?.id === server.id
                               ? "opacity-100"
-                              : "opacity-0"
+                              : "opacity-0",
                           )}
                         />
                       </CommandItem>
@@ -152,48 +153,14 @@ export default function ServerSwitcher({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create server</DialogTitle>
-          <DialogDescription>Add a new server.</DialogDescription>
+          <DialogDescription>Add a new rcon server.</DialogDescription>
         </DialogHeader>
-        <div>
-          <div className="space-y-4 py-2 pb-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Server name</Label>
-              <Input id="name" placeholder="Local Server" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="plan">Game</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a game" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Factorio">
-                    <span className="font-medium">Factorio</span>
-                  </SelectItem>
-                  <SelectItem value="Satisfactory">
-                    <span className="font-medium">Satisfactory</span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setShowNewServerDialog(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            onClick={() => {
-              setShowNewServerDialog(false);
-            }}
-          >
-            Continue
-          </Button>
-        </DialogFooter>
+        <ServerConfigForm
+          onClickReset={() => setShowNewServerDialog(false)}
+          onClickSubmit={() => {
+            setShowNewServerDialog(false);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );

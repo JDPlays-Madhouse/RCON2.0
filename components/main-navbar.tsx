@@ -38,7 +38,7 @@ export default function MainNav({
           <Link href={"/"}>Dashboard</Link>
         </NavigationMenuItem>
         <NavigationMenuItem key="mainnavServerSettings">
-          <Link href={"/settings/" + server?.id}>Server Config</Link>
+          <Link href="/server-config">Server Config</Link>
         </NavigationMenuItem>
         <NavigationMenuItem key="mainnavSettings">
           <Link href="/settings">Settings</Link>
