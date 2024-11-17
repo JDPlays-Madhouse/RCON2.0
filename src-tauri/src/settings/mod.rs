@@ -86,6 +86,8 @@ impl Settings {
     }
     /// BUG: Doesn't work unless its a top level config.
     pub fn remove_config(self, key: &str) -> Self {
+        let key_breakdown: Vec<&str> = key.split('.').collect();
+
         let serializable: Map<String, ConfigValue> = self
             .config()
             .try_deserialize::<Map<String, Value>>()
