@@ -120,6 +120,7 @@ impl WebsocketClient {
         info!("Connected to Twitch's Websocket",);
         // Loop over the stream, processing messages as they come in.
 
+        use WebsocketError::*;
         loop {
             if s.is_terminated() {
                 error!("Websocket Terminated");
@@ -153,9 +154,12 @@ impl WebsocketClient {
                                 }
                                 _ => msg.map_err(|_e| WebsocketError::FailedToConnect("When getting message".into()))?,
                             };
-                            WebsocketError::FailedToRun("Processing Message".into()).map_err(self.process_message(msg)
+                            match self.process_message(msg)
                                 .instrument(span)
-                                .await).unwrap()
+                                .await {
+                                Ok(m) => m,
+                                Err(e) => return Err(e),
+                            }
                             }
                         Ok(None) => {
                             error!("Received none");
@@ -180,7 +184,10 @@ impl WebsocketClient {
     }
 
     /// Process a message from the websocket
-    pub async fn process_message(&mut self, msg: tungstenite::Message) -> Result<(), Error> {
+    pub async fn process_message(
+        &mut self,
+        msg: tungstenite::Message,
+    ) -> Result<(), WebsocketError> {
         match msg {
             tungstenite::Message::Text(s) => {
                 tracing::trace!("{s}");
@@ -193,10 +200,7 @@ impl WebsocketClient {
                     | EventsubWebsocketData::Reconnect {
                         payload: ReconnectPayload { session },
                         ..
-                    } => {
-                        self.process_welcome_message(session).await.unwrap();
-                        Ok(())
-                    }
+                    } => self.process_welcome_message(session).await,
                     // Here is where you would handle the events you want to listen to
                     EventsubWebsocketData::Notification {
                         metadata: _,
@@ -271,7 +275,7 @@ impl WebsocketClient {
                         payload: _,
                     } => {
                         error!("got revocation event: {metadata:?}");
-                        bail!("got revocation event: {metadata:?}")
+                        Err(WebsocketError::Terminated)
                     }
                     EventsubWebsocketData::Keepalive {
                         metadata: _,
@@ -279,13 +283,16 @@ impl WebsocketClient {
                     } => Ok(()),
                     data => {
                         error!("Unexpected EventsubWebsocketData {:?}", data);
-                        bail!("Unexpected EventsubWebsocketData {:?}", data)
+                        Err(WebsocketError::FailedToRun(format!(
+                            "Unexpected EventsubWebsocketData {:?}",
+                            data
+                        )))
                     }
                 }
             }
             tungstenite::Message::Close(close) => {
                 error!("Close frame: {:?}", close);
-                bail!("Close frame: {:?}", close)
+                Err(WebsocketError::Terminated)
             }
             tungstenite::Message::Binary(vec) => todo!("Binary"),
             tungstenite::Message::Frame(frame) => todo!("frame"),

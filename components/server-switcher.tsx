@@ -1,3 +1,4 @@
+"use client";
 import * as React from "react";
 import {
   CaretSortIcon,
@@ -5,7 +6,7 @@ import {
   PlusCircledIcon,
 } from "@radix-ui/react-icons";
 
-import { cn } from "@/lib/utils";
+import { cn, defaultServers } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,29 +22,22 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import FactorioLogo from "@/app/images/factorio.ico";
 import { GameString, Server, Servers, games } from "@/types";
 import { invoke } from "@tauri-apps/api/core";
 import { ServerConfigForm } from "./forms/server-config-form";
+import { useEffect, useState } from "react";
 
 type PopoverTriggerProps = React.ComponentPropsWithoutRef<
   typeof PopoverTrigger
@@ -52,14 +46,12 @@ type PopoverTriggerProps = React.ComponentPropsWithoutRef<
 interface ServerSwitcherProps extends PopoverTriggerProps {
   selectedServer?: Server;
   setSelectedServer: React.Dispatch<React.SetStateAction<Server | undefined>>;
-  servers: Servers;
 }
 
 export default function ServerSwitcher({
   className,
   selectedServer,
   setSelectedServer,
-  servers,
 }: ServerSwitcherProps) {
   const [open, setOpen] = React.useState(false);
   const [showNewServerDialog, setShowNewServerDialog] = React.useState(false);
@@ -68,6 +60,22 @@ export default function ServerSwitcher({
     setSelectedServer(server);
     setOpen(false);
   };
+  const [servers, setServers] = useState(defaultServers());
+
+  useEffect(() => {
+    if (open == false) {
+      const temp_servers = defaultServers();
+      invoke<Server[]>("list_game_servers")
+        .then((list_of_servers: Server[]) => {
+          list_of_servers.forEach((server) =>
+            temp_servers[server.game].servers.push(server),
+          );
+        })
+        .catch((e) => console.log(e));
+      setServers(temp_servers);
+    }
+  }, [open]);
+
   return (
     <Dialog open={showNewServerDialog} onOpenChange={setShowNewServerDialog}>
       <Popover open={open} onOpenChange={setOpen}>
@@ -160,6 +168,7 @@ export default function ServerSwitcher({
           onClickSubmit={() => {
             setShowNewServerDialog(false);
           }}
+          setSelectedServer={setSelectedServer}
         />
       </DialogContent>
     </Dialog>

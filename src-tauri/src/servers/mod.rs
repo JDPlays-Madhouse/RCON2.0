@@ -243,7 +243,6 @@ pub fn get_default_server(_app_handle: AppHandle) -> Result<GameServer, String> 
         }
     };
 
-    dbg!(&default_server);
     // app_handle.send_tao_window_event(window_id, WindowMessage::RequestRedraw);
     match server_from_settings(config, default_server) {
         Some(server) => Ok(server),
@@ -264,9 +263,9 @@ pub fn set_default_server(server_name: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn new_server(server: GameServer) -> Result<(), String> {
+pub fn new_server(server: GameServer) -> Result<GameServer, String> {
     info! {"adding new rcon server: {:?}", server};
-
+    let ret_server = server.clone();
     let mut settings = crate::settings::Settings::new();
     settings
         .set_config(&format!("servers.{}.address", server.name), server.address)
@@ -286,16 +285,19 @@ pub fn new_server(server: GameServer) -> Result<(), String> {
     settings
         .set_config(&format!("servers.{}.port", server.name), server.port)
         .unwrap();
-    Ok(())
+    Ok(ret_server)
 }
 
 #[tauri::command]
-pub fn update_server(server: GameServer, old_server_name: String) -> Result<(), String> {
+pub fn update_server(server: GameServer, old_server_name: String) -> Result<GameServer, String> {
     info! {"updating rcon server {old_server_name}: {:?}", server};
 
+    let ret_server = server.clone();
     let mut settings = crate::settings::Settings::new();
-    // settings = settings.remove_config(&format!("servers.{}", old_server_name)); // BUG: Doesn't
-    // remove old server if name change.
+    settings = settings.remove_config(&format!("servers.{}", old_server_name));
+    settings
+        .set_config("servers.default", server.name.clone())
+        .unwrap();
     settings
         .set_config(&format!("servers.{}.address", server.name), server.address)
         .unwrap();
@@ -314,5 +316,5 @@ pub fn update_server(server: GameServer, old_server_name: String) -> Result<(), 
     settings
         .set_config(&format!("servers.{}.port", server.name), server.port)
         .unwrap();
-    Ok(())
+    Ok(ret_server)
 }

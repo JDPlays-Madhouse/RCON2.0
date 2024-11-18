@@ -11,20 +11,13 @@ import React, { useEffect } from "react";
 
 export default function Home() {
   const [selectedServer, setSelectedServer] = React.useState<Server>();
-  const servers: Servers = defaultServers();
   const [showLog, setShowLog] = React.useState(true);
   useEffect(() => {
     invoke<Server>("get_default_server").then((server: Server) => {
       setSelectedServer(server);
     });
   }, []);
-  useEffect(() => {
-    invoke<Server[]>("list_game_servers").then((list_of_servers: Server[]) => {
-      list_of_servers.map((server) =>
-        servers[server.game].servers.push(server),
-      );
-    });
-  });
+
 
   return (
     <div className="flex flex-col h-dvh bg-background">
@@ -38,7 +31,6 @@ export default function Home() {
           className=""
           selectedServer={selectedServer}
           setSelectedServer={setSelectedServer}
-          servers={servers}
         />
         <MainNav server={selectedServer} />
       </header>
@@ -46,6 +38,7 @@ export default function Home() {
         className="flex-auto h-full"
         showLog={showLog}
         server={selectedServer}
+        setSelectedServer={setSelectedServer}
       />
       {/* </MainContextMenu> */}
     </div>

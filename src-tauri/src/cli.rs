@@ -55,17 +55,13 @@ pub async fn handle_cli_matches(
                 "twitch" => {
                     if arg_data.value.as_bool().expect("Tried to parse as boolean") {
                         exit = true;
-                        if let Err(err) = twitch_integration.lock().await.authenticate().await {
-                            error!("{}", err);
-                            process::exit(1);
-                        };
-                        match &twitch_integration.lock().await.token {
-                            Some(token) => {
+                        match twitch_integration.lock().await.authenticate(true).await {
+                            Ok(token) => {
                                 let _ =
                                     writeln!(token_buf, "Twitch: {}", token.access_token.secret());
                             }
-                            None => {
-                                error!("Failed to get Twitch Token")
+                            Err(e) => {
+                                error!("Failed to get Twitch Token: {e:?}")
                             }
                         }
                     }

@@ -1,13 +1,7 @@
-use std::{
-    sync::{mpsc::channel, Arc},
-    thread,
-    time::Duration,
-};
+use std::{sync::mpsc::channel, thread, time::Duration};
 
 use anyhow::Context;
 use cached::{stores::DiskCacheBuilder, DiskCache, IOCached};
-use clap::error;
-use futures::executor;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::{debug, error, info};
@@ -61,16 +55,21 @@ pub async fn oauth(
     client_id: String,
     client_secret: String,
     redirect_url: String,
+    use_cache: bool,
 ) -> anyhow::Result<UserToken> {
     let cache = token_cache("TWITCH_OAUTH".to_string());
     let cache_key = client_id.clone() + &oauth_scope_to_string(&scopes);
-    let cached_token_option = match cache.cache_get(&cache_key) {
+    let mut cached_token_option = match cache.cache_get(&cache_key) {
         Ok(value) => value,
         Err(e) => {
             error!("DiskCacheError: {:?}", e);
             None
         }
     };
+    if !use_cache {
+        cached_token_option = None;
+        info!("Not using cache")
+    }
     // Setup the http client to use with the library.
     let reqwest = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
@@ -150,14 +149,14 @@ pub async fn oauth(
     let serializable_token = SerializableUserToken::from(token.clone());
     match cache.cache_set(cache_key, serializable_token) {
         Ok(_) => {
-            debug!(target = "Twitch OAuth", "Stored key in cache.");
+            debug!("Stored key in cache.");
         }
         Err(e) => {
             dbg!(&e);
-            debug!(target = "Twitch OAuth", "Disk Cache failure: {}", e);
+            debug!("Disk Cache failure: {}", e);
         }
     }
-    dbg!(Ok(token))
+    Ok(token)
 }
 
 fn response_uri(port: u16) -> String {

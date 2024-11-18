@@ -24,6 +24,7 @@ use settings::Settings;
 use tauri::AppHandle;
 use tauri_plugin_cli::CliExt;
 use time::UtcOffset;
+use tracing::trace;
 use tracing::{debug, error, info};
 use tracing_appender::rolling::RollingFileAppender;
 use tracing_appender::rolling::Rotation;
@@ -52,6 +53,7 @@ pub async fn run() {
             .context("Log level Conversion")
             .unwrap_or(LogLevel::default())
     };
+    info!("Log level: {}", log_level);
 
     let file_prefix = String::from(PROGRAM) + ".log";
     // use tauri_plugin_log::;
@@ -97,18 +99,21 @@ pub async fn run() {
             error!("{:?}", e)
         }
     };
-    let mut twitch_integration = Arc::new(futures::lock::Mutex::new(TwitchApiConnection::new(
+    let twitch_integration = Arc::new(futures::lock::Mutex::new(TwitchApiConnection::new(
         config.get_table("auth.twitch").unwrap(),
     )));
+
     let twitch_int_clone = Arc::clone(&twitch_integration);
     tokio::spawn(async move {
-        match twitch_int_clone.lock().await.check_token().await {
+        let mut twitch_int_clone_lock = twitch_int_clone.lock().await;
+        match twitch_int_clone_lock.check_token().await {
             Ok(_) => info!("Twitch Token is valid"),
             Err(e) => info!("Twitch Token is invalid: {:?}", e),
         };
-
-        twitch_int_clone.lock().await.new_websocket(config).await
+        trace!("token");
+        twitch_int_clone_lock.new_websocket(config).await;
     });
+
     let twitch_int_clone = Arc::clone(&twitch_integration);
     tauri::Builder::default()
         .plugin(tauri_plugin_websocket::init())
@@ -146,7 +151,13 @@ pub async fn run() {
             get_default_server,
             set_default_server,
             new_server,
-            update_server
+            update_server,
+            settings::set_config_string,
+            settings::set_config_bool,
+            settings::set_config_int,
+            settings::set_config_uint,
+            settings::set_config_float,
+            settings::set_config_array,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

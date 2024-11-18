@@ -42,20 +42,15 @@ export function ServerConfigForm({
     server,
     onClickSubmit = () => { },
     onClickReset = () => { },
+    setSelectedServer,
 }: {
     className?: string;
     server?: Server;
     onClickSubmit?: () => void;
     onClickReset?: () => void;
+    setSelectedServer: React.Dispatch<React.SetStateAction<Server | undefined>>;
 }) {
-    const [formData, setFormData] = useState<Server>({
-        id: "Factorio:Local",
-        name: "Local",
-        address: "localhost",
-        port: 2345,
-        password: "Testing",
-        game: Game.Factorio,
-    });
+
     const [showPassword, setShowPassword] = useState(false);
     const form = useForm<z.infer<typeof serverConfigFormSchema>>({
         resolver: zodResolver(serverConfigFormSchema),
@@ -81,17 +76,20 @@ export function ServerConfigForm({
     }, [server, form]);
 
     function onSubmit(values: z.infer<typeof serverConfigFormSchema>) {
-        // Do something with the form values.
-        // ✅ This will be type-safe and validated.
         if (server) {
             console.log("update");
-            invoke("update_server", {
+            invoke<Server>("update_server", {
                 server: values,
                 oldServerName: server.name,
-            }).then();
+            }).then((s: Server) =>
+                setSelectedServer(s),
+            );
+
         } else {
             console.log("new");
-            invoke("new_server", { server: values }).then();
+            invoke<Server>("new_server", { server: values }).then((s: Server) =>
+                setSelectedServer(s),
+            );
         }
         onClickSubmit();
     }

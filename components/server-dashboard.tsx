@@ -32,7 +32,7 @@ export default function ServerDashboard({
   return (
     <div className={cn("", className)} {...props}>
       <ResizablePanelGroup direction="vertical" className="border max-w-dvw">
-        <ResizablePanel defaultSize={50}>
+        <ResizablePanel defaultSize={70}>
           <div className="flex h-full items-center justify-center p-6 my-auto">
             <span className="font-semibold">Dashboard</span>
           </div>
@@ -41,7 +41,7 @@ export default function ServerDashboard({
 
         <ResizablePanel
           ref={logRef}
-          defaultSize={50}
+          defaultSize={30}
           collapsible={true}
           className="flex"
         >

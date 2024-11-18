@@ -1,3 +1,4 @@
+use futures::executor::block_on;
 use indexmap::IndexMap;
 use permissions::get_eventsub_consolidated_scopes;
 use std::{
@@ -7,10 +8,10 @@ use std::{
         Arc, LazyLock, Mutex,
     },
     thread::JoinHandle,
+    time::Duration,
 };
 use tokio::spawn;
-use tracing::{debug, error, info, trace};
-use tracing_subscriber::field::debug;
+use tracing::{debug, error, info, trace, warn};
 
 use super::{
     APIConnectionConfig, IntegrationChannels, IntegrationCommand, IntegrationControl,
@@ -25,8 +26,8 @@ use twitch_api::{
     types::UserName,
     TwitchClient,
 };
-use twitch_oauth2::Scope;
 use twitch_oauth2::UserToken;
+use twitch_oauth2::{Scope, TwitchToken};
 
 pub mod oauth;
 pub mod permissions;
@@ -35,8 +36,8 @@ pub mod websocket;
 use twitch_types::UserId;
 use websocket::{WebsocketClient, WebsocketError};
 
-static TOKEN: LazyLock<Arc<Mutex<Option<UserToken>>>> =
-    LazyLock::new(|| Arc::new(Mutex::new(None)));
+pub static TOKEN: LazyLock<Arc<futures::lock::Mutex<Option<UserToken>>>> =
+    LazyLock::new(|| Arc::new(futures::lock::Mutex::new(None)));
 
 pub struct TwitchApiConnection {
     pub username: Option<UserName>,
@@ -45,7 +46,6 @@ pub struct TwitchApiConnection {
     pub event_tx: Option<mpsc::Sender<IntegrationEvent>>,
     pub command_channels: IntegrationChannels<IntegrationCommand>,
     pub command_joinhandle: Option<JoinHandle<Result<(), mpsc::RecvError>>>,
-    pub token: Option<UserToken>,
     pub redirect_url: String,
     pub client: TwitchClient<'static, ReqwestClient>,
     pub websocket: Option<WebsocketClient>,
@@ -128,7 +128,6 @@ impl TwitchApiConnection {
             event_tx: None,
             command_channels: IntegrationChannels::default(),
             command_joinhandle: Default::default(),
-            token: Default::default(),
             client: twitch_api::TwitchClient::new(),
             websocket: Default::default(),
             websocket_joinhandle: Default::default(),
@@ -139,9 +138,10 @@ impl TwitchApiConnection {
 
 impl TwitchApiConnection {
     pub async fn new_websocket(&mut self, config: Config) {
+        trace!("new websocket");
         if let Some(joinhandle) = self.websocket_joinhandle.take() {
             joinhandle.abort();
-            debug!(
+            info!(
                 "Old Twitch Websocket is finished: {}",
                 joinhandle.is_finished()
             );
@@ -169,22 +169,28 @@ impl TwitchApiConnection {
         self.websocket = Some(WebsocketClient::new(
             self.session_id.clone(),
             token,
-            self.user_id().await,
+            self.user_id().await.expect("Token is checked."),
             subscriptions,
         ));
         let websocket = self.websocket.clone().unwrap();
+        let client = self.client.clone();
+        let token_loop = Arc::clone(&TOKEN);
         self.websocket_joinhandle = Some(tokio::spawn(async move {
             use websocket::WebsocketError::*;
             loop {
                 match websocket.clone().run().await {
                     Ok(_) => {}
                     Err(TokenElapsed) => {
-                        error!("{:?}", TokenElapsed);
-                        break;
+                        warn!("{:?}", TokenElapsed);
+                        let mut token_cont = token_loop.lock().await;
+                        token_cont.as_mut().unwrap().refresh_token(&client).await;
+                        continue;
                     }
                     Err(InvalidToken) => {
-                        error!("{:?}", InvalidToken);
-                        break;
+                        warn!("{:?}", InvalidToken);
+                        let mut token_cont = token_loop.lock().await;
+                        token_cont.as_mut().unwrap().refresh_token(&client).await;
+                        continue;
                     }
                     Err(e) => {
                         error!("{:?}", e);
@@ -198,20 +204,25 @@ impl TwitchApiConnection {
 
 impl TwitchApiConnection {
     pub async fn check_token(&mut self) -> anyhow::Result<UserToken, TokenError> {
-        if self.token.is_none() {
-            match self.authenticate().await {
-                Ok(_) => {
-                    info!("Twitch Token Authenticated")
-                }
-                Err(e) => {
-                    error!("{:?}", e);
-                    return Err(TokenError::UnknownError);
-                }
-            };
-        }
-        let token = self.token.clone().context("Token not being set.").unwrap();
+        let mut token: UserToken = match TOKEN.lock().await.clone() {
+            Some(t) => t,
+            None => self.authenticate(true).await.expect("token"),
+        };
+
         match token.access_token.validate_token(&self.client).await {
-            Ok(_) => Ok(token),
+            Ok(vt) => {
+                if vt.expires_in.expect("Token should have an expiration.")
+                    < Duration::from_secs(15_000)
+                {
+                    if let Err(e) = token.refresh_token(&self.client).await {
+                        error!("{:?}", e);
+                        return Err(TokenError::UnknownError);
+                    };
+                }
+                let mut token_container = TOKEN.lock().await;
+                *token_container = Some(token.clone());
+                Ok(token)
+            }
             Err(e) => {
                 use twitch_oauth2::tokens::errors::ValidationError;
                 match e {
@@ -221,7 +232,10 @@ impl TwitchApiConnection {
                     }
                     ValidationError::RequestParseError(request_parse_error) => {
                         error!("{:?}", request_parse_error);
-                        Err(TokenError::UnknownError)
+                        self.authenticate(false).await.map_err(|e| {
+                            error!("{e:?}");
+                            TokenError::UnknownError
+                        })
                     }
                     ValidationError::Request(e) => {
                         error!("{:?}", e);
@@ -239,24 +253,26 @@ impl TwitchApiConnection {
 }
 
 impl TwitchApiConnection {
-    pub async fn user_id(&mut self) -> UserId {
-        if self.token.is_some() {
-            self.token.clone().unwrap().user_id
+    pub async fn user_id(&mut self) -> Option<UserId> {
+        let token = TOKEN.lock().await.clone();
+        if token.is_some() {
+            Some(token.clone().unwrap().user_id)
+        } else if let Ok(t) = self.check_token().await {
+            Some(t.user_id)
         } else {
-            let _ = self.check_token().await;
-            self.token.clone().unwrap().user_id
+            None
         }
     }
 
     pub async fn custom_rewards(&mut self) -> Vec<CustomReward> {
-        let _ = self.check_token().await;
-        let request = GetCustomRewardRequest::broadcaster_id(self.user_id().await);
-        let rewards = match self
-            .client
-            .helix
-            .req_get(request, &(self.token.clone()).unwrap())
+        let token = self
+            .check_token()
             .await
-        {
+            .expect("To call this, you must be authenticated");
+        let request = GetCustomRewardRequest::broadcaster_id(
+            self.user_id().await.expect("Everytoken has a user id."),
+        );
+        let rewards = match self.client.helix.req_get(request, &(token.clone())).await {
             Ok(twitch_api::helix::Response { data, .. }) => data,
             Err(e) => {
                 let message = e.to_string();
@@ -328,21 +344,21 @@ impl PlatformConnection for TwitchApiConnection {
     }
 }
 
-impl PlatformAuthenticate for TwitchApiConnection {
-    async fn authenticate(&mut self) -> Result<()> {
-        self.token = Some(
-            oauth::oauth(
-                self.scope.clone(),
-                self.client_id.clone(),
-                self.client_secret.clone(),
-                self.redirect_url.clone(),
-            )
-            .await
-            .unwrap(),
-        );
+impl TwitchApiConnection {
+    pub async fn authenticate(&mut self, use_cache: bool) -> Result<UserToken> {
+        let token = oauth::oauth(
+            self.scope.clone(),
+            self.client_id.clone(),
+            self.client_secret.clone(),
+            self.redirect_url.clone(),
+            use_cache,
+        )
+        .await
+        .unwrap();
+
         info!("Twitch Authenticated");
 
-        Ok(())
+        Ok(token)
     }
 }
 

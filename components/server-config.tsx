@@ -15,12 +15,14 @@ import { Server } from "@/types";
 interface ServerConfigProps extends React.ComponentProps<"div"> {
     showLog: boolean;
     server?: Server;
+    setSelectedServer: React.Dispatch<React.SetStateAction<Server | undefined>>;
 }
 
 export default function ServerConfig({
     className,
     showLog,
     server,
+    setSelectedServer,
     ...props
 }: ServerConfigProps) {
     const logRef = useRef<ImperativePanelHandle>(null);
@@ -37,7 +39,11 @@ export default function ServerConfig({
         <div className={cn("", className)} {...props}>
             <ResizablePanelGroup direction="vertical" className="border max-w-dvw">
                 <ResizablePanel defaultSize={80} className="flex m-auto">
-                    <ServerConfigForm className="m-auto" server={server} />
+                    <ServerConfigForm
+                        className="m-auto"
+                        server={server}
+                        setSelectedServer={setSelectedServer}
+                    />
                 </ResizablePanel>
                 <ResizableHandle withHandle />
 

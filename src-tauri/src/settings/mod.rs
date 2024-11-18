@@ -7,10 +7,13 @@ use serde::{
     ser::{SerializeMap, SerializeSeq},
     Serialize,
 };
-use std::path::{Path, PathBuf};
-use tracing::error;
+use std::{
+    fmt::Debug,
+    path::{Path, PathBuf},
+};
+use tracing::{error, info};
 
-use crate::PROGRAM;
+use crate::{servers, PROGRAM};
 use config::{Config, Environment, File, FileFormat};
 use dirs::config_dir;
 
@@ -44,6 +47,12 @@ impl Settings {
         let _ = mut_self.write();
 
         mut_self
+    }
+
+    pub fn new_from_config(config: Config) -> Self {
+        let mut settings = Self::new();
+        settings.config_builder = settings.config_builder.add_source(config);
+        settings
     }
 
     pub fn config_filepath(&self) -> PathBuf {
@@ -85,22 +94,9 @@ impl Settings {
         setting
     }
     /// BUG: Doesn't work unless its a top level config.
-    pub fn remove_config(self, key: &str) -> Self {
-        let key_breakdown: Vec<&str> = key.split('.').collect();
-
-        let serializable: Map<String, ConfigValue> = self
-            .config()
-            .try_deserialize::<Map<String, Value>>()
-            .context("deserializing config")
-            .unwrap()
-            .iter()
-            .filter(|(k, _)| key.starts_with(*k))
-            .map(|(k, v)| (k.clone(), ConfigValue::from(v)))
-            .collect();
-        let toml_out = toml::to_string_pretty(&serializable)
-            .context("Convert to Toml")
-            .unwrap();
-        std::fs::write(self.config_filepath(), toml_out).expect("Writing to file");
+    pub fn remove_config(mut self, key: &str) -> Self {
+        self.set_config(key, ValueKind::Nil);
+        self.write();
         Self::new()
     }
 
@@ -262,10 +258,7 @@ impl Default for Settings {
             ),
             ("auth.youtube.username", ""),
             ("auth.youtube.api_token", ""),
-            ("servers.default", "factorio:example"),
-            ("servers.example.address", "127.0.0.1"),
-            ("servers.example.game", "factorio"),
-            ("servers.example.password", "totally_secure_password"),
+            ("servers.default", ""),
             ("log_folder", default_log_path.to_str().unwrap()),
             ("script_folder", default_script_path.to_str().unwrap()),
             ("max_log_level", "Info"),
@@ -289,8 +282,9 @@ impl Default for Settings {
         ];
         builder = Settings::default_loop(builder, default_settings_list_str);
 
-        let default_settings_int: Vec<DefaultValue<u16>> = vec![("servers.example.port", 4312)];
-        builder = Settings::default_loop(builder, default_settings_int);
+        // let default_settings_int: Vec<DefaultValue<u16>> = vec![("servers.example.port", 4312)];
+        // builder = Settings::default_loop(builder, default_settings_int);
+
         let config = builder.build_cloned().expect("Building cloned config");
         let log_folder = PathBuf::from(
             config
@@ -302,6 +296,21 @@ impl Default for Settings {
                 .get_string("script_folder")
                 .expect("Getting script folder path"),
         );
+        if config.get_table("servers").unwrap().keys().count() <= 2 {
+            dbg!(config.get_table("servers").unwrap().keys().count());
+            dbg!(config);
+            todo!("logic to stop");
+            builder = Settings::default_loop(
+                builder,
+                vec![
+                    ("servers.default", "example"),
+                    ("servers.example.address", "127.0.0.1"),
+                    ("servers.example.game", "factorio"),
+                    ("servers.example.password", "totally_secure_password"),
+                ],
+            );
+            builder = Settings::default_loop(builder, vec![("servers.example.port", 4312)]);
+        }
 
         let settings = Self {
             config_builder: builder,
@@ -328,4 +337,33 @@ impl Settings {
         }
         b
     }
+}
+
+#[tauri::command]
+pub fn set_config_string(key: String, value: String) {
+    dbg!(value);
+}
+#[tauri::command]
+pub fn set_config_int(key: String, value: i128) {
+    dbg!(value);
+}
+
+#[tauri::command]
+pub fn set_config_uint(key: String, value: u128) {
+    dbg!(value);
+}
+
+#[tauri::command]
+pub fn set_config_float(key: String, value: f64) {
+    dbg!(value);
+}
+
+#[tauri::command]
+pub fn set_config_bool(key: String, value: bool) {
+    dbg!(value);
+}
+
+#[tauri::command]
+pub fn set_config_array(key: String, value: Vec<String>) {
+    dbg!(value);
 }
