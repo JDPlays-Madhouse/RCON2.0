@@ -5,9 +5,10 @@ use std::{
 
 use anyhow::{bail, Result};
 use config::{Config, Value};
-use rcon::{AsyncStdStream, Connection};
+use rcon::Connection;
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{ipc::Channel, AppHandle};
+use tokio::net::TcpStream;
 use tracing::{debug, error, info};
 
 pub static SERVERS: LazyLock<Mutex<HashMap<String, GameServer>>> =
@@ -33,7 +34,6 @@ impl std::fmt::Display for Game {
 impl TryFrom<String> for Game {
     type Error = String;
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        let value: String = value.into();
         match value.to_lowercase().as_str() {
             "factorio" => Ok(Game::Factorio),
             _ => Err(format!("Invalid game: {:?}", value)),
@@ -41,26 +41,44 @@ impl TryFrom<String> for Game {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase", tag = "event", content = "data")]
+pub enum ServerStatus {
+    Connecting { server: GameServer },
+    Checking { server: GameServer },
+    Connected { server: GameServer },
+    Error { msg: String, server: GameServer },
+    Disconnected { server: Option<GameServer> },
+}
+
 pub struct GameServerConnected {
     pub server: GameServer,
-    pub connection: Connection<AsyncStdStream>,
+    pub connection: Connection<TcpStream>,
+    pub channel: Channel<ServerStatus>,
     active: bool,
 }
 
 impl GameServerConnected {
-    pub async fn connect(server: GameServer) -> Result<GameServer> {
-        match <Connection<AsyncStdStream>>::builder()
+    pub async fn connect(server: GameServer, channel: Channel<ServerStatus>) -> Result<GameServer> {
+        let _ = channel.send(ServerStatus::Connecting {
+            server: server.clone(),
+        });
+        match <Connection<TcpStream>>::builder()
             .enable_factorio_quirks(server.game == Game::Factorio)
-            .connect(&server.address, &server.password)
+            .connect(&server.socket_address(), &server.password)
             .await
         {
             Ok(connection) => {
+                let _ = channel.send(ServerStatus::Connected {
+                    server: server.clone(),
+                });
                 let gameserverconnected = Self {
                     server: server.clone(),
+                    channel,
                     connection,
                     active: true,
                 };
-                info!("Connected to server: {}", &server.id());
+                info!("Connected to server: {}", &server.name);
                 CONNECTIONS
                     .lock()
                     .unwrap()
@@ -68,12 +86,15 @@ impl GameServerConnected {
                 Ok(server)
             }
             Err(e) => {
+                let _ = channel.send(ServerStatus::Error {
+                    msg: format!("{e:?}"),
+                    server: server.clone(),
+                });
                 error!("Server {} failed to connect: {}", server.id(), e);
                 bail!(e)
             }
         }
     }
-
     pub fn id(&self) -> String {
         self.server.id()
     }
@@ -82,18 +103,40 @@ impl GameServerConnected {
         Ok(self.connection.cmd(&command_contents).await?)
     }
 
-    pub fn disconnect(self) -> Result<GameServer, GameServer> {
-        let gameserver = self.server.clone();
+    pub async fn handshake(&self) -> ServerStatus {
+        let io = TcpStream::connect(&self.server.socket_address())
+            .await
+            .expect("Already connected");
+        match <Connection<TcpStream>>::builder()
+            .handshake(io, &self.server.password)
+            .await
+        {
+            Ok(_r) => ServerStatus::Connected {
+                server: self.server.clone(),
+            },
+            Err(e) => ServerStatus::Error {
+                msg: e.to_string(),
+                server: self.server.clone(),
+            },
+        }
+    }
+
+    pub fn disconnect(server: GameServer) -> Result<GameServer, GameServer> {
+        info!("disconnecting");
         match CONNECTIONS
             .lock()
             .expect("Locking Connections")
-            .remove(&gameserver)
+            .remove_entry(&server)
         {
-            Some(_) => Ok(gameserver),
-            None => {
-                error!("{}", gameserver.id());
-                Err(gameserver)
+            Some((s, c)) => {
+                let channel = c.channel;
+                channel.send(ServerStatus::Disconnected {
+                    server: Some(s.clone()),
+                });
+
+                Ok(s)
             }
+            None => Err(server),
         }
     }
 }
@@ -155,8 +198,12 @@ impl GameServer {
         format!("{}:{}", self.game, self.name)
     }
 
-    pub async fn connect(&self) -> Result<GameServer> {
-        GameServerConnected::connect(self.clone()).await
+    pub async fn connect(&self, channel: Channel<ServerStatus>) -> Result<GameServer> {
+        GameServerConnected::connect(self.clone(), channel).await
+    }
+
+    pub fn socket_address(&self) -> String {
+        self.address.clone() + ":" + &self.port.to_string()
     }
 }
 
@@ -185,12 +232,12 @@ pub fn servers_from_settings(config: Config) -> Result<Vec<GameServer>> {
     match config.get_table("servers") {
         Ok(servers_conf) => {
             let mut servers_conf = servers_conf.clone();
-            let default_server = servers_conf
+            let _default_server = servers_conf
                 .shift_remove("default")
                 .unwrap()
                 .into_string()
                 .unwrap();
-            let autostart_server = servers_conf
+            let _autostart_server = servers_conf
                 .shift_remove("autostart")
                 .unwrap()
                 .into_bool()
@@ -222,11 +269,10 @@ pub fn server_from_settings(config: Config, name: String) -> Option<GameServer> 
 }
 
 #[tauri::command]
-pub async fn list_game_servers(// app: tauri::AppHandle<R>,
-    // window: tauri::Window<R>,
-) -> Result<Vec<GameServer>, String> {
-    let servers = SERVERS.lock().unwrap();
-    let servers: Vec<GameServer> = servers.values().cloned().collect();
+pub async fn list_game_servers() -> Result<Vec<GameServer>, String> {
+    let settings = crate::settings::Settings::new();
+    let config = settings.config();
+    let servers = servers_from_settings(config).unwrap_or_default();
     Ok(servers)
 }
 
@@ -244,7 +290,7 @@ pub fn get_default_server(_app_handle: AppHandle) -> Result<GameServer, String> 
     };
 
     // app_handle.send_tao_window_event(window_id, WindowMessage::RequestRedraw);
-    match server_from_settings(config, default_server) {
+    match server_from_settings(config, default_server.to_lowercase()) {
         Some(server) => Ok(server),
         None => {
             Err("No default server found. Select a server to set it as the default.".to_string())
@@ -254,9 +300,8 @@ pub fn get_default_server(_app_handle: AppHandle) -> Result<GameServer, String> 
 
 #[tauri::command]
 pub fn set_default_server(server_name: String) -> Result<String, String> {
-    dbg!(&server_name);
     let mut settings = crate::settings::Settings::new();
-    match settings.set_config("servers.default", server_name) {
+    match settings.set_config("servers.default", server_name.to_lowercase()) {
         Ok(_) => Ok("Default server set".to_string()),
         Err(e) => Err(format!("Failed to set default server: {:?}", e)),
     }
@@ -294,7 +339,7 @@ pub fn update_server(server: GameServer, old_server_name: String) -> Result<Game
 
     let ret_server = server.clone();
     let mut settings = crate::settings::Settings::new();
-    settings = settings.remove_config(&format!("servers.{}", old_server_name));
+
     settings
         .set_config("servers.default", server.name.clone())
         .unwrap();
@@ -316,5 +361,64 @@ pub fn update_server(server: GameServer, old_server_name: String) -> Result<Game
     settings
         .set_config(&format!("servers.{}.port", server.name), server.port)
         .unwrap();
+    if server.name != old_server_name {
+        settings = settings.remove_config(&format!("servers.{}", old_server_name));
+    }
     Ok(ret_server)
+}
+
+#[tauri::command]
+pub fn connect_to_server(channel: Channel<ServerStatus>, server: GameServer) {
+    tokio::spawn(async move {
+        match server.connect(channel.clone()).await {
+            Ok(s) => {
+                channel.send(ServerStatus::Connected { server: s });
+            }
+            Err(e) => {
+                error!("{e:?}"); // TODO: Handle errors.
+                channel.send(ServerStatus::Error {
+                    msg: format!("{:?}", e),
+                    server,
+                });
+            }
+        };
+    });
+}
+
+#[tauri::command]
+pub async fn send_command_to_server(server: GameServer) {
+    // let connected_server = server.connect().await;
+    todo!("Send commands");
+}
+
+#[tauri::command]
+pub fn check_connection(server: GameServer) -> ServerStatus {
+    let connections = CONNECTIONS.lock().unwrap();
+    let conn = connections.get(&server);
+    let status = match conn {
+        Some(c) => {
+            let s = c.server.clone();
+            // tokio::spawn(async move { // TODO: run handshake to ensure connection.
+            //     let status = c.handshake().await;
+            //     let _ = c.channel.send(status.clone());
+            //     status
+            // });
+            // ServerStatus::Checking { server: s }
+            ServerStatus::Connected { server: s }
+        }
+        None => ServerStatus::Disconnected {
+            server: Some(server.clone()),
+        },
+    };
+
+    info!("Server Status: {:?}", status);
+    status
+}
+
+#[tauri::command]
+pub fn disconnect_connection(server: GameServer) -> ServerStatus {
+    match GameServerConnected::disconnect(server) {
+        Ok(s) => ServerStatus::Disconnected { server: Some(s) },
+        Err(_) => ServerStatus::Disconnected { server: None },
+    }
 }

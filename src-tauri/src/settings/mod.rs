@@ -35,7 +35,7 @@ impl Settings {
     pub fn new() -> Self {
         let mut mut_self = Self::default();
 
-        let builder = mut_self
+        let mut builder = mut_self
             .config_builder
             .clone()
             .add_source(File::new(
@@ -43,9 +43,25 @@ impl Settings {
                 mut_self.config_fileformat,
             ))
             .add_source(Environment::with_prefix(PROGRAM));
-        mut_self.config_builder = builder;
-        let _ = mut_self.write();
+        mut_self.config_builder = builder.clone();
+        let config = mut_self.config();
+        if config.get_table("servers").unwrap().keys().count() <= 2 {
+            builder = Settings::default_loop(
+                builder,
+                vec![
+                    ("servers.default", "example"),
+                    ("servers.example.address", "127.0.0.1"),
+                    ("servers.example.game", "factorio"),
+                    ("servers.example.password", "totally_secure_password"),
+                ],
+            );
+            builder = Settings::default_loop(builder, vec![("servers.example.port", 4312)]);
+            let _ = mut_self.set_config("servers.default", "example");
 
+            mut_self.config_builder = builder.clone();
+        }
+
+        let _ = mut_self.write();
         mut_self
     }
 
@@ -296,21 +312,6 @@ impl Default for Settings {
                 .get_string("script_folder")
                 .expect("Getting script folder path"),
         );
-        if config.get_table("servers").unwrap().keys().count() <= 2 {
-            dbg!(config.get_table("servers").unwrap().keys().count());
-            dbg!(config);
-            todo!("logic to stop");
-            builder = Settings::default_loop(
-                builder,
-                vec![
-                    ("servers.default", "example"),
-                    ("servers.example.address", "127.0.0.1"),
-                    ("servers.example.game", "factorio"),
-                    ("servers.example.password", "totally_secure_password"),
-                ],
-            );
-            builder = Settings::default_loop(builder, vec![("servers.example.port", 4312)]);
-        }
 
         let settings = Self {
             config_builder: builder,

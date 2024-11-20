@@ -1,6 +1,7 @@
 "use client";
 // import { MainContextMenu } from "@/components/main-context-menu";
 import MainNav from "@/components/main-navbar";
+import ServerControl from "@/components/server-control";
 import ServerDashboard from "@/components/server-dashboard";
 import ServerSwitcher from "@/components/server-switcher";
 import { Server, Servers } from "@/types";
@@ -24,11 +25,14 @@ export default function Home() {
         servers={servers}
       >*/}
       <header className="px-10 py-5 flex flex-row justify-between w-full max-w-[2560px] mx-auto border border-t-none border-x-none flex-initial">
-        <ServerSwitcher
-          className=""
-          selectedServer={selectedServer}
-          setSelectedServer={setSelectedServer}
-        />
+        <div className="flex flex-row gap-4 items-center">
+          <ServerSwitcher
+            className=""
+            selectedServer={selectedServer}
+            setSelectedServer={setSelectedServer}
+          />
+          <ServerControl selectedServer={selectedServer} />
+        </div>
         <MainNav server={selectedServer} />
       </header>
       <ServerDashboard className="flex-auto h-full" showLog={showLog} />

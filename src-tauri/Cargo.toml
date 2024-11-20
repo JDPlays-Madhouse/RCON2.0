@@ -43,7 +43,7 @@ itertools = "0.13.0"
 libc = "0.2.162"
 log = "0.4.22"
 num_threads = "0.1.7"
-rcon = { version = "0.6.0", features = ["async-std", "rt-async-std", "rt-tokio"] }
+rcon = { version = "0.6.0", features = ["rt-tokio"] }
 reqwest = { version = "0.12.9", features = ["json"] }
 rpassword = "7.3.1"
 serde = { version = "1.0.215", features = ["derive"] }

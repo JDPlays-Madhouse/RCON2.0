@@ -30,9 +30,9 @@ import { cn } from "@/lib/utils";
 const gamesEnum = z.nativeEnum(Game);
 
 const serverConfigFormSchema = z.object({
-    name: z.string().min(2).max(50),
+    name: z.string().min(2).max(50).toLowerCase(),
     address: z.string().min(2).max(256),
-    port: z.number().max(65535).min(0),
+    port: z.number({ coerce: true }).int().lte(65535).gt(0),
     password: z.string().min(0).max(256),
     game: gamesEnum,
 });
@@ -50,7 +50,6 @@ export function ServerConfigForm({
     onClickReset?: () => void;
     setSelectedServer: React.Dispatch<React.SetStateAction<Server | undefined>>;
 }) {
-
     const [showPassword, setShowPassword] = useState(false);
     const form = useForm<z.infer<typeof serverConfigFormSchema>>({
         resolver: zodResolver(serverConfigFormSchema),
@@ -81,15 +80,14 @@ export function ServerConfigForm({
             invoke<Server>("update_server", {
                 server: values,
                 oldServerName: server.name,
-            }).then((s: Server) =>
-                setSelectedServer(s),
-            );
-
+            })
+                .then((s: Server) => setSelectedServer(s))
+                .catch((e) => console.log(e));
         } else {
             console.log("new");
-            invoke<Server>("new_server", { server: values }).then((s: Server) =>
-                setSelectedServer(s),
-            );
+            invoke<Server>("new_server", { server: values })
+                .then((s: Server) => setSelectedServer(s))
+                .catch((e) => console.log(e));
         }
         onClickSubmit();
     }
@@ -136,7 +134,7 @@ export function ServerConfigForm({
                         <FormItem>
                             <FormLabel>RCON Port</FormLabel>
                             <FormControl>
-                                <Input placeholder="2345" {...field} />
+                                <Input placeholder="2345" type="number" {...field} />
                             </FormControl>
                             <FormDescription>
                                 The RCON port number not the factorio port number.

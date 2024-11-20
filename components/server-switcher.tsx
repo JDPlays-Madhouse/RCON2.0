@@ -63,18 +63,18 @@ export default function ServerSwitcher({
   const [servers, setServers] = useState(defaultServers());
 
   useEffect(() => {
-    if (open == false) {
-      const temp_servers = defaultServers();
+    if (!open) {
+      const temp_servers = defaultServers(); // BUG: When servers are removed from the config file, when reopen it shows deleted servers.
       invoke<Server[]>("list_game_servers")
         .then((list_of_servers: Server[]) => {
-          list_of_servers.forEach((server) =>
-            temp_servers[server.game].servers.push(server),
-          );
+          list_of_servers.forEach((server) => {
+            temp_servers[server.game].servers.push(server);
+          });
+          setServers(temp_servers);
         })
         .catch((e) => console.log(e));
-      setServers(temp_servers);
     }
-  }, [open]);
+  }, [open, selectedServer]);
 
   return (
     <Dialog open={showNewServerDialog} onOpenChange={setShowNewServerDialog}>

@@ -141,23 +141,27 @@ pub async fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            subscribe_logging_channel,
-            unsubscribe_logging_channel,
-            log,
-            log_to_channel,
-            fetch_all_logs,
-            list_game_servers, // get_channel_point_rewards
+            logging::fetch_all_logs,
+            logging::log,
+            logging::log_to_channel,
+            logging::subscribe_logging_channel,
+            logging::unsubscribe_logging_channel,
             restart,
-            get_default_server,
-            set_default_server,
-            new_server,
-            update_server,
-            settings::set_config_string,
-            settings::set_config_bool,
-            settings::set_config_int,
-            settings::set_config_uint,
-            settings::set_config_float,
+            servers::check_connection,
+            servers::connect_to_server,
+            servers::disconnect_connection,
+            servers::get_default_server,
+            servers::list_game_servers, // get_channel_point_rewards
+            servers::new_server,
+            servers::send_command_to_server,
+            servers::set_default_server,
+            servers::update_server,
             settings::set_config_array,
+            settings::set_config_bool,
+            settings::set_config_float,
+            settings::set_config_int,
+            settings::set_config_string,
+            settings::set_config_uint,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
