@@ -1,15 +1,17 @@
 use std::{
     collections::HashMap,
-    sync::{LazyLock, Mutex},
+    sync::{Arc, LazyLock, Mutex},
 };
 
 use anyhow::{bail, Result};
 use config::{Config, Value};
 use rcon::Connection;
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
-use tauri::{ipc::Channel, AppHandle};
+use tauri::{ipc::Channel, State};
 use tokio::net::TcpStream;
 use tracing::{debug, error, info};
+
+use crate::command::Command;
 
 pub static SERVERS: LazyLock<Mutex<HashMap<String, GameServer>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -17,7 +19,9 @@ pub static SERVERS: LazyLock<Mutex<HashMap<String, GameServer>>> =
 pub static CONNECTIONS: LazyLock<Mutex<HashMap<GameServer, GameServerConnected>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-/// Valid Games go here, update the 2 lower impls like below.
+/// Valid Games
+///
+/// Dev notes: Update the 2 lower impls (`impl std::fmt::Display for Game`, `impl TryFrom<String> for Game`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Hash)]
 pub enum Game {
     #[default]
@@ -254,11 +258,11 @@ pub fn servers_from_settings(config: Config) -> Result<Vec<GameServer>> {
     }
 }
 
-pub fn server_from_settings(config: Config, name: String) -> Option<GameServer> {
+pub fn server_from_settings(config: Config, name: &str) -> Option<GameServer> {
     match config.get_table("servers") {
         Ok(servers_conf) => {
-            if let Some(server) = servers_conf.get(&name) {
-                let server = GameServer::try_from_config(name, server.clone()).unwrap();
+            if let Some(server) = servers_conf.get(name) {
+                let server = GameServer::try_from_config(name.into(), server.clone()).unwrap();
                 Some(server)
             } else {
                 None
@@ -268,6 +272,16 @@ pub fn server_from_settings(config: Config, name: String) -> Option<GameServer> 
     }
 }
 
+pub fn default_server_from_settings(config: Config) -> Option<GameServer> {
+    let default_server = match config.get_string("servers.default") {
+        Ok(server) => server,
+        Err(_) => {
+            return None;
+        }
+    };
+
+    server_from_settings(config, &default_server.to_lowercase())
+}
 #[tauri::command]
 pub async fn list_game_servers() -> Result<Vec<GameServer>, String> {
     let settings = crate::settings::Settings::new();
@@ -277,20 +291,15 @@ pub async fn list_game_servers() -> Result<Vec<GameServer>, String> {
 }
 
 #[tauri::command]
-pub fn get_default_server(_app_handle: AppHandle) -> Result<GameServer, String> {
-    let settings = crate::settings::Settings::new();
-    let config = settings.config();
-    let default_server = match config.get_string("servers.default") {
-        Ok(server) => server,
-        Err(_) => {
-            return Err(
-                "No default server found. Select a server to set it as the default.".to_string(),
-            )
-        }
-    };
-
-    // app_handle.send_tao_window_event(window_id, WindowMessage::RequestRedraw);
-    match server_from_settings(config, default_server.to_lowercase()) {
+pub fn get_default_server(
+    default_server: State<Arc<Mutex<Option<GameServer>>>>,
+    config: State<Arc<Mutex<Config>>>,
+) -> Result<GameServer, String> {
+    let default_server_lock = default_server.lock().unwrap();
+    if let Some(server) = default_server_lock.clone() {
+        return Ok(server);
+    }
+    match default_server_from_settings(config.lock().unwrap().clone()) {
         Some(server) => Ok(server),
         None => {
             Err("No default server found. Select a server to set it as the default.".to_string())
@@ -299,8 +308,19 @@ pub fn get_default_server(_app_handle: AppHandle) -> Result<GameServer, String> 
 }
 
 #[tauri::command]
-pub fn set_default_server(server_name: String) -> Result<String, String> {
+pub fn set_default_server(
+    default_server: State<Arc<Mutex<Option<GameServer>>>>,
+    server_name: String,
+) -> Result<String, String> {
     let mut settings = crate::settings::Settings::new();
+    let server = match server_from_settings(settings.config(), &server_name.to_lowercase()) {
+        Some(s) => s,
+        None => return Err(format!("No server found with that name: {:?}", server_name)),
+    };
+    {
+        let mut default_server_lock = default_server.lock().unwrap();
+        *default_server_lock = Some(server);
+    }
     match settings.set_config("servers.default", server_name.to_lowercase()) {
         Ok(_) => Ok("Default server set".to_string()),
         Err(e) => Err(format!("Failed to set default server: {:?}", e)),
@@ -386,7 +406,7 @@ pub fn connect_to_server(channel: Channel<ServerStatus>, server: GameServer) {
 }
 
 #[tauri::command]
-pub async fn send_command_to_server(server: GameServer) {
+pub fn send_command_to_server(server: GameServer, command: Command) {
     // let connected_server = server.connect().await;
     todo!("Send commands");
 }

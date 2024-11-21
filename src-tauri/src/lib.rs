@@ -1,27 +1,19 @@
-mod cli;
-mod command;
-mod integration;
-mod logging;
-mod servers;
-mod settings;
+pub mod cli;
+pub mod command;
+pub mod integration;
+pub mod logging;
+pub mod servers;
+pub mod settings;
 
 use std::sync::Arc;
-use std::sync::Mutex;
 
 use anyhow::Context;
 use cli::handle_cli_matches;
 use integration::TwitchApiConnection;
-use logging::{
-    fetch_all_logs, log, log_to_channel, subscribe_logging_channel, unsubscribe_logging_channel,
-    LogLevel, Logger,
-};
-use servers::get_default_server;
-use servers::new_server;
-use servers::set_default_server;
-use servers::update_server;
-use servers::{list_game_servers, servers_from_settings};
+use logging::{LogLevel, Logger};
+use servers::servers_from_settings;
 use settings::Settings;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tauri_plugin_cli::CliExt;
 use time::UtcOffset;
 use tracing::trace;
@@ -31,7 +23,6 @@ use tracing_appender::rolling::Rotation;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::fmt;
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::prelude::*;
 use tracing_subscriber::util::SubscriberInitExt;
 
 pub const PROGRAM: &str = "RCON2.0";
@@ -104,6 +95,7 @@ pub async fn run() {
     )));
 
     let twitch_int_clone = Arc::clone(&twitch_integration);
+    let config_clone = config.clone();
     tokio::spawn(async move {
         let mut twitch_int_clone_lock = twitch_int_clone.lock().await;
         match twitch_int_clone_lock.check_token().await {
@@ -111,9 +103,12 @@ pub async fn run() {
             Err(e) => info!("Twitch Token is invalid: {:?}", e),
         };
         trace!("token");
-        twitch_int_clone_lock.new_websocket(config).await;
+        twitch_int_clone_lock
+            .new_websocket(config_clone.clone())
+            .await;
     });
 
+    let config_clone = config.clone();
     let twitch_int_clone = Arc::clone(&twitch_integration);
     tauri::Builder::default()
         .plugin(tauri_plugin_websocket::init())
@@ -129,7 +124,9 @@ pub async fn run() {
                     std::process::exit(1);
                 }
             }
-            // todo!();
+            let default_server = servers::default_server_from_settings(config_clone.clone());
+            app.manage(Arc::new(std::sync::Mutex::new(config_clone.clone())));
+            app.manage(Arc::new(std::sync::Mutex::new(default_server)));
             tracing_subscriber::Registry::default()
                 .with(level_filter)
                 .with(logger_layer)
@@ -151,7 +148,7 @@ pub async fn run() {
             servers::connect_to_server,
             servers::disconnect_connection,
             servers::get_default_server,
-            servers::list_game_servers, // get_channel_point_rewards
+            servers::list_game_servers,
             servers::new_server,
             servers::send_command_to_server,
             servers::set_default_server,
@@ -169,6 +166,7 @@ pub async fn run() {
 
 #[tauri::command]
 fn restart(app: AppHandle) {
+    /// Restart the program from the frontend.
     use tauri::{process::restart, Manager};
     restart(&app.env())
 }

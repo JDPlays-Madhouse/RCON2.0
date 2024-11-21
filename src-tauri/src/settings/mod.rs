@@ -5,7 +5,7 @@ use config::{
 };
 use serde::{
     ser::{SerializeMap, SerializeSeq},
-    Serialize,
+    Deserialize, Serialize,
 };
 use std::{
     fmt::Debug,
@@ -327,6 +327,7 @@ impl Default for Settings {
         settings
     }
 }
+
 impl Settings {
     fn default_loop<T: BuilderState, D: Into<ValueKind>>(
         builder: ConfigBuilder<T>,
