@@ -1,3 +1,5 @@
+use config::Map;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -103,28 +105,31 @@ impl RconCommand {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Command {
+    pub name: String,
     id: String,
     pub variant: CommandType,
     pub rcon_lua: RconCommand,
 }
 
 impl Command {
-    pub fn new(variant: CommandType, rcon_lua: RconCommand) -> Self {
+    pub fn new(name: String, variant: CommandType, rcon_lua: RconCommand) -> Self {
         let id = Uuid::now_v7().to_string();
         Self {
+            name,
             id: id.clone(),
             variant,
             rcon_lua,
         }
     }
 
-    pub fn from_config<I, V, L>(id: I, variant: V, rcon_lua: L) -> Self
+    pub fn from_config<I, V, L>(name: I, id: I, variant: V, rcon_lua: L) -> Self
     where
         I: Into<String>,
         V: Into<CommandType>,
         L: Into<RconCommand>,
     {
         Self {
+            name: name.into(),
             id: id.into(),
             variant: variant.into(),
             rcon_lua: rcon_lua.into(),
@@ -151,11 +156,24 @@ impl Command {
     }
 }
 
+impl From<Command> for config::ValueKind {
+    fn from(value: Command) -> Self {
+        // let map = Map::new();
+        // map.insert();
+        // Self::Table(map)
+        todo!()
+    }
+}
+
 #[tauri::command]
-pub fn create_command(variant: CommandType, rcon_lua: RconCommand) -> Command {
-    let command = Command::new(variant, rcon_lua);
-    let _id = command.add_to_commands();
-    command
+pub fn create_command(
+    name: String,
+    variant: CommandType,
+    rcon_lua: RconCommand,
+) -> Result<Command, String> {
+    let command = Command::new(name, variant, rcon_lua);
+    command.add_to_commands(); // TODO: Add error handling for if command name exists.
+    Ok(command)
 }
 
 // #[cfg(test)]

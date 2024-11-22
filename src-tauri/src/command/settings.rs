@@ -21,6 +21,8 @@ use crate::{
 use config::{Config, Environment, File, FileFormat};
 use dirs::config_dir;
 
+use super::Command;
+
 pub enum FileType {
     Dir,
     File,
@@ -149,6 +151,19 @@ impl ScriptSettings {
             }
             _ => Err(anyhow!("reached an unhandled path in Settings::make_exist")),
         }
+    }
+
+    pub fn get_command(&self, id: String) -> Option<Command> {
+        todo!("get_command");
+    }
+
+    pub fn set_command(&self, command: Command) -> Option<Command> {
+        let builder = self
+            .config_builder
+            .clone()
+            .set_override(command.name.clone(), command);
+        // builder.set_override(command.name, )
+        todo!("set_command");
     }
 
     pub fn write(&self) -> std::io::Result<()> {
