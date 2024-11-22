@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use cli::handle_cli_matches;
+use command::settings::ScriptSettings;
 use integration::TwitchApiConnection;
 use logging::{LogLevel, Logger};
 use servers::servers_from_settings;
@@ -32,6 +33,7 @@ pub const PROGRAM: &str = "RCON2.0";
 pub async fn run() {
     let settings = Settings::new();
     let config = settings.config();
+    let _script_settings = ScriptSettings::new();
     let log_level = if config.get_bool("debug").unwrap() {
         LogLevel::Debug
     } else {
@@ -138,6 +140,7 @@ pub async fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            command::create_command,
             logging::fetch_all_logs,
             logging::log,
             logging::log_to_channel,

@@ -25,8 +25,10 @@ pub enum FileType {
 #[derive(Debug)]
 pub struct Settings {
     pub config_builder: ConfigBuilder<DefaultState>,
+    // pub script_config_builder: ConfigBuilder<DefaultState>,
     pub config_folder: PathBuf,
     pub log_folder: PathBuf,
+    pub script_folder: PathBuf,
     pub config_filename: String,
     pub config_fileformat: FileFormat,
 }
@@ -103,21 +105,25 @@ impl Settings {
         let setting = match self.config().get::<Value>(key) {
             Ok(value) => Some(ConfigValue::from(value)),
             Err(e) => {
-                error!("{:?}", e);
+                error!("Config not available: {:?}", e);
                 None
             }
         };
         setting
     }
-    /// BUG: Doesn't work unless its a top level config.
     pub fn remove_config(mut self, key: &str) -> Self {
-        self.set_config(key, ValueKind::Nil);
-        self.write();
+        self.set_config(key, ValueKind::Nil)
+            .expect("Setting Config");
+        self.write().expect("writing to file");
         Self::new()
     }
 
     pub fn file_exists(path: &Path) -> bool {
         path.exists()
+    }
+
+    pub fn current_config() -> Config {
+        Self::new().config()
     }
 
     pub fn config(&self) -> Config {
@@ -247,7 +253,7 @@ impl Serialize for ConfigValue {
     }
 }
 
-type DefaultValue<T> = (&'static str, T);
+pub type DefaultValue<T> = (&'static str, T);
 
 impl Default for Settings {
     fn default() -> Self {
@@ -319,6 +325,7 @@ impl Default for Settings {
             config_filename,
             config_fileformat,
             log_folder: log_folder.clone(),
+            script_folder: script_folder.clone(),
         };
         let _ = settings.make_config_exists(config_folder.as_path(), FileType::Dir);
         let _ = settings.make_config_exists(log_folder.as_path(), FileType::Dir);

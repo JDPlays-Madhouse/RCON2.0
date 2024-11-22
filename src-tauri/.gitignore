@@ -7,4 +7,4 @@ config.example.toml
 .env
 *.bak
 Cargo.lock
-/test-logs/
+/test-*

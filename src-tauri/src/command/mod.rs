@@ -6,17 +6,20 @@ use std::{
     sync::{Arc, LazyLock, Mutex},
 };
 use uuid::Uuid;
+pub mod settings;
 
 static COMMANDS: LazyLock<Arc<Mutex<HashMap<String, Command>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Hash)]
+#[serde(tag = "type", content = "data")]
 pub enum CommandType {
     ChannelPoints(String),
     Chat,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Hash)]
+#[serde(tag = "prefix", content = "data")]
 pub enum RconCommandPrefix {
     /// Everything before the actual command including slashes and spaces.
     Custom(String),
@@ -44,9 +47,24 @@ impl Display for RconCommandPrefix {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum RconLuaType {
+#[serde(tag = "commandType", content = "command")]
+pub enum RconLuaCommand {
+    /// Relative path in scripts directory.
     File(PathBuf),
     Inline(String),
+}
+
+impl RconLuaCommand {
+    pub fn command(&self) -> String {
+        use RconLuaCommand::*;
+        match self {
+            File(filename) => {
+                todo!("read the file")
+            }
+            Inline(command) => command.clone(),
+            _ => todo!("Rcon command not implemented"),
+        }
+    }
 }
 
 // #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -72,17 +90,14 @@ pub enum RconLuaType {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RconCommand {
     pub prefix: RconCommandPrefix,
-    pub lua_type: RconLuaType,
+    pub lua_command: RconLuaCommand,
     // pub default_values: Option<CommandValue<T>>,
 }
 
 impl RconCommand {
-    pub fn lua(&self) -> String {
-        use RconLuaType::*;
-        match &self.lua_type {
-            Inline(command) => self.prefix.to_string() + command,
-            lua_type => todo!("Needs to be implemented: {:?}", lua_type),
-        }
+    /// The complete command to transmit to the server.
+    pub fn command(&self) -> String {
+        self.prefix.to_string() + &self.lua_command.command()
     }
 }
 
@@ -96,14 +111,30 @@ pub struct Command {
 impl Command {
     pub fn new(variant: CommandType, rcon_lua: RconCommand) -> Self {
         let id = Uuid::now_v7().to_string();
-        let cmd = Self {
+        Self {
             id: id.clone(),
             variant,
             rcon_lua,
-        };
+        }
+    }
+
+    pub fn from_config<I, V, L>(id: I, variant: V, rcon_lua: L) -> Self
+    where
+        I: Into<String>,
+        V: Into<CommandType>,
+        L: Into<RconCommand>,
+    {
+        Self {
+            id: id.into(),
+            variant: variant.into(),
+            rcon_lua: rcon_lua.into(),
+        }
+    }
+
+    pub fn add_to_commands(&self) -> String {
         let mut commands = COMMANDS.lock().unwrap();
-        commands.insert(id, cmd.clone());
-        cmd
+        commands.insert(self.id(), self.clone());
+        self.id.clone()
     }
 
     pub fn get(id: &str) -> Option<Self> {
@@ -116,9 +147,15 @@ impl Command {
     }
 
     pub fn tx_string(&self) -> String {
-        let tx = self.rcon_lua.prefix.to_string();
-        todo!("tx_string")
+        self.rcon_lua.command()
     }
+}
+
+#[tauri::command]
+pub fn create_command(variant: CommandType, rcon_lua: RconCommand) -> Command {
+    let command = Command::new(variant, rcon_lua);
+    let _id = command.add_to_commands();
+    command
 }
 
 // #[cfg(test)]
@@ -131,7 +168,7 @@ impl Command {
 //     #[case::float(8.1, ValueType::Float)]
 //     #[case::bool(true, ValueType::Bool)]
 //     #[case::string("test", ValueType::String)]
-//     fn command_value_data<T>(#[ca<se] input: T, #[case] input_type: ValueType)
+//     fn command_value_data<T>(#[case] input: T, #[case] input_type: ValueType)
 //     where
 //         T: std::fmt::Debug + std::cmp::PartialEq + std::clone::Clone,
 //     {

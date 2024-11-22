@@ -35,7 +35,7 @@ export default function Home() {
         </div>
         <MainNav server={selectedServer} />
       </header>
-      <ServerDashboard className="flex-auto h-full" showLog={showLog} />
+      <ServerDashboard className="flex-auto h-full" showLog={showLog} selectedServer={selectedServer} />
       {/* </MainContextMenu> */}
     </div>
   );

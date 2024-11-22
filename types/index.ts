@@ -29,3 +29,32 @@ export type LogLevel = Log["level"];
 export type LogLevelColors = {
         [Properties in LogLevel]: string;
 };
+
+// Commands
+export type CommandType =
+        | { type: "ChannelPoints"; data: string }
+        | {
+                type: "Chat";
+        };
+
+export type RconCommandPrefix =
+        | {
+                prefix: "Custom";
+                data: string;
+        }
+        | { prefix: "SC" }
+        | { prefix: "MC" }
+        | { prefix: "C" };
+export type RconLuaCommand =
+        | { commandType: "File"; command: string }
+        | { commandType: "Inline"; command: string };
+
+export type RconCommand = {
+        prefix: RconCommandPrefix;
+        lua_command: RconLuaCommand;
+}
+export type Command = {
+        id: string;
+        variant: CommandType;
+        rcon_lua: RconCommand;
+}
