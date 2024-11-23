@@ -1,5 +1,3 @@
-use config::Map;
-use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -7,8 +5,11 @@ use std::{
     path::PathBuf,
     sync::{Arc, LazyLock, Mutex},
 };
+use trigger::Trigger;
 use uuid::Uuid;
+
 pub mod settings;
+pub mod trigger;
 
 static COMMANDS: LazyLock<Arc<Mutex<HashMap<String, Command>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
@@ -51,8 +52,12 @@ impl Display for RconCommandPrefix {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "commandType", content = "command")]
 pub enum RconLuaCommand {
-    /// Relative path in scripts directory.
-    File(PathBuf),
+    File {
+        /// Relative path in scripts directory.
+        path: PathBuf,
+        /// Command starts as None until file is read.
+        command: Option<String>,
+    },
     Inline(String),
 }
 
@@ -60,7 +65,7 @@ impl RconLuaCommand {
     pub fn command(&self) -> String {
         use RconLuaCommand::*;
         match self {
-            File(filename) => {
+            File { path, command } => {
                 todo!("read the file")
             }
             Inline(command) => command.clone(),
@@ -109,6 +114,7 @@ pub struct Command {
     id: String,
     pub variant: CommandType,
     pub rcon_lua: RconCommand,
+    pub triggers: Vec<Trigger>,
 }
 
 impl Command {
@@ -119,20 +125,23 @@ impl Command {
             id: id.clone(),
             variant,
             rcon_lua,
+            triggers: vec![],
         }
     }
 
-    pub fn from_config<I, V, L>(name: I, id: I, variant: V, rcon_lua: L) -> Self
+    pub fn from_config<I, V, L, T>(name: I, id: I, variant: V, rcon_lua: L, triggers: T) -> Self
     where
         I: Into<String>,
         V: Into<CommandType>,
         L: Into<RconCommand>,
+        T: Into<Vec<Trigger>>,
     {
         Self {
             name: name.into(),
             id: id.into(),
             variant: variant.into(),
             rcon_lua: rcon_lua.into(),
+            triggers: triggers.into(),
         }
     }
 

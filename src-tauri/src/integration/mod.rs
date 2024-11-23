@@ -129,3 +129,9 @@ pub enum TokenError {
     UnknownError,
     TokenNotAuthorized,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Event {
+    Chat { msg: String, author: String },
+    ChannelPoint { id: String, redeemer: String },
+}

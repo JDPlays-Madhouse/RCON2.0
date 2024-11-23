@@ -170,6 +170,6 @@ pub async fn run() {
 #[tauri::command]
 fn restart(app: AppHandle) {
     /// Restart the program from the frontend.
-    use tauri::{process::restart, Manager};
-    restart(&app.env())
+    use tauri::Manager;
+    tauri::process::restart(&app.env())
 }
