@@ -2,8 +2,11 @@ use std::{sync::mpsc::channel, thread, time::Duration};
 
 use anyhow::Context;
 use cached::{stores::DiskCacheBuilder, DiskCache, IOCached};
+use http::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufStream};
+use tokio::net::TcpListener;
 use tracing::{debug, error, info};
 use twitch_oauth2::{tokens::UserTokenBuilder, AccessToken, RefreshToken, Scope, UserToken};
 use url::Url;
@@ -108,10 +111,10 @@ pub async fn oauth(
 
     // Generate the URL, this is the url that the user should visit to authenticate.
     let (url, _csrf_code) = builder.generate_url();
-    info!("Generated URL: {}", &url);
+    debug!("Generated URL: {}", &url);
     let _ = webbrowser::open(url.as_str());
 
-    let input = response_uri(response_port);
+    let input = response_uri(response_port).await.unwrap();
 
     let u = twitch_oauth2::url::Url::parse(&input)
         .context("when parsing the input as a URL")
@@ -159,25 +162,81 @@ pub async fn oauth(
     Ok(token)
 }
 
-fn response_uri(port: u16) -> String {
-    use simple_server::Server;
-    let (tx, rx) = channel::<String>();
+async fn response_uri(port: u16) -> anyhow::Result<String> {
     let host = "localhost";
+    let listener_address = format!("{}:{}", host, port);
+    let jh = tauri::async_runtime::spawn(async move {
+        let listener = match TcpListener::bind(listener_address.clone()).await {
+            Ok(l) => {
+                debug! {"TcpListener started: {}", listener_address};
+                l
+            }
+            Err(e) => {
+                error!("TcpListener Error: {}", e);
+                return Err::<String, String>(format!("TcpListener Error: {}", e));
+            }
+        };
+        let _ = listener.set_ttl(30);
+        // loop {
+        let (stream, _address) = listener.accept().await.unwrap();
+        let stream = BufStream::new(stream);
+        match parse_request(stream).await {
+            Ok(path) => Ok(path),
+            Err(e) => {
+                error!("{e:?}");
+                Err(e.to_string())
+            }
+        }
 
-    let _ = thread::spawn(move || {
-        let tx_thread = tx.clone();
-        let server = Server::with_timeout(Duration::from_secs(60), move |request, mut response| {
-            // dbg!(request.uri());
-            let url = Url::parse("http://localhost")
-                .unwrap()
-                .join(&request.uri().to_string())
-                .unwrap()
-                .to_string();
-
-            let _ = tx_thread.clone().send(url);
-            Ok(response.body("You may now close this tab.".as_bytes().to_vec())?)
-        });
-        server.listen(host, &port.to_string());
+        // }
     });
-    rx.recv().context("Twitch OAuth URL").unwrap()
+    let mut path = jh.await.context("Twitch OAuth URL").unwrap().unwrap();
+    path = "http://".to_string() + host + &path;
+    Ok(path)
+}
+
+async fn parse_request(
+    mut stream: impl AsyncBufRead + AsyncWrite + Unpin,
+) -> anyhow::Result<String> {
+    let mut line_buffer = String::new();
+    stream.read_line(&mut line_buffer).await?;
+
+    let mut parts = line_buffer.split_whitespace();
+
+    let _method: String = parts
+        .next()
+        .ok_or(anyhow::anyhow!("missing method"))
+        .unwrap()
+        .to_string();
+
+    let path: String = parts
+        .next()
+        .ok_or(anyhow::anyhow!("missing path"))
+        .map(Into::into)?;
+    info!("path: {}", path.clone());
+    let _ = response(&mut stream).await;
+    Ok(path)
+}
+
+/// TODO: Oauth code in uri not validated.
+async fn response<O: AsyncWrite + Unpin>(stream: &mut O) -> anyhow::Result<()> {
+    let status = StatusCode::OK;
+    let response = Response::builder()
+        .status(status)
+        .body("You may now close this webpage.".to_string())
+        .unwrap();
+    let headers = response
+        .headers()
+        .iter()
+        .map(|(k, v)| format!("{}: {}", k, v.to_str().unwrap_or("")))
+        .collect::<Vec<_>>()
+        .join("\r\n");
+
+    stream
+        .write_all(format!("HTTP/1.1 {}\r\n{headers}\r\n\r\n", status).as_bytes())
+        .await
+        .unwrap();
+    tokio::io::copy(&mut response.body().as_bytes(), stream).await?;
+
+    Ok(())
 }

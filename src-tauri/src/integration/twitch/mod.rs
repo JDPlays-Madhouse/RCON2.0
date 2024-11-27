@@ -1,5 +1,3 @@
-use futures::executor::block_on;
-use indexmap::IndexMap;
 use permissions::get_eventsub_consolidated_scopes;
 use std::{
     str::FromStr,
@@ -12,6 +10,8 @@ use std::{
 };
 use tokio::spawn;
 use tracing::{debug, error, info, trace, warn};
+
+use crate::command::runner::Runner;
 
 use super::{
     APIConnectionConfig, IntegrationChannels, IntegrationCommand, IntegrationControl,
@@ -52,6 +52,7 @@ pub struct TwitchApiConnection {
     pub websocket_joinhandle: Option<tokio::task::JoinHandle<()>>,
     pub session_id: Option<String>,
     pub scope: Vec<Scope>,
+    pub runner: Runner,
 }
 
 impl std::fmt::Debug for TwitchApiConnection {
@@ -73,7 +74,7 @@ impl std::fmt::Debug for TwitchApiConnection {
 }
 
 impl TwitchApiConnection {
-    pub fn new(config: APIConnectionConfig) -> Self {
+    pub fn new(config: APIConnectionConfig, runner: Runner) -> Self {
         let username = config
             .get("username")
             .unwrap()
@@ -132,6 +133,7 @@ impl TwitchApiConnection {
             websocket: Default::default(),
             websocket_joinhandle: Default::default(),
             session_id: Default::default(),
+            runner,
         }
     }
 }
@@ -171,6 +173,7 @@ impl TwitchApiConnection {
             token,
             self.user_id().await.expect("Token is checked."),
             subscriptions,
+            self.runner.tx(),
         ));
         let websocket = self.websocket.clone().unwrap();
         let client = self.client.clone();

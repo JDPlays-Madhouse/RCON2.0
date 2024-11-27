@@ -8,6 +8,7 @@ use std::{
 use trigger::Trigger;
 use uuid::Uuid;
 
+pub mod runner;
 pub mod settings;
 pub mod trigger;
 

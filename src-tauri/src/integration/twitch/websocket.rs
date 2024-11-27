@@ -1,7 +1,9 @@
 use std::time::Duration;
 
+use crate::integration;
 use anyhow::{bail, Error, Result};
 use futures::stream::FusedStream;
+use tokio::sync::mpsc::Sender;
 use tokio_tungstenite::tungstenite;
 use tracing::{debug, error, info};
 use tracing::{trace, Instrument};
@@ -42,6 +44,7 @@ pub struct WebsocketClient {
     pub user_id: types::UserId,
     pub connect_url: url::Url,
     pub subscriptions: Vec<eventsub::EventType>,
+    pub event_tx: Sender<integration::IntegrationEvent>,
     keep_alive_seconds: Duration,
 }
 
@@ -63,6 +66,7 @@ impl WebsocketClient {
         token: UserToken,
         user_id: types::UserId,
         subscriptions: Vec<eventsub::EventType>,
+        event_tx: Sender<integration::IntegrationEvent>,
     ) -> Self {
         let client: HelixClient<_> = twitch_api::HelixClient::with_client(
             <reqwest::Client>::default_client_with_name(Some(
@@ -79,6 +83,7 @@ impl WebsocketClient {
             connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
             subscriptions,
             keep_alive_seconds: Duration::from_secs(10),
+            event_tx,
         }
     }
 
@@ -91,7 +96,7 @@ impl WebsocketClient {
         >,
         WebsocketError,
     > {
-        tracing::info!("connecting to twitch");
+        tracing::debug!("Connecting to Twitch Websocket");
         let config = tungstenite::protocol::WebSocketConfig {
             max_message_size: Some(64 << 20), // 64 MiB
             max_frame_size: Some(16 << 20),   // 16 MiB
@@ -110,17 +115,16 @@ impl WebsocketClient {
     }
 
     /// Run the websocket subscriber
-    #[tracing::instrument(name = "subscriber", skip_all, fields())]
+    #[tracing::instrument(name = "Twitch_Websocket", skip_all, fields())]
     pub async fn run(mut self) -> Result<(), WebsocketError> {
         // Establish the stream
         let mut s = match self.connect().await {
             Ok(s) => s,
             Err(e) => return Err(e),
         };
-        info!("Connected to Twitch's Websocket",);
+        info!("Connected to Twitch's Websocket");
         // Loop over the stream, processing messages as they come in.
 
-        use WebsocketError::*;
         loop {
             if s.is_terminated() {
                 error!("Websocket Terminated");

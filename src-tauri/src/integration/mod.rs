@@ -48,19 +48,26 @@ where
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Default, PartialEq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Clone)]
 pub enum IntegrationEvent {
     #[default]
     Connected,
-    Chat(&'static str),
-    NewFollower {
-        username: &'static str,
+    Chat {
+        msg: String,
+        author: String,
     },
+    ChannelPoint {
+        id: String,
+        redeemer: String,
+    },
+    Unknown,
 }
+
 pub trait PlatformConnection {
     fn connect(&self) -> Result<()>;
 }
 
+#[allow(async_fn_in_trait)]
 pub trait PlatformAuthenticate {
     async fn authenticate(&mut self) -> Result<()>;
 }
@@ -128,10 +135,4 @@ pub enum TokenError {
     InvalidToken,
     UnknownError,
     TokenNotAuthorized,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Event {
-    Chat { msg: String, author: String },
-    ChannelPoint { id: String, redeemer: String },
 }

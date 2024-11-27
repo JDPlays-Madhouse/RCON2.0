@@ -46,15 +46,15 @@ export type RconCommandPrefix =
         | { prefix: "MC" }
         | { prefix: "C" };
 export type RconLuaCommand =
-        | { commandType: "File"; command: string }
+        | { commandType: "File"; command: { path: string; command?: string } }
         | { commandType: "Inline"; command: string };
 
 export type RconCommand = {
         prefix: RconCommandPrefix;
         lua_command: RconLuaCommand;
-}
+};
 export type Command = {
         id: string;
         variant: CommandType;
         rcon_lua: RconCommand;
-}
+};
