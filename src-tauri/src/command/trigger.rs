@@ -23,7 +23,7 @@ pub enum Trigger {
 }
 
 impl Trigger {
-    pub fn is_match(&self, event: IntegrationEvent) -> bool {
+    pub fn is_match(&self, event: &IntegrationEvent) -> bool {
         match self {
             Trigger::Chat { pattern } => {
                 if let IntegrationEvent::Chat { msg, .. } = event {
@@ -34,7 +34,7 @@ impl Trigger {
             }
             Trigger::ChannelPointRewardRedemed { id, .. } => {
                 if let IntegrationEvent::ChannelPoint { id: event_id, .. } = event {
-                    event_id == *id
+                    event_id == id
                 } else {
                     false
                 }

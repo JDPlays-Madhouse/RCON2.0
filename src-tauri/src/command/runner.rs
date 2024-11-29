@@ -9,7 +9,7 @@ use tokio::{
 };
 use tracing::error;
 
-use super::Trigger;
+use super::{Command, Trigger};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunnerError {
@@ -17,7 +17,7 @@ pub enum RunnerError {
     FailedToStop,
     RunnerNotRunning,
     AlreadyCancelled,
-    PanicedSubprocess,
+    PanickedSubprocess,
     UnknownError,
 }
 
@@ -30,6 +30,7 @@ pub struct Runner {
     tx: Sender<IntegrationEvent>,
     server: Option<GameServer>,
     triggers: HashMap<IntegrationEvent, Vec<Trigger>>,
+    commands: Vec<Command>,
     joinhandle: Option<JoinHandle<Result<(), RunnerError>>>,
 }
 
@@ -41,6 +42,7 @@ impl Runner {
             tx,
             server,
             triggers: HashMap::new(),
+            commands: Vec::new(),
             joinhandle: None,
         }
     }
@@ -60,7 +62,7 @@ impl Runner {
     /// Stops the runner, then generates new channels.
     pub async fn new_channel(&mut self) {
         if self.joinhandle.is_some() {
-            let _ = self.end().await;
+            let _ = self.abort().await;
         }
         let (tx, rx) = channel::<IntegrationEvent>(100);
         self.tx = tx;
@@ -79,16 +81,19 @@ impl Runner {
                 rx
             }
         };
+        let triggers = self.triggers.clone();
 
         use IntegrationEvent::*;
         let jh: JoinHandle<std::result::Result<(), RunnerError>> = spawn(async move {
             loop {
                 match rx.recv().await {
-                    Some(Chat { .. }) => {
-                        todo!()
+                    Some(event) => {
+                        if triggers.contains_key(&event.event_type()) {
+                            let group = triggers.get(&event.event_type()).unwrap();
+                            group.iter().for_each(|t| if t.is_match(&event) {});
+                        }
                     }
                     Some(Connected) => todo!(),
-                    Some(ChannelPoint { .. }) => todo!(),
                     Some(Stop) => return Ok(()),
                     Some(Pause) => loop {
                         match rx.recv().await {
@@ -111,7 +116,16 @@ impl Runner {
         Ok(())
     }
 
-    pub async fn end(&mut self) -> Result<(), RunnerError> {
+    /// Returns [true] if the runner is actively running.
+    pub fn is_running(&self) -> bool {
+        if let Some(jh) = &self.joinhandle {
+            !jh.is_finished()
+        } else {
+            false
+        }
+    }
+
+    pub async fn abort(&mut self) -> Result<(), RunnerError> {
         match self.joinhandle.take() {
             Some(jh) => {
                 let _ = self.transmit(IntegrationEvent::Stop).await;
@@ -147,7 +161,12 @@ impl Runner {
     }
 
     /// Adds the trigger to the correct group and will remove duplicate triggers.
+    ///
+    /// TODO: Add in running handling.
     pub fn add_trigger(&mut self, trigger: &Trigger) {
+        if self.is_running() {
+            unimplemented!("running handling")
+        }
         let key = trigger.event_type();
         if let Entry::Vacant(e) = self.triggers.entry(key.clone()) {
             e.insert(vec![trigger.clone()]);
@@ -165,7 +184,12 @@ impl Runner {
     /// Removes the trigger if it exists and returns it as an [Option], otherwise returns [None].
     ///
     /// Note: If the [IntegrationEvent] has no linked triggers, it will be dropped from the [HashMap].
+    ///
+    /// TODO: Add in running handling.
     pub fn remove_trigger(&mut self, trigger: &Trigger) -> Option<Trigger> {
+        if self.is_running() {
+            unimplemented!("running handling")
+        }
         if self.trigger_exists(trigger) {
             if let Some(group) = self.triggers.get_mut(&trigger.event_type()) {
                 group.retain(|t| t != trigger);
@@ -180,6 +204,27 @@ impl Runner {
             None
         }
     }
+
+    // pub fn link_command(&mut self, trigger: Trigger, command: Command) {
+    //     if self.is_running() {
+    //         unimplemented!("running handling")
+    //     }
+    //     if !self.trigger_exists(&trigger) {
+    //         self.add_trigger(&trigger);
+    //     }
+    //
+    //     if let Entry::Vacant(e) = self.commands.entry(trigger.clone()) {
+    //         e.insert(vec![command.clone()]);
+    //     } else {
+    //         let commands = self
+    //             .commands
+    //             .get_mut(&trigger)
+    //             .expect("Already handled the None case.");
+    //         commands.push(command.clone());
+    //         commands.sort();
+    //         commands.dedup();
+    //     }
+    // }
 
     /// Returns [true] if this runner has this [Trigger].
     pub fn trigger_exists(&self, trigger: &Trigger) -> bool {

@@ -16,14 +16,14 @@ pub use trigger::Trigger;
 static COMMANDS: LazyLock<Arc<Mutex<HashMap<String, Command>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(tag = "type", content = "data")]
 pub enum CommandType {
     ChannelPoints(String),
     Chat,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(tag = "prefix", content = "data")]
 pub enum RconCommandPrefix {
     /// Everything before the actual command including slashes and spaces.
@@ -51,7 +51,7 @@ impl Display for RconCommandPrefix {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(tag = "commandType", content = "command")]
 pub enum RconLuaCommand {
     File {
@@ -61,6 +61,7 @@ pub enum RconLuaCommand {
         command: Option<String>,
     },
     Inline(String),
+    Other,
 }
 
 impl RconLuaCommand {
@@ -96,7 +97,7 @@ impl RconLuaCommand {
 //     Float,
 // }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RconCommand {
     pub prefix: RconCommandPrefix,
     pub lua_command: RconLuaCommand,
@@ -110,7 +111,7 @@ impl RconCommand {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Command {
     pub name: String,
     id: String,
@@ -164,6 +165,30 @@ impl Command {
 
     pub fn tx_string(&self) -> String {
         self.rcon_lua.command()
+    }
+
+    pub fn contains_trigger(&self, trigger: &Trigger) -> bool {
+        self.triggers.contains(trigger)
+    }
+
+    /// Adds the trigger and will remove duplicate triggers.
+    ///
+    /// TODO: Add in running handling.
+    pub fn add_trigger(&mut self, trigger: &Trigger) {
+        if !self.contains_trigger(trigger) {
+            self.triggers.push(trigger.clone());
+        }
+    }
+
+    /// Removes the [Trigger] from this command. Returns [`Some<Trigger>`] if trigger was being used
+    /// by command otherwise [None].
+    pub fn remove_trigger(&mut self, trigger: &Trigger) -> Option<Trigger> {
+        if self.contains_trigger(trigger) {
+            self.triggers.retain(|t| t != trigger);
+            Some(trigger.clone())
+        } else {
+            None
+        }
     }
 }
 

@@ -64,6 +64,8 @@ pub enum IntegrationEvent {
     Stop,
     Pause,
     Continue,
+    /// TODO: add implementation for updating triggers and commands for runner.
+    Update,
 }
 
 impl IntegrationEvent {
@@ -99,6 +101,7 @@ impl IntegrationEvent {
             Stop => Stop,
             Pause => Pause,
             Continue => Continue,
+            Update => Update,
         }
     }
 }
