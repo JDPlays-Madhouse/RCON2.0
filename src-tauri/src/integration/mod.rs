@@ -48,7 +48,7 @@ where
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Hash)]
 pub enum IntegrationEvent {
     #[default]
     Connected,
@@ -61,6 +61,46 @@ pub enum IntegrationEvent {
         redeemer: String,
     },
     Unknown,
+    Stop,
+    Pause,
+    Continue,
+}
+
+impl IntegrationEvent {
+    /// Returns `true` if the integration event is [`Chat`].
+    ///
+    /// [`Chat`]: IntegrationEvent::Chat
+    #[must_use]
+    pub fn is_chat(&self) -> bool {
+        matches!(self, Self::Chat { .. })
+    }
+
+    /// Returns `true` if the integration event is [`ChannelPoint`].
+    ///
+    /// [`ChannelPoint`]: IntegrationEvent::ChannelPoint
+    #[must_use]
+    pub fn is_channel_point(&self) -> bool {
+        matches!(self, Self::ChannelPoint { .. })
+    }
+    /// A default implementation of each enum which can be used for being a key.
+    pub fn event_type(&self) -> Self {
+        use IntegrationEvent::*;
+        match self {
+            Chat { .. } => Chat {
+                msg: Default::default(),
+                author: Default::default(),
+            },
+            Connected => Connected,
+            ChannelPoint { .. } => ChannelPoint {
+                id: Default::default(),
+                redeemer: Default::default(),
+            },
+            Unknown => Unknown,
+            Stop => Stop,
+            Pause => Pause,
+            Continue => Continue,
+        }
+    }
 }
 
 pub trait PlatformConnection {

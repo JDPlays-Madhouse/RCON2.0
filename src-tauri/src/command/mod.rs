@@ -5,12 +5,13 @@ use std::{
     path::PathBuf,
     sync::{Arc, LazyLock, Mutex},
 };
-use trigger::Trigger;
 use uuid::Uuid;
 
-pub mod runner;
+mod runner;
 pub mod settings;
-pub mod trigger;
+mod trigger;
+pub use runner::Runner;
+pub use trigger::Trigger;
 
 static COMMANDS: LazyLock<Arc<Mutex<HashMap<String, Command>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));

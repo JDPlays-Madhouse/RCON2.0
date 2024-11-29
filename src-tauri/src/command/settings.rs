@@ -88,14 +88,13 @@ impl ScriptSettings {
     }
 
     pub fn get_config(&self, key: &str) -> Option<ConfigValue> {
-        let setting = match self.config().get::<Value>(key) {
+        match self.config().get::<Value>(key) {
             Ok(value) => Some(ConfigValue::from(value)),
             Err(e) => {
                 error!("Config not available: {:?}", e);
                 None
             }
-        };
-        setting
+        }
     }
     pub fn remove_config(mut self, key: &str) -> Self {
         self.set_config(key, ValueKind::Nil)

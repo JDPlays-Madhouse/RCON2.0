@@ -11,7 +11,7 @@ use std::{
 use tokio::spawn;
 use tracing::{debug, error, info, trace, warn};
 
-use crate::command::runner::Runner;
+use crate::command::Runner;
 
 use super::{
     APIConnectionConfig, IntegrationChannels, IntegrationCommand, IntegrationControl,
