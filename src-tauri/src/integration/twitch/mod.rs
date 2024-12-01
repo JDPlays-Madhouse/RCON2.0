@@ -3,22 +3,21 @@ use std::{
     str::FromStr,
     sync::{
         mpsc::{self, RecvError},
-        Arc, LazyLock, Mutex,
+        Arc, LazyLock,
     },
     thread::JoinHandle,
     time::Duration,
 };
-use tokio::spawn;
 use tracing::{debug, error, info, trace, warn};
 
 use crate::command::Runner;
 
 use super::{
     APIConnectionConfig, IntegrationChannels, IntegrationCommand, IntegrationControl,
-    IntegrationEvent, PlatformAuthenticate, PlatformConnection, TokenError, Transmitter,
+    IntegrationEvent, PlatformConnection, TokenError, Transmitter,
 };
-use anyhow::{Context, Result};
-use config::{Config, Value};
+use anyhow::Result;
+use config::Config;
 use reqwest::Client as ReqwestClient;
 use twitch_api::{
     eventsub::EventType,
@@ -34,7 +33,7 @@ pub mod permissions;
 pub mod websocket;
 
 use twitch_types::UserId;
-use websocket::{WebsocketClient, WebsocketError};
+use websocket::WebsocketClient;
 
 pub static TOKEN: LazyLock<Arc<futures::lock::Mutex<Option<UserToken>>>> =
     LazyLock::new(|| Arc::new(futures::lock::Mutex::new(None)));
@@ -186,13 +185,13 @@ impl TwitchApiConnection {
                     Err(TokenElapsed) => {
                         warn!("{:?}", TokenElapsed);
                         let mut token_cont = token_loop.lock().await;
-                        token_cont.as_mut().unwrap().refresh_token(&client).await;
+                        let _ = token_cont.as_mut().unwrap().refresh_token(&client).await;
                         continue;
                     }
                     Err(InvalidToken) => {
                         warn!("{:?}", InvalidToken);
                         let mut token_cont = token_loop.lock().await;
-                        token_cont.as_mut().unwrap().refresh_token(&client).await;
+                        let _ = token_cont.as_mut().unwrap().refresh_token(&client).await;
                         continue;
                     }
                     Err(e) => {

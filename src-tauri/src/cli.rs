@@ -1,13 +1,12 @@
 use std::{
     io::{self, Write},
-    process,
     sync::Arc,
 };
 use tauri::App;
-use tauri_plugin_cli::{CliExt, Matches};
+use tauri_plugin_cli::Matches;
 use tracing::error;
 
-use crate::integration::{PlatformAuthenticate, TwitchApiConnection};
+use crate::integration::TwitchApiConnection;
 
 pub async fn handle_cli_matches(
     matches: Matches,

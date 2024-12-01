@@ -5,15 +5,15 @@ use config::{
 };
 use serde::{
     ser::{SerializeMap, SerializeSeq},
-    Deserialize, Serialize,
+    Serialize,
 };
 use std::{
     fmt::Debug,
     path::{Path, PathBuf},
 };
-use tracing::{error, info};
+use tracing::error;
 
-use crate::{servers, PROGRAM};
+use crate::PROGRAM;
 use config::{Config, Environment, File, FileFormat};
 use dirs::config_dir;
 
@@ -166,8 +166,7 @@ impl Settings {
             (false, FileType::File) => {
                 let _ = self.write();
                 Ok(FileType::File)
-            }
-            _ => Err(anyhow!("reached an unhandled path in Settings::make_exist")),
+            } // _ => Err(anyhow!("reached an unhandled path in Settings::make_exist")),
         }
     }
 
@@ -349,30 +348,30 @@ impl Settings {
 }
 
 #[tauri::command]
-pub fn set_config_string(key: String, value: String) {
+pub fn set_config_string(_key: String, value: String) {
     dbg!(value);
 }
 #[tauri::command]
-pub fn set_config_int(key: String, value: i128) {
-    dbg!(value);
-}
-
-#[tauri::command]
-pub fn set_config_uint(key: String, value: u128) {
+pub fn set_config_int(_key: String, value: i128) {
     dbg!(value);
 }
 
 #[tauri::command]
-pub fn set_config_float(key: String, value: f64) {
+pub fn set_config_uint(_key: String, value: u128) {
     dbg!(value);
 }
 
 #[tauri::command]
-pub fn set_config_bool(key: String, value: bool) {
+pub fn set_config_float(_key: String, value: f64) {
     dbg!(value);
 }
 
 #[tauri::command]
-pub fn set_config_array(key: String, value: Vec<String>) {
+pub fn set_config_bool(_key: String, value: bool) {
+    dbg!(value);
+}
+
+#[tauri::command]
+pub fn set_config_array(_key: String, value: Vec<String>) {
     dbg!(value);
 }

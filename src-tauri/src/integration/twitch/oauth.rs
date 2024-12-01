@@ -1,21 +1,17 @@
-use std::{sync::mpsc::channel, thread, time::Duration};
-
 use anyhow::Context;
 use cached::{stores::DiskCacheBuilder, DiskCache, IOCached};
 use http::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufStream};
 use tokio::net::TcpListener;
 use tracing::{debug, error, info};
 use twitch_oauth2::{tokens::UserTokenBuilder, AccessToken, RefreshToken, Scope, UserToken};
-use url::Url;
 
-#[derive(Error, Debug, PartialEq, Clone)]
-enum OAuthError {
-    #[error("error with disk cache `{0}`")]
-    DiskError(String),
-}
+// #[derive(Error, Debug, PartialEq, Clone)]
+// enum OAuthError {
+//     #[error("error with disk cache `{0}`")]
+//     DiskError(String),
+// }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SerializableUserToken {

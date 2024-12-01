@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::integration::{self, IntegrationEvent};
-use anyhow::{bail, Error, Result};
+use anyhow::Result;
 use futures::stream::FusedStream;
 use tokio::sync::mpsc::Sender;
 use tokio_tungstenite::tungstenite;
@@ -12,7 +12,7 @@ use twitch_api::{
     eventsub::{
         self,
         event::websocket::{EventsubWebsocketData, ReconnectPayload, SessionData, WelcomePayload},
-        Event, EventType,
+        Event,
     },
     types::{self},
     HelixClient,
@@ -168,7 +168,7 @@ impl WebsocketClient {
                         Ok(None) => {
                             error!("Received none");
                         }
-                        Err(timeout_error) => {
+                        Err(_timeout_error) => {
                             debug!("Twitch websocket has timed out, reestablishing now...");
                             s = WebsocketError::FailedToRun("when reestablishing connection after timeout".into()).map_err(self
                                         .connect()
@@ -221,10 +221,13 @@ impl WebsocketClient {
                                             target = "rcon2::integration::twitch::websocket::ChannelChatMessage",
                                             message
                                         );
-                                        self.event_tx.send(IntegrationEvent::Chat {
-                                            msg: chat_payload.message.text.to_string(),
-                                            author: chat_payload.chatter_user_name.to_string(),
-                                        });
+                                        let _ = self
+                                            .event_tx
+                                            .send(IntegrationEvent::Chat {
+                                                msg: chat_payload.message.text.to_string(),
+                                                author: chat_payload.chatter_user_name.to_string(),
+                                            })
+                                            .await;
                                     }
                                     _ => {
                                         error! {"Unhandled Message Payload: {:?}", message}
@@ -302,13 +305,13 @@ impl WebsocketClient {
                 error!("Close frame: {:?}", close);
                 Err(WebsocketError::Terminated)
             }
-            tungstenite::Message::Binary(vec) => todo!("Binary"),
-            tungstenite::Message::Frame(frame) => todo!("frame"),
-            tungstenite::Message::Ping(vec) => {
+            tungstenite::Message::Binary(_vec) => todo!("Binary"),
+            tungstenite::Message::Frame(_frame) => todo!("frame"),
+            tungstenite::Message::Ping(_vec) => {
                 trace!("Ping");
                 Ok(())
             }
-            tungstenite::Message::Pong(vec) => {
+            tungstenite::Message::Pong(_vec) => {
                 trace!("Pong");
                 Ok(())
             }

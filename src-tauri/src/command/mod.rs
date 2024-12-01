@@ -7,7 +7,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, LazyLock, Mutex},
 };
-use tracing::{error, info, trace};
+use tracing::{error, trace};
 use uuid::Uuid;
 
 mod runner;
@@ -228,7 +228,7 @@ impl Command {
 }
 
 impl From<Command> for config::ValueKind {
-    fn from(value: Command) -> Self {
+    fn from(_value: Command) -> Self {
         // let map = Map::new();
         // map.insert();
         // Self::Table(map)

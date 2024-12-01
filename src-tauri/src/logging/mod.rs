@@ -1,6 +1,5 @@
 use crate::settings::ConfigValue;
-use crate::PROGRAM;
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Result};
 use config::ValueKind;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
@@ -352,7 +351,7 @@ pub fn unsubscribe_logging_channel(uuid: String) -> Result<(), String> {
     let unsub = Logger::unsubscribe_channel(uuid.clone());
 
     match unsub {
-        Some(channel) => {
+        Some(_channel) => {
             debug!("Unsubscribed from channel: {}", uuid.clone());
             Ok(())
         }

@@ -23,6 +23,7 @@ pub enum RunnerError {
 
 /// Responsible for receiving [IntegrationEvent] and handling them.
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct Runner {
     /// [Receiver] for the runner to listen on.
     rx: Option<Receiver<IntegrationEvent>>,
@@ -88,12 +89,6 @@ impl Runner {
         let jh: JoinHandle<std::result::Result<(), RunnerError>> = spawn(async move {
             loop {
                 match rx.recv().await {
-                    Some(event) => {
-                        if triggers.contains_key(&event.event_type()) {
-                            let group = triggers.get(&event.event_type()).unwrap();
-                            group.iter().for_each(|t| if t.is_match(&event) {});
-                        }
-                    }
                     Some(Connected) => {
                         info!("runner connected");
                     }
@@ -109,11 +104,16 @@ impl Runner {
                             _ => continue,
                         }
                     },
-                    Some(Unknown) => todo!(),
-
-                    Some(e) => {
-                        error!("Unexpected integration event: {:?}", e)
+                    Some(Unknown) => {
+                        error!("An unknown event occurred")
                     }
+                    Some(event) => {
+                        if triggers.contains_key(&event.event_type()) {
+                            let group = triggers.get(&event.event_type()).unwrap();
+                            group.iter().for_each(|t| if t.is_match(&event) {});
+                        }
+                    }
+
                     None => return Ok(()),
                 }
             }
