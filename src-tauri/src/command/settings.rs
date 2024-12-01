@@ -3,23 +3,14 @@ use config::{
     builder::{BuilderState, DefaultState},
     ConfigBuilder, Map, Value, ValueKind,
 };
-use serde::{
-    ser::{SerializeMap, SerializeSeq},
-    Deserialize, Serialize,
-};
 use std::{
     fmt::Debug,
     path::{Path, PathBuf},
 };
-use tracing::{error, info};
+use tracing::error;
 
-use crate::{
-    servers,
-    settings::{ConfigValue, DefaultValue, Settings},
-    PROGRAM,
-};
+use crate::settings::{ConfigValue, DefaultValue, Settings};
 use config::{Config, Environment, File, FileFormat};
-use dirs::config_dir;
 
 use super::Command;
 
@@ -49,7 +40,6 @@ impl ScriptSettings {
             ))
             .add_source(Environment::with_prefix("RCON_SCRIPTS"));
         mut_self.config_builder = builder.clone();
-        let config = mut_self.config();
         let _ = mut_self.write();
         mut_self
     }
@@ -148,16 +138,15 @@ impl ScriptSettings {
                 let _ = self.write();
                 Ok(FileType::File)
             }
-            _ => Err(anyhow!("reached an unhandled path in Settings::make_exist")),
         }
     }
 
-    pub fn get_command(&self, id: String) -> Option<Command> {
+    pub fn get_command(&self, _id: String) -> Option<Command> {
         todo!("get_command");
     }
 
     pub fn set_command(&self, command: Command) -> Option<Command> {
-        let builder = self
+        let _builder = self
             .config_builder
             .clone()
             .set_override(command.name.clone(), command);
@@ -218,6 +207,7 @@ impl Default for ScriptSettings {
     }
 }
 
+#[allow(unused)]
 impl ScriptSettings {
     fn default_loop<T: BuilderState, D: Into<ValueKind>>(
         builder: ConfigBuilder<T>,

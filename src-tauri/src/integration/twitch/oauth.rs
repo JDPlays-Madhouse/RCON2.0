@@ -213,12 +213,11 @@ async fn parse_request(
         .next()
         .ok_or(anyhow::anyhow!("missing path"))
         .map(Into::into)?;
-    info!("path: {}", path.clone());
     let _ = response(&mut stream).await;
     Ok(path)
 }
 
-/// TODO: Oauth code in uri not validated.
+/// TODO: Oauth code in uri not validated i.e. add error handling.
 async fn response<O: AsyncWrite + Unpin>(stream: &mut O) -> anyhow::Result<()> {
     let status = StatusCode::OK;
     let response = Response::builder()

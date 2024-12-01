@@ -7,7 +7,7 @@ use tokio::{
     sync::mpsc::{channel, error::SendError, Receiver, Sender},
     task::JoinHandle,
 };
-use tracing::error;
+use tracing::{error, info};
 
 use super::{Command, Trigger};
 
@@ -82,6 +82,7 @@ impl Runner {
             }
         };
         let triggers = self.triggers.clone();
+        let _server = self.server.clone().unwrap();
 
         use IntegrationEvent::*;
         let jh: JoinHandle<std::result::Result<(), RunnerError>> = spawn(async move {
@@ -93,7 +94,12 @@ impl Runner {
                             group.iter().for_each(|t| if t.is_match(&event) {});
                         }
                     }
-                    Some(Connected) => todo!(),
+                    Some(Connected) => {
+                        info!("runner connected");
+                    }
+                    Some(Disconnected) => {
+                        info!("runner Disconnected");
+                    }
                     Some(Stop) => return Ok(()),
                     Some(Pause) => loop {
                         match rx.recv().await {

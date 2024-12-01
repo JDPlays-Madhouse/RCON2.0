@@ -53,11 +53,12 @@ export default function ServerControl({
         invoke("connect_to_server", { server: selectedServer, channel: onEvent });
     }
     function handleServerCheck() {
+        if (selectedServer){
         invoke<ServerStatus>("check_connection", { server: selectedServer }).then(
             (s) => {
                 setStatus(s);
             },
-        );
+        ).catch(console.error);}
     }
     function handleServerDisconnect() {
         invoke<ServerStatus>("disconnect_connection", {

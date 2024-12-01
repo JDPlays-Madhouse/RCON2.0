@@ -91,10 +91,8 @@ pub async fn run() {
             error!("{:?}", e)
         }
     };
-    let twitch_runner = command::Runner::new(None);
     let twitch_integration = Arc::new(futures::lock::Mutex::new(TwitchApiConnection::new(
         config.get_table("auth.twitch").unwrap(),
-        twitch_runner,
     )));
 
     let twitch_int_clone = Arc::clone(&twitch_integration);

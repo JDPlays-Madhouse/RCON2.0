@@ -52,6 +52,7 @@ where
 pub enum IntegrationEvent {
     #[default]
     Connected,
+    Disconnected,
     Chat {
         msg: String,
         author: String,
@@ -102,6 +103,7 @@ impl IntegrationEvent {
             Pause => Pause,
             Continue => Continue,
             Update => Update,
+            Disconnected => Disconnected,
         }
     }
 }

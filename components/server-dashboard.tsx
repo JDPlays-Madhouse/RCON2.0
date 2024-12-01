@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import LogArea from "./server-log";
 import { invoke } from "@tauri-apps/api/core";
 import { Command, CommandType, RconCommand, Server } from "@/types";
+import { Button } from "./ui/button";
 
 interface ServerDashBoardProps extends React.ComponentProps<"div"> {
   showLog: boolean;
@@ -24,6 +25,7 @@ export default function ServerDashboard({
 }: ServerDashBoardProps) {
   const logRef = useRef<ImperativePanelHandle>(null);
   const [command, setCommand] = useState<Command>();
+
   useEffect(() => {
     if (logRef && logRef.current && showLog) {
       logRef.current.expand();
@@ -31,24 +33,33 @@ export default function ServerDashboard({
       logRef.current.collapse();
     }
   }, [showLog]);
+
+  const variant: CommandType = {
+    type: "Chat",
+  };
+  const rconLua: RconCommand = {
+    prefix: {
+      prefix: "SC",
+    },
+    lua_command: {
+      commandType: "Inline",
+      command: "print('hello world')",
+    },
+  };
+  const name: string = "Hello World";
+  const commandProps = { name, variant, rconLua };
   useEffect(() => {
-    const variant: CommandType = {
-      type: "Chat",
-    };
-    const rconLua: RconCommand = {
-      prefix: {
-        prefix: "SC",
-      },
-      lua_command: {
-        commandType: "Inline",
-        command: "game.print('Hello world', {color= {b=0.5}})",
-      },
-    };
-    invoke<Command>("create_command", { variant, rconLua }).then((c) => {
-      setCommand(c);
-    });
-  });
+    invoke<Command>("create_command", commandProps)
+      .then((c) => {
+        console.log(c);
+        setCommand(c);
+      })
+      .catch(console.log);
+    console.log("after create command");
+  }, []); // Needed otherwise ui freezes ...
+
   function handleOnClick() {
+    console.log("HandleOnClick");
     if (command && selectedServer) {
       invoke<string>("send_command_to_server", {
         server: selectedServer,
@@ -63,9 +74,14 @@ export default function ServerDashboard({
     <div className={cn("", className)} {...props}>
       <ResizablePanelGroup direction="vertical" className="border max-w-dvw">
         <ResizablePanel defaultSize={70}>
-          <div className="flex h-full items-center justify-center p-6 my-auto">
+          <div className="flex flex-col h-full items-center justify-center p-6 my-auto">
             <div className="font-semibold">Dashboard</div>
-            <div onClick={handleOnClick}> Send Hello world</div>
+            <Button onClick={handleOnClick} variant="secondary">
+              Send:{" "}
+              {command?.rcon_lua?.lua_command.commandType == "Inline"
+                ? command?.rcon_lua?.lua_command.command
+                : command?.rcon_lua?.lua_command.command.command}
+            </Button>
           </div>
         </ResizablePanel>
         <ResizableHandle withHandle />

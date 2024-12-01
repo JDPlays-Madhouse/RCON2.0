@@ -1,10 +1,13 @@
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fmt::Display,
+    fs,
     path::PathBuf,
     sync::{Arc, LazyLock, Mutex},
 };
+use tracing::{error, info, trace};
 use uuid::Uuid;
 
 mod runner;
@@ -12,6 +15,8 @@ pub mod settings;
 mod trigger;
 pub use runner::Runner;
 pub use trigger::Trigger;
+
+use crate::servers::GameServer;
 
 static COMMANDS: LazyLock<Arc<Mutex<HashMap<String, Command>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
@@ -54,24 +59,41 @@ impl Display for RconCommandPrefix {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(tag = "commandType", content = "command")]
 pub enum RconLuaCommand {
-    File {
-        /// Relative path in scripts directory.
-        path: PathBuf,
-        /// Command starts as None until file is read.
-        command: Option<String>,
-    },
+    File(LuaFile),
     Inline(String),
     Other,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LuaFile {
+    /// Relative path in scripts directory.
+    pub path: PathBuf,
+    /// Command starts as None until file is read.
+    pub contents: Option<String>,
+}
+
+impl LuaFile {
+    pub fn contents(&mut self) -> Result<String> {
+        if self.contents.is_none() {
+            match fs::read_to_string(&self.path) {
+                Ok(command) => {
+                    self.contents = Some(command.clone());
+                    Ok(command)
+                }
+                Err(e) => bail!(e),
+            }
+        } else {
+            Ok(self.contents.clone().unwrap())
+        }
+    }
+}
+
 impl RconLuaCommand {
-    pub fn command(&self) -> String {
+    pub fn command(&mut self) -> Result<String> {
         use RconLuaCommand::*;
         match self {
-            File { path, command } => {
-                todo!("read the file")
-            }
-            Inline(command) => command.clone(),
+            File(lua_file) => lua_file.contents(),
+            Inline(command) => Ok(command.clone()),
             _ => todo!("Rcon command not implemented"),
         }
     }
@@ -106,8 +128,14 @@ pub struct RconCommand {
 
 impl RconCommand {
     /// The complete command to transmit to the server.
-    pub fn command(&self) -> String {
-        self.prefix.to_string() + &self.lua_command.command()
+    pub fn command(&mut self) -> String {
+        match self.lua_command.command() {
+            Ok(command) => self.prefix.to_string() + &command,
+            Err(e) => {
+                error!("{:?}", e);
+                String::new()
+            }
+        }
     }
 }
 
@@ -118,6 +146,7 @@ pub struct Command {
     pub variant: CommandType,
     pub rcon_lua: RconCommand,
     pub triggers: Vec<Trigger>,
+    pub servers: Vec<GameServer>,
 }
 
 impl Command {
@@ -125,10 +154,11 @@ impl Command {
         let id = Uuid::now_v7().to_string();
         Self {
             name,
-            id: id.clone(),
+            id,
             variant,
             rcon_lua,
             triggers: vec![],
+            servers: vec![],
         }
     }
 
@@ -145,12 +175,17 @@ impl Command {
             variant: variant.into(),
             rcon_lua: rcon_lua.into(),
             triggers: triggers.into(),
+            servers: vec![],
         }
     }
 
     pub fn add_to_commands(&self) -> String {
+        trace!("add_to_commands");
         let mut commands = COMMANDS.lock().unwrap();
+        trace!("COMMANDS Locked");
         commands.insert(self.id(), self.clone());
+        trace!("COMMANDS Unlocked");
+
         self.id.clone()
     }
 
@@ -163,7 +198,7 @@ impl Command {
         self.id.clone()
     }
 
-    pub fn tx_string(&self) -> String {
+    pub fn tx_string(&mut self) -> String {
         self.rcon_lua.command()
     }
 
@@ -207,8 +242,11 @@ pub fn create_command(
     variant: CommandType,
     rcon_lua: RconCommand,
 ) -> Result<Command, String> {
+    trace!("Create Command");
     let command = Command::new(name, variant, rcon_lua);
+    trace!("Created Command");
     command.add_to_commands(); // TODO: Add error handling for if command name exists.
+    trace!("Added Command");
     Ok(command)
 }
 

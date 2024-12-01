@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::integration;
+use crate::integration::{self, IntegrationEvent};
 use anyhow::{bail, Error, Result};
 use futures::stream::FusedStream;
 use tokio::sync::mpsc::Sender;
@@ -221,6 +221,10 @@ impl WebsocketClient {
                                             target = "rcon2::integration::twitch::websocket::ChannelChatMessage",
                                             message
                                         );
+                                        self.event_tx.send(IntegrationEvent::Chat {
+                                            msg: chat_payload.message.text.to_string(),
+                                            author: chat_payload.chatter_user_name.to_string(),
+                                        });
                                     }
                                     _ => {
                                         error! {"Unhandled Message Payload: {:?}", message}

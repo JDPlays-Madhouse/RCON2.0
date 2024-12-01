@@ -9,7 +9,7 @@ use rcon::Connection;
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
 use tauri::{ipc::Channel, State};
 use tokio::net::TcpStream;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, trace};
 
 use crate::command::Command;
 
@@ -22,7 +22,9 @@ pub static CONNECTIONS: LazyLock<tokio::sync::Mutex<HashMap<GameServer, GameServ
 /// Valid Games
 ///
 /// Dev notes: Update the 2 lower impls (`impl std::fmt::Display for Game`, `impl TryFrom<String> for Game`) to match Factorio.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Hash, PartialOrd, Ord,
+)]
 pub enum Game {
     #[default]
     Factorio,
@@ -114,28 +116,12 @@ impl GameServerConnected {
     }
 
     pub async fn handshake(&self) -> ServerStatus {
-        let io = match TcpStream::connect(&self.server.socket_address()).await {
-            Ok(io) => {
-                return ServerStatus::Connected {
-                    server: self.server.clone(),
-                }
-            }
-            Err(_e) => {
-                return ServerStatus::Disconnected {
-                    server: Some(self.server.clone()),
-                };
-            }
-        };
-        match <Connection<TcpStream>>::builder()
-            .handshake(io, &self.server.password)
-            .await
-        {
-            Ok(_r) => ServerStatus::Connected {
+        match TcpStream::connect(&self.server.socket_address()).await {
+            Ok(_io) => ServerStatus::Connected {
                 server: self.server.clone(),
             },
-            Err(e) => ServerStatus::Error {
-                msg: e.to_string(),
-                server: self.server.clone(),
+            Err(_e) => ServerStatus::Disconnected {
+                server: Some(self.server.clone()),
             },
         }
     }
@@ -145,7 +131,7 @@ impl GameServerConnected {
         match CONNECTIONS.lock().await.remove_entry(&server) {
             Some((s, c)) => {
                 let channel = c.channel;
-                channel.send(ServerStatus::Disconnected {
+                let _ = channel.send(ServerStatus::Disconnected {
                     server: Some(s.clone()),
                 });
 
@@ -156,7 +142,7 @@ impl GameServerConnected {
     }
 }
 
-#[derive(Default, Deserialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Deserialize, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GameServer {
     pub name: String,
     pub address: String,
@@ -393,7 +379,7 @@ pub fn update_server(server: GameServer, old_server_name: String) -> Result<Game
         .set_config(&format!("servers.{}.port", server.name), server.port)
         .unwrap();
     if server.name != old_server_name {
-        settings = settings.remove_config(&format!("servers.{}", old_server_name));
+        let _ = settings.remove_config(&format!("servers.{}", old_server_name));
     }
     Ok(ret_server)
 }
@@ -405,12 +391,12 @@ pub async fn connect_to_server(
 ) -> Result<(), String> {
     match server.connect(channel.clone()).await {
         Ok(s) => {
-            channel.send(ServerStatus::Connected { server: s });
+            let _ = channel.send(ServerStatus::Connected { server: s });
             Ok(())
         }
         Err(e) => {
             error!("{e:?}"); // TODO: Handle errors.
-            channel.send(ServerStatus::Error {
+            let _ = channel.send(ServerStatus::Error {
                 msg: format!("{:?}", e),
                 server,
             });
@@ -422,22 +408,29 @@ pub async fn connect_to_server(
 #[tauri::command]
 pub async fn send_command_to_server(
     server: GameServer,
-    command: Command,
+    mut command: Command,
 ) -> Result<String, String> {
+    trace!("send_command_to_server");
     let mut connections = CONNECTIONS.lock().await;
+    trace!("CONNECTIONS Locked");
     let connection: &mut GameServerConnected = match connections.get_mut(&server) {
         Some(c) => c,
         None => return Err("Server not connected to.".to_string()),
     };
     match connection.send_command(command.tx_string()).await {
-        Ok(r) => Ok(r),
+        Ok(r) => {
+            trace!("CONNECTIONS Unlocked");
+            Ok(r)
+        }
         Err(e) => Err(format!("{:?}", e)),
     }
 }
 
 #[tauri::command]
 pub async fn check_connection(server: GameServer) -> ServerStatus {
+    trace!("check_connection");
     let connections = CONNECTIONS.lock().await;
+    trace!("CONNECTIONS Locked");
     let conn = connections.get(&server);
     let status = match conn {
         Some(c) => {
@@ -449,6 +442,7 @@ pub async fn check_connection(server: GameServer) -> ServerStatus {
             server: Some(server.clone()),
         },
     };
+    trace!("CONNECTIONS Unlocked");
 
     info!("Server Status: {:?}", status);
     status

@@ -74,7 +74,7 @@ impl std::fmt::Debug for TwitchApiConnection {
 }
 
 impl TwitchApiConnection {
-    pub fn new(config: APIConnectionConfig, runner: Runner) -> Self {
+    pub fn new(config: APIConnectionConfig) -> Self {
         let username = config
             .get("username")
             .unwrap()
@@ -133,7 +133,7 @@ impl TwitchApiConnection {
             websocket: Default::default(),
             websocket_joinhandle: Default::default(),
             session_id: Default::default(),
-            runner,
+            runner: Runner::new(None),
         }
     }
 }
