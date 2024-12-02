@@ -1,5 +1,7 @@
 use anyhow::{bail, Result};
+use config::{Map, Value};
 use serde::{Deserialize, Serialize};
+use settings::ScriptSettings;
 use std::{
     collections::HashMap,
     fmt::Display,
@@ -7,8 +9,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, LazyLock, Mutex},
 };
-use tracing::{error, trace};
-use uuid::Uuid;
+use tracing::{debug, error, info, trace};
 
 mod runner;
 pub mod settings;
@@ -16,7 +17,10 @@ mod trigger;
 pub use runner::Runner;
 pub use trigger::Trigger;
 
-use crate::servers::GameServer;
+use crate::{
+    servers::{self, GameServer},
+    settings::Settings,
+};
 
 static COMMANDS: LazyLock<Arc<Mutex<HashMap<String, Command>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
@@ -28,7 +32,7 @@ pub enum CommandType {
     Chat,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(tag = "prefix", content = "data")]
 pub enum RconCommandPrefix {
     /// Everything before the actual command including slashes and spaces.
@@ -41,6 +45,7 @@ pub enum RconCommandPrefix {
     MC,
     /// Command: /command \<command\> <br/>
     /// Executes a Lua command (if allowed).
+    #[default]
     C,
 }
 
@@ -56,6 +61,34 @@ impl Display for RconCommandPrefix {
     }
 }
 
+impl From<String> for RconCommandPrefix {
+    fn from(value: String) -> Self {
+        use RconCommandPrefix::*;
+        match value.clone().to_uppercase().as_str() {
+            "SC" => SC,
+            "C" => C,
+            "MC" => MC,
+            _ => {
+                debug!(
+                    "RconCommandPrefix not already known, assuming it is custom: {}",
+                    &value
+                );
+                Custom(value)
+            }
+        }
+    }
+}
+impl TryFrom<Map<String, Value>> for RconCommandPrefix {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Map<String, Value>) -> std::result::Result<Self, Self::Error> {
+        match value.get("prefix") {
+            Some(p) => Ok(Self::from(p.to_string())),
+            None => bail!("No 'prefix' property specified."),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(tag = "commandType", content = "command")]
 pub enum RconLuaCommand {
@@ -64,18 +97,55 @@ pub enum RconLuaCommand {
     Other,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
+impl Default for RconLuaCommand {
+    fn default() -> Self {
+        Self::Inline(String::new())
+    }
+}
+
+impl TryFrom<Map<String, Value>> for RconLuaCommand {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Map<String, Value>) -> std::result::Result<Self, Self::Error> {
+        use RconLuaCommand::*;
+        let command_type = match value.get("command_type") {
+            Some(t) => t.to_string(),
+            None => bail!("No 'command_type' specified."),
+        };
+        match command_type.to_lowercase().as_str() {
+            "script" => {
+                let script_key = "script";
+                match value.get(script_key) {
+                    Some(s) => {
+                        let path = PathBuf::from(s.to_string());
+                        Ok(File(LuaFile::new(path)))
+                    }
+                    None => bail!("No {} property specified.", script_key),
+                }
+            }
+            "inline" => match value.get("inline") {
+                Some(lua) => Ok(Inline(lua.to_string())),
+                None => bail!("No 'inline' property specified."),
+            },
+            _ => {
+                bail!("Invalid command type.")
+            }
+        }
+    }
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LuaFile {
     /// Relative path in scripts directory.
-    pub path: PathBuf,
+    pub relative_path: PathBuf,
     /// Command starts as None until file is read.
-    pub contents: Option<String>,
+    contents: Option<String>,
 }
 
 impl LuaFile {
     pub fn contents(&mut self) -> Result<String> {
         if self.contents.is_none() {
-            match fs::read_to_string(&self.path) {
+            match fs::read_to_string(self.full_path()) {
                 Ok(command) => {
                     self.contents = Some(command.clone());
                     Ok(command)
@@ -85,6 +155,18 @@ impl LuaFile {
         } else {
             Ok(self.contents.clone().unwrap())
         }
+    }
+
+    fn new(path: PathBuf) -> Self {
+        Self {
+            relative_path: path,
+            contents: None,
+        }
+    }
+
+    fn full_path(&mut self) -> PathBuf {
+        let folder = ScriptSettings::scripts_folder();
+        folder.join(&self.relative_path)
     }
 }
 
@@ -142,40 +224,135 @@ impl RconCommand {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Command {
     pub name: String,
-    id: String,
-    pub variant: CommandType,
     pub rcon_lua: RconCommand,
     pub triggers: Vec<Trigger>,
     pub servers: Vec<GameServer>,
 }
 
+impl TryFrom<Map<String, Value>> for Command {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Map<String, Value>) -> std::result::Result<Self, Self::Error> {
+        let mut errors: Vec<anyhow::Error> = vec![];
+        let prefix = match RconCommandPrefix::try_from(value.clone()) {
+            Ok(p) => p,
+            Err(e) => {
+                error!("{}", &e);
+                errors.push(e);
+                RconCommandPrefix::default()
+            }
+        };
+
+        let lua_command = match RconLuaCommand::try_from(value.clone()) {
+            Ok(lua) => lua,
+            Err(e) => {
+                error!("{}", &e);
+                errors.push(e);
+                RconLuaCommand::default()
+            }
+        };
+
+        let rconcommand = RconCommand {
+            prefix,
+            lua_command,
+        };
+
+        let mut command_servers: Vec<GameServer> = Vec::new();
+        let settings = Settings::new();
+        let config = settings.config();
+        match value.get("servers") {
+            Some(servers_val) => {
+                let servers = match servers_val.clone().into_array() {
+                    Ok(s) => s,
+                    Err(e) => bail!(e),
+                };
+                for server in servers {
+                    let name = match server.into_table() {
+                        Ok(s) => match s.get("name") {
+                            Some(n) => match n.clone().into_string() {
+                                Ok(n) => n,
+                                Err(e) => bail!(e),
+                            },
+                            None => {
+                                error!("One of the servers is missing a 'name' property in scripts config.");
+                                bail!("One of the servers is missing a 'name' property in scripts config.");
+                            }
+                        },
+                        Err(e) => bail!(e),
+                    };
+                    match servers::server_from_settings(config.clone(), &name) {
+                        Some(s) => command_servers.push(s),
+                        None => {
+                            error!("No server found with name: {}", name);
+                            bail!("No server found with name: {}", name);
+                        }
+                    }
+                }
+            }
+            None => {
+                info!("No servers were listed.")
+            }
+        };
+
+        let triggers: Vec<Trigger> = match value.get("triggers") {
+            Some(trigger) => match trigger.clone().into_array() {
+                Ok(v) => v
+                    .clone()
+                    .iter()
+                    .filter_map(|t| Trigger::try_from(t.clone()).ok())
+                    .collect::<Vec<Trigger>>(),
+                Err(e) => bail!(e),
+            },
+            None => vec![],
+        };
+
+        if !errors.is_empty() {
+            error!(
+                "{} error/s occued in conversion from config file: {:?}",
+                errors.len(),
+                errors
+            );
+            Err(errors.remove(0))
+        } else {
+            Ok(Command::from_config(
+                "",
+                rconcommand,
+                triggers,
+                command_servers,
+            ))
+        }
+    }
+}
+
 impl Command {
-    pub fn new(name: String, variant: CommandType, rcon_lua: RconCommand) -> Self {
-        let id = Uuid::now_v7().to_string();
+    pub fn new(name: String, rcon_lua: RconCommand) -> Self {
         Self {
             name,
-            id,
-            variant,
             rcon_lua,
             triggers: vec![],
             servers: vec![],
         }
     }
 
-    pub fn from_config<I, V, L, T>(name: I, id: I, variant: V, rcon_lua: L, triggers: T) -> Self
+    pub fn set_name<N: Into<String>>(self, name: N) -> Self {
+        Self {
+            name: name.into(),
+            ..self
+        }
+    }
+
+    pub fn from_config<N, L, T, S>(name: N, rcon_lua: L, triggers: T, servers: S) -> Self
     where
-        I: Into<String>,
-        V: Into<CommandType>,
+        N: Into<String>,
         L: Into<RconCommand>,
         T: Into<Vec<Trigger>>,
+        S: Into<Vec<GameServer>>,
     {
         Self {
             name: name.into(),
-            id: id.into(),
-            variant: variant.into(),
             rcon_lua: rcon_lua.into(),
             triggers: triggers.into(),
-            servers: vec![],
+            servers: servers.into(),
         }
     }
 
@@ -186,7 +363,7 @@ impl Command {
         commands.insert(self.id(), self.clone());
         trace!("COMMANDS Unlocked");
 
-        self.id.clone()
+        self.id()
     }
 
     pub fn get(id: &str) -> Option<Self> {
@@ -195,7 +372,7 @@ impl Command {
     }
 
     pub fn id(&self) -> String {
-        self.id.clone()
+        self.name.clone()
     }
 
     pub fn tx_string(&mut self) -> String {
@@ -237,47 +414,11 @@ impl From<Command> for config::ValueKind {
 }
 
 #[tauri::command]
-pub fn create_command(
-    name: String,
-    variant: CommandType,
-    rcon_lua: RconCommand,
-) -> Result<Command, String> {
+pub fn create_command(name: String, rcon_lua: RconCommand) -> Result<Command, String> {
     trace!("Create Command");
-    let command = Command::new(name, variant, rcon_lua);
+    let command = Command::new(name, rcon_lua);
     trace!("Created Command");
     command.add_to_commands(); // TODO: Add error handling for if command name exists.
     trace!("Added Command");
     Ok(command)
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use rstest::rstest;
-//
-//     #[rstest]
-//     #[case::integer(8, ValueType::Int)]
-//     #[case::float(8.1, ValueType::Float)]
-//     #[case::bool(true, ValueType::Bool)]
-//     #[case::string("test", ValueType::String)]
-//     fn command_value_data<T>(#[case] input: T, #[case] input_type: ValueType)
-//     where
-//         T: std::fmt::Debug + std::cmp::PartialEq + std::clone::Clone,
-//     {
-//         let t = CommandValue::new(input.clone(), input_type);
-//         assert_eq!(t.data, input);
-//     }
-//
-//     #[rstest]
-//     #[case::integer(8, ValueType::Int)]
-//     #[case::float(8.1, ValueType::Float)]
-//     #[case::bool(true, ValueType::Bool)]
-//     #[case::string("test", ValueType::String)]
-//     fn command_value_type<T>(#[case] input: T, #[case] input_type: ValueType)
-//     where
-//         T: std::fmt::Debug + std::cmp::PartialEq + std::clone::Clone,
-//     {
-//         let t = CommandValue::new(input.clone(), input_type);
-//         assert_eq!(t.r#type, input_type);
-//     }
-// }

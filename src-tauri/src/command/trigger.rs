@@ -1,4 +1,7 @@
+use anyhow::bail;
+use config::Value;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 use crate::integration::IntegrationEvent;
 
@@ -100,6 +103,70 @@ impl Trigger {
     #[must_use]
     pub fn is_channel_point_reward_redemed(&self) -> bool {
         matches!(self, Self::ChannelPointRewardRedemed { .. })
+    }
+}
+
+impl TryFrom<Value> for Trigger {
+    type Error = anyhow::Error;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        let trigger_table = match value.into_table() {
+            Ok(t) => t,
+            Err(e) => bail!(e),
+        };
+        let trigger_type = match trigger_table.get("trigger_type") {
+            Some(trigger_type) => match trigger_type.clone().into_string() {
+                Ok(t) => t,
+                Err(e) => bail!(e),
+            },
+            None => bail!("Missing 'trigger_type' property."),
+        };
+
+        match trigger_type.to_lowercase().as_str() {
+            "chat" => match trigger_table.get("pattern") {
+                Some(p) => match p.clone().into_string() {
+                    Ok(pattern) => Ok(Self::Chat { pattern }),
+                    Err(e) => bail!(e),
+                },
+                None => bail!(
+                    "A trigger_type of '{}' needs the properties: {:?}",
+                    trigger_type,
+                    vec!["pattern"]
+                ),
+            },
+            "channelpointrewardredemed" => {
+                let id = match trigger_table.get("id") {
+                    Some(id) => match id.clone().into_string() {
+                        Ok(i) => i,
+                        Err(e) => {
+                            bail!(e)
+                        }
+                    },
+                    None => bail!(
+                        "A trigger_type of '{}' needs the properties: {:?}",
+                        trigger_type,
+                        vec!["id", "name"]
+                    ),
+                };
+                let name = match trigger_table.get("name") {
+                    Some(name) => match name.clone().into_string() {
+                        Ok(n) => n,
+                        Err(e) => {
+                            bail!(e)
+                        }
+                    },
+                    None => bail!(
+                        "A trigger_type of '{}' needs the properties: {:?}",
+                        trigger_type,
+                        vec!["id", "name"]
+                    ),
+                };
+                Ok(Self::ChannelPointRewardRedemed { name, id })
+            }
+            trig => {
+                error!("Trigger type has not been implemented: {}", trig);
+                bail!("Trigger type has not been implemented: {}", trig)
+            }
+        }
     }
 }
 

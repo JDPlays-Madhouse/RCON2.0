@@ -44,6 +44,10 @@ impl ScriptSettings {
         mut_self
     }
 
+    pub fn scripts_folder() -> PathBuf {
+        Self::new().scripts_folder
+    }
+
     pub fn new_from_config(config: Config) -> Self {
         let mut settings = Self::new();
         settings.config_builder = settings.config_builder.add_source(config);
@@ -141,8 +145,24 @@ impl ScriptSettings {
         }
     }
 
-    pub fn get_command(&self, _id: String) -> Option<Command> {
-        todo!("get_command");
+    pub fn get_command(&self, id: &str) -> Option<Command> {
+        let config = self.config();
+        let command_table = match config.get_table(id) {
+            Ok(c) => c,
+            Err(e) => {
+                error!("{}", e);
+                return None;
+            }
+        };
+
+        match Command::try_from(command_table) {
+            Ok(command) => Some(command.set_name(id)),
+            Err(e) => {
+                error!("Command not found: {id}");
+                dbg!(e);
+                None
+            }
+        }
     }
 
     pub fn set_command(&self, command: Command) -> Option<Command> {
@@ -207,7 +227,7 @@ impl Default for ScriptSettings {
     }
 }
 
-#[allow(unused)]
+#[allow(dead_code)]
 impl ScriptSettings {
     fn default_loop<T: BuilderState, D: Into<ValueKind>>(
         builder: ConfigBuilder<T>,

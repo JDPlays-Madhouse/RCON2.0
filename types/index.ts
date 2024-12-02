@@ -31,12 +31,6 @@ export type LogLevelColors = {
 };
 
 // Commands
-export type CommandType =
-        | { type: "ChannelPoints"; data: string }
-        | {
-                type: "Chat";
-        };
-
 export type RconCommandPrefix =
         | {
                 prefix: "Custom";
@@ -45,6 +39,7 @@ export type RconCommandPrefix =
         | { prefix: "SC" }
         | { prefix: "MC" }
         | { prefix: "C" };
+
 export type RconLuaCommand =
         | { commandType: "File"; command: { path: string; command?: string } }
         | { commandType: "Inline"; command: string };
@@ -55,6 +50,5 @@ export type RconCommand = {
 };
 export type Command = {
         id: string;
-        variant: CommandType;
         rcon_lua: RconCommand;
 };
