@@ -1,0 +1,32 @@
+---
+config:
+    theme: dark
+    class:
+        hideEmptyMembersBox: true
+        nodeSpacing: 200
+        rankSpacing: 200
+        useMaxWidth: true
+
+---
+classDiagram
+    direction RL
+    GameServer "0..*" <|--|> "0..1" Command
+    Command <|--|> "0..*" Trigger
+    Command "0..*" <|--|> "0..*" Runner
+    Runner  <|--|> Integration
+
+    class GameServer{
+
+    }
+    class Command{
+
+    }
+    class Trigger{
+
+    }
+    class Runner{
+
+    }
+    class Integration{
+
+    }

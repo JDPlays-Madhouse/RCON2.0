@@ -324,6 +324,7 @@ pub fn set_default_server(
     }
 }
 
+/// TODO: Change to a `impl From<GameServer> for ConfigValue`
 #[tauri::command]
 pub fn new_server(server: GameServer) -> Result<GameServer, String> {
     info! {"adding new rcon server: {:?}", server};

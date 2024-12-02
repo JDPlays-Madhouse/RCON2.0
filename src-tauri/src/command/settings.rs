@@ -139,7 +139,7 @@ impl ScriptSettings {
                 Ok(_) => Ok(FileType::Dir),
             },
             (false, FileType::File) => {
-                let _ = self.write();
+                self.write().expect("writing to file");
                 Ok(FileType::File)
             }
         }
@@ -165,13 +165,18 @@ impl ScriptSettings {
         }
     }
 
-    pub fn set_command(&self, command: Command) -> Option<Command> {
-        let _builder = self
+    /// Sets a command in config and returns [`None`] if no command with that name exists otherwise
+    /// returns [`Some<Command>`].
+    pub fn set_command(&mut self, command: Command) -> Option<Command> {
+        let old_command = self.get_command(&command.name);
+        let builder = self
             .config_builder
             .clone()
-            .set_override(command.name.clone(), command);
-        // builder.set_override(command.name, )
-        todo!("set_command");
+            .set_override(command.name.clone(), command)
+            .expect("Setting override");
+        self.config_builder = builder;
+        let _ = self.write();
+        old_command
     }
 
     pub fn write(&self) -> std::io::Result<()> {
@@ -199,21 +204,6 @@ impl Default for ScriptSettings {
 
         let builder: ConfigBuilder<config::builder::DefaultState> = Config::builder();
 
-        // Set Default Settings here.
-        // let default_settings_str: Vec<DefaultValue<&str>> = vec![];
-        // builder = ScriptSettings::default_loop(builder, default_settings_str);
-
-        // let default_settings_bool: Vec<DefaultValue<bool>> = vec![];
-        // builder = ScriptSettings::default_loop(builder, default_settings_bool);
-
-        // let default_settings_list_str = vec![];
-        // builder = ScriptSettings::default_loop(builder, default_settings_list_str);
-
-        // let default_settings_int: Vec<DefaultValue<u16>> = vec![("servers.example.port", 4312)];
-        // builder = Settings::default_loop(builder, default_settings_int);
-
-        // let config = builder.build_cloned().expect("Building cloned config");
-
         let script_settings = Self {
             config_builder: builder,
             config_filename,
@@ -240,32 +230,3 @@ impl ScriptSettings {
         b
     }
 }
-//
-// #[tauri::command]
-// pub fn set_config_string(key: String, value: String) {
-//     dbg!(value);
-// }
-// #[tauri::command]
-// pub fn set_config_int(key: String, value: i128) {
-//     dbg!(value);
-// }
-//
-// #[tauri::command]
-// pub fn set_config_uint(key: String, value: u128) {
-//     dbg!(value);
-// }
-//
-// #[tauri::command]
-// pub fn set_config_float(key: String, value: f64) {
-//     dbg!(value);
-// }
-//
-// #[tauri::command]
-// pub fn set_config_bool(key: String, value: bool) {
-//     dbg!(value);
-// }
-//
-// #[tauri::command]
-// pub fn set_config_array(key: String, value: Vec<String>) {
-//     dbg!(value);
-// }

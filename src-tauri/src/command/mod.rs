@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use config::{Map, Value};
+use config::{Map, Value, ValueKind};
 use serde::{Deserialize, Serialize};
 use settings::ScriptSettings;
 use std::{
@@ -22,7 +22,7 @@ use crate::{
     settings::Settings,
 };
 
-static COMMANDS: LazyLock<Arc<Mutex<HashMap<String, Command>>>> =
+pub static COMMANDS: LazyLock<Arc<Mutex<HashMap<String, Command>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -78,6 +78,18 @@ impl From<String> for RconCommandPrefix {
         }
     }
 }
+
+impl From<RconCommandPrefix> for ValueKind {
+    fn from(prefix: RconCommandPrefix) -> Self {
+        match prefix {
+            RconCommandPrefix::Custom(command) => Self::String(command),
+            RconCommandPrefix::SC => Self::from("SC"),
+            RconCommandPrefix::MC => Self::from("MC"),
+            RconCommandPrefix::C => Self::from("C"),
+        }
+    }
+}
+
 impl TryFrom<Map<String, Value>> for RconCommandPrefix {
     type Error = anyhow::Error;
 
@@ -91,30 +103,51 @@ impl TryFrom<Map<String, Value>> for RconCommandPrefix {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(tag = "commandType", content = "command")]
-pub enum RconLuaCommand {
+pub enum RconCommandLua {
     File(LuaFile),
     Inline(String),
     Other,
 }
 
-impl Default for RconLuaCommand {
+impl RconCommandLua {
+    pub fn command_type(&self) -> String {
+        use RconCommandLua::*;
+        match self {
+            File(_) => stringify!(File).to_string(),
+            Inline(_) => stringify!(Inline).to_string(),
+            Other => stringify!(Other).to_string(),
+        }
+    }
+}
+
+impl From<RconCommandLua> for ValueKind {
+    fn from(lua: RconCommandLua) -> Self {
+        match lua {
+            RconCommandLua::File(lua_file) => Self::from(lua_file.relative_path.to_str()),
+            RconCommandLua::Inline(lua) => Self::from(lua),
+            RconCommandLua::Other => todo!("impl From<RconLuaCommand> for ValueKind::Other"),
+        }
+    }
+}
+
+impl Default for RconCommandLua {
     fn default() -> Self {
         Self::Inline(String::new())
     }
 }
 
-impl TryFrom<Map<String, Value>> for RconLuaCommand {
+impl TryFrom<Map<String, Value>> for RconCommandLua {
     type Error = anyhow::Error;
 
     fn try_from(value: Map<String, Value>) -> std::result::Result<Self, Self::Error> {
-        use RconLuaCommand::*;
+        use RconCommandLua::*;
         let command_type = match value.get("command_type") {
             Some(t) => t.to_string(),
             None => bail!("No 'command_type' specified."),
         };
         match command_type.to_lowercase().as_str() {
             "script" => {
-                let script_key = "script";
+                let script_key = "relative_path";
                 match value.get(script_key) {
                     Some(s) => {
                         let path = PathBuf::from(s.to_string());
@@ -170,9 +203,9 @@ impl LuaFile {
     }
 }
 
-impl RconLuaCommand {
+impl RconCommandLua {
     pub fn command(&mut self) -> Result<String> {
-        use RconLuaCommand::*;
+        use RconCommandLua::*;
         match self {
             File(lua_file) => lua_file.contents(),
             Inline(command) => Ok(command.clone()),
@@ -204,7 +237,7 @@ impl RconLuaCommand {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RconCommand {
     pub prefix: RconCommandPrefix,
-    pub lua_command: RconLuaCommand,
+    pub lua_command: RconCommandLua,
     // pub default_values: Option<CommandValue<T>>,
 }
 
@@ -243,12 +276,12 @@ impl TryFrom<Map<String, Value>> for Command {
             }
         };
 
-        let lua_command = match RconLuaCommand::try_from(value.clone()) {
+        let lua_command = match RconCommandLua::try_from(value.clone()) {
             Ok(lua) => lua,
             Err(e) => {
                 error!("{}", &e);
                 errors.push(e);
-                RconLuaCommand::default()
+                RconCommandLua::default()
             }
         };
 
@@ -325,9 +358,9 @@ impl TryFrom<Map<String, Value>> for Command {
 }
 
 impl Command {
-    pub fn new(name: String, rcon_lua: RconCommand) -> Self {
+    pub fn new<N: Into<String>>(name: N, rcon_lua: RconCommand) -> Self {
         Self {
-            name,
+            name: name.into(),
             rcon_lua,
             triggers: vec![],
             servers: vec![],
@@ -356,6 +389,7 @@ impl Command {
         }
     }
 
+    /// Adds command to [COMMANDS].
     pub fn add_to_commands(&self) -> String {
         trace!("add_to_commands");
         let mut commands = COMMANDS.lock().unwrap();
@@ -366,15 +400,27 @@ impl Command {
         self.id()
     }
 
+    /// Fetches command from [COMMANDS] if possible, then checks config file, then returns
+    /// [`Option<Command>`].
     pub fn get(id: &str) -> Option<Self> {
-        let commands = COMMANDS.lock().unwrap();
-        commands.get(id).cloned()
+        {
+            info!("Command::get");
+            let commands = COMMANDS.lock().unwrap();
+            info!("COMMANDS locked.");
+            if let Some(command) = commands.get(id).cloned() {
+                info!("COMMANDS Unlocked.");
+                return Some(command);
+            };
+        }
+        info!("COMMANDS Unlocked.");
+        ScriptSettings::get_command(&ScriptSettings::new(), id)
     }
 
     pub fn id(&self) -> String {
         self.name.clone()
     }
 
+    /// The full string for transmitting to the rcon server.
     pub fn tx_string(&mut self) -> String {
         self.rcon_lua.command()
     }
@@ -404,12 +450,56 @@ impl Command {
     }
 }
 
-impl From<Command> for config::ValueKind {
-    fn from(_value: Command) -> Self {
-        // let map = Map::new();
-        // map.insert();
-        // Self::Table(map)
-        todo!()
+impl From<Command> for Value {
+    fn from(command: Command) -> Self {
+        let mut map = Map::new();
+        map.insert("name".to_string(), ValueKind::from(command.name));
+        map.insert(
+            "prefix".to_string(),
+            ValueKind::from(command.rcon_lua.prefix.clone()),
+        );
+        map.insert(
+            "command_type".to_string(),
+            ValueKind::from(command.rcon_lua.lua_command.command_type()),
+        );
+        match command.rcon_lua.lua_command.command_type().as_str() {
+            stringify!(File) => {
+                map.insert(
+                    "relative_path".to_owned(),
+                    ValueKind::from(command.rcon_lua.lua_command),
+                );
+            }
+            stringify!(Inline) => {
+                map.insert(
+                    "inline".to_owned(),
+                    ValueKind::from(command.rcon_lua.lua_command),
+                );
+            }
+            _ => {}
+        }
+
+        map.insert(
+            "servers".to_string(),
+            ValueKind::Array(
+                command
+                    .servers
+                    .iter()
+                    .map(|s| Value::new(None, ValueKind::String(s.name.clone())))
+                    .collect(),
+            ),
+        );
+        map.insert(
+            "triggers".to_string(),
+            ValueKind::Array(
+                command
+                    .triggers
+                    .iter()
+                    .map(|v| Value::from(v.clone()))
+                    .collect(),
+            ),
+        );
+
+        Self::new(None, ValueKind::from(map))
     }
 }
 
@@ -421,4 +511,10 @@ pub fn create_command(name: String, rcon_lua: RconCommand) -> Result<Command, St
     command.add_to_commands(); // TODO: Add error handling for if command name exists.
     trace!("Added Command");
     Ok(command)
+}
+
+#[tauri::command]
+pub fn get_command(name: String) -> Result<Option<Command>, String> {
+    trace!("Get Command");
+    Ok(Command::get(&name))
 }

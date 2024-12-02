@@ -1,5 +1,5 @@
 use anyhow::bail;
-use config::Value;
+use config::{Map, Value, ValueKind};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
@@ -170,19 +170,33 @@ impl TryFrom<Value> for Trigger {
     }
 }
 
-// #[cfg(test)]
-// mod test {
-//     use super::*;
-//
-//     #[test]
-//     fn test_trigger_equality() {
-//         assert_eq!(
-//             Trigger::Chat {
-//                 pattern: "test".into()
-//             },
-//             Trigger::Chat {
-//                 pattern: "test".into()
-//             }
-//         )
-//     }
-// }
+impl From<Trigger> for Value {
+    fn from(trigger: Trigger) -> Self {
+        let mut map = Map::new();
+        match trigger {
+            Trigger::Chat { pattern } => {
+                map.insert(
+                    "trigger_type".to_string(),
+                    ValueKind::from(stringify!(Chat)),
+                );
+                map.insert("pattern".to_string(), ValueKind::from(pattern));
+            }
+            Trigger::ChatRegex { pattern } => {
+                map.insert(
+                    "trigger_type".to_string(),
+                    ValueKind::from(stringify!(ChatRegex)),
+                );
+                map.insert("pattern".to_string(), ValueKind::from(pattern));
+            }
+            Trigger::ChannelPointRewardRedemed { name, id } => {
+                map.insert(
+                    "trigger_type".to_string(),
+                    ValueKind::from(stringify!(ChannelPointRewardRedemed)),
+                );
+                map.insert("name".to_string(), ValueKind::from(name));
+                map.insert("id".to_string(), ValueKind::from(id));
+            }
+        }
+        Self::new(None, ValueKind::from(map))
+    }
+}

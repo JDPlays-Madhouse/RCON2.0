@@ -8,12 +8,16 @@
 //!     - Only the redeem is handled not the comments.
 //! - [x] Connect to an Rcon Server.
 //! - [x] Send commands to Rcon Server.
-//! - [ ] Configure through TOML commands to send to RCON server with defined triggers.
+//! - [x] Configure through TOML commands to send to RCON server with defined triggers.
+//! - [ ] React to triggers and send events to RCON server.
 //!
 //! ## Todo
 //!
 //! - [ ] Write commands to file.
 //! - [ ] React to events.
+//!
+//! ## Classes
+#![doc = simple_mermaid::mermaid!("../../docs/mermaid/classes.mmd")]
 //!
 //! ## Requirements
 //!
@@ -66,7 +70,8 @@
 //!
 //! ### Twitch
 //!
-//! 1. Get a Client ID and Client Secret from [dev.twitch.tv/console/apps/](https://dev.twitch.tv/console/apps/).
+//! 1. Get a Client ID and Client Secret from
+//!     [dev.twitch.tv/console/apps/](https://dev.twitch.tv/console/apps/).
 //! 2. For the redirect url make sure they are exactly the same
 //!     e.g. `http://localhost:27934/twitch/register`. The port can be changed but
 //!     both the dev console and the config file need to match.
@@ -106,6 +111,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use cli::handle_cli_matches;
 use command::settings::ScriptSettings;
+use command::Command;
 use integration::TwitchApiConnection;
 use logging::{LogLevel, Logger};
 use servers::servers_from_settings;
@@ -177,11 +183,21 @@ pub async fn run() {
     let logger_layer: Logger = Logger::new();
 
     debug!("Log Established");
-    let script_settings = command::settings::ScriptSettings::new();
+
+    let mut script_settings = command::settings::ScriptSettings::new();
     dbg!(script_settings
         .get_command("hello world")
         .unwrap()
         .tx_string());
+
+    script_settings.set_command(Command::new(
+        "test",
+        command::RconCommand {
+            prefix: command::RconCommandPrefix::C,
+            lua_command: command::RconCommandLua::Inline("print('hello working')".to_string()),
+        },
+    ));
+    dbg!(script_settings.get_command("test").unwrap().tx_string());
     todo!("scripts");
     match servers_from_settings(config.clone()) {
         Ok(servers) => {
