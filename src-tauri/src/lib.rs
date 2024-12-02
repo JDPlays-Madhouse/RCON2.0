@@ -5,46 +5,52 @@
 //! - [x] Authenticate with twitch.
 //! - [x] Connect to twitch websocket.
 //! - [x] Handle Chat and Channel Point Reward Events.
+//!     - Only the redeem is handled not the comments.
 //! - [x] Connect to an Rcon Server.
 //! - [x] Send commands to Rcon Server.
 //! - [ ] Configure through TOML commands to send to RCON server with defined triggers.
 //!
+//! ## Todo
+//!
+//! - [ ] Write commands to file.
+//! - [ ] React to events.
+//!
 //! ## Requirements
 //!
-//! - [x] Read twitch events directly i.e. no Streamer.bot etc.
-//!   - [ ] Events including subs/bits/follows/hype trains
-//!   - [x] Channel Points
-//!   - [x] Chat messages
-//! - [ ] Detect certain messages and parse the message for battleship. (Only 1 command)
-//!   - [ ] Example: /muppet_streamer_schedule_explosive_delivery target targetPosition
-//! - [ ] Convert the parsed message into a valid command.
-//!   - [ ] have default values for commands so invalid data with a valid command
-//!         becomes valid command with default data.
-//! - [ ] Read from SteamLabs/streamelements Patreon (own api) and Humble
-//!       notifications and donations.
-//! - [ ] Read from YouTube for chat/subs/memberships/supers.
-//! - [x] Have a Pause button or Api end point to pause for bio breaks.
+//! 1. [x] Read twitch events directly i.e. no Streamer.bot etc.
+//!     1. [ ] Events including subs/bits/follows/hype trains
+//!     1. [x] Channel Points
+//!     1. [x] Chat messages
+//! 1. [ ] Detect certain messages and parse the message for battleship. (Only 1 command)
+//!     1. [ ] Example: /muppet_streamer_schedule_explosive_delivery target targetPosition
+//! 1. [ ] Convert the parsed message into a valid command.
+//!     1. [ ] have default values for commands so invalid data with a valid command
+//!               becomes valid command with default data.
+//! 1. [ ] Read from SteamLabs/streamelements Patreon (own api) and Humble
+//!        notifications and donations.
+//! 1. [ ] Read from YouTube for chat/subs/memberships/supers.
+//! 1. [x] Have a Pause button or Api end point to pause for bio breaks.
 //!
-//! - [x] Have a RCON app/interface that takes in specific Factorio commands as well
-//!       as any other games.
-//! - [x] Rcon interface needs to take configurations for any rcon server.
-//! - [?] Ensure that the amount of data is below the max per tick amount.
+//! 1. [x] Have a RCON app/interface that takes in specific Factorio commands as well
+//!        as any other games.
+//! 1. [x] Rcon interface needs to take configurations for any rcon server.
+//! 1. [ ] Ensure that the amount of data is below the max per tick amount.
 //!
-//! - [ ] Provide visiual feedback through an OBS overlay (website) to give feedback
-//!       on things like the boom factor.
-//!       ![Example of OBS overlay](./docs/Example_visual_feedback.png)
-//! - [ ] From twitch events read hype trains and be able to respond.
-//!   - JDGOESBoom with count down, if redeamed again dead factor goes up and
-//!         restart count down.
-//! - [ ] Be able to add RCON commands, modify, delete, display (CRUD), including
-//!       default values like deadliness.
-//! - [ ] Be able to test when adding commands.
-//! - [x] Output a log with raw output for debugging
-//!   - [x] ESPECIALLY "custom-reward-id" from twitch channel points as ill need
-//!         that data for adding new points rewards through streamer.bot. Or Work
-//!         out what the ID code.
-//! - [ ] Has to support some sort of user comments in the script so i can keep
-//!       track/notes on new code.
+//! 1. [ ] Provide visiual feedback through an OBS overlay (website) to give feedback
+//!        on things like the boom factor.
+//!        ![Example of OBS overlay](./docs/Example_visual_feedback.png)
+//! 1. [ ] From twitch events read hype trains and be able to respond.
+//!     1. JDGOESBoom with count down, if redeamed again dead factor goes up and
+//!            restart count down.
+//! 1. [ ] Be able to add RCON commands, modify, delete, display (CRUD), including
+//!        default values like deadliness.
+//! 1. [ ] Be able to test when adding commands.
+//! 1. [x] Output a log with raw output for debugging
+//!     1. [x] ESPECIALLY "custom-reward-id" from twitch channel points as ill need
+//!            that data for adding new points rewards through streamer.bot. Or Work
+//!            out what the ID code.
+//! 1. [ ] Has to support some sort of user comments in the script so i can keep
+//!        track/notes on new code.
 //!
 //! ### Definitions
 //!
