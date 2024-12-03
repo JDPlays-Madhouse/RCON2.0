@@ -185,19 +185,40 @@ pub async fn run() {
     debug!("Log Established");
 
     let mut script_settings = command::settings::ScriptSettings::new();
-    dbg!(script_settings
-        .get_command("hello world")
-        .unwrap()
-        .tx_string());
+    script_settings.get_command("hello world").unwrap();
 
-    script_settings.set_command(Command::new(
-        "test",
-        command::RconCommand {
-            prefix: command::RconCommandPrefix::C,
-            lua_command: command::RconCommandLua::Inline("print('hello working')".to_string()),
+    let mut testing_command = match Command::get("test") {
+        Some(c) => c,
+        None => Command::new(
+            "test",
+            command::RconCommand {
+                prefix: command::Prefix::C,
+                lua_command: command::RconCommandLua::Inline("print('hello working')".to_string()),
+            },
+        ),
+    };
+    testing_command.add_server_trigger(
+        servers::GameServer::try_get("local").unwrap(),
+        command::Trigger::Chat {
+            pattern: "testing9".to_string(),
         },
-    ));
-    dbg!(script_settings.get_command("test").unwrap().tx_string());
+        false,
+    );
+    testing_command.add_server_trigger(
+        servers::GameServer::try_get("local").unwrap(),
+        command::Trigger::Chat {
+            pattern: "testing2".to_string(),
+        },
+        true,
+    );
+    testing_command.remove_server_trigger(
+        servers::GameServer::try_get("local").unwrap(),
+        command::Trigger::Chat {
+            pattern: "testing2".to_string(),
+        },
+    );
+    script_settings.set_command(testing_command);
+    dbg!(script_settings.get_command("test").unwrap());
     todo!("scripts");
     match servers_from_settings(config.clone()) {
         Ok(servers) => {

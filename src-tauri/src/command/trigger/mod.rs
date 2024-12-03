@@ -5,6 +5,9 @@ use tracing::error;
 
 use crate::integration::IntegrationEvent;
 
+mod server_trigger;
+pub use server_trigger::GameServerTrigger;
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Hash, Eq, PartialOrd, Ord)]
 #[serde(tag = "trigger", content = "data")]
 pub enum Trigger {

@@ -132,7 +132,7 @@ impl TwitchApiConnection {
             websocket: Default::default(),
             websocket_joinhandle: Default::default(),
             session_id: Default::default(),
-            runner: Runner::new(None),
+            runner: Runner::new(),
         }
     }
 }

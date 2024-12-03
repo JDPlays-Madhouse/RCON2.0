@@ -11,7 +11,10 @@ use tauri::{ipc::Channel, State};
 use tokio::net::TcpStream;
 use tracing::{debug, error, info, trace};
 
-use crate::command::Command;
+use crate::{
+    command::{settings, Command},
+    settings::Settings,
+};
 
 pub static SERVERS: LazyLock<Mutex<HashMap<String, GameServer>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -205,6 +208,14 @@ impl GameServer {
 
     pub fn socket_address(&self) -> String {
         self.address.clone() + ":" + &self.port.to_string()
+    }
+
+    pub fn try_get(id: &str) -> Option<GameServer> {
+        if let Some(server) = SERVERS.lock().expect("Locking SERVERS").get(id) {
+            return Some(server.clone());
+        };
+        let config = Settings::current_config();
+        server_from_settings(config, id)
     }
 }
 
