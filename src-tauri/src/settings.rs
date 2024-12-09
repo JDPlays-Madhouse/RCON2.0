@@ -10,7 +10,9 @@ use serde::{
 use std::{
     fmt::Debug,
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
 };
+use tauri::State;
 use tracing::error;
 
 use crate::PROGRAM;
@@ -374,4 +376,11 @@ pub fn set_config_bool(_key: String, value: bool) {
 #[tauri::command]
 pub fn set_config_array(_key: String, value: Vec<String>) {
     dbg!(value);
+}
+
+#[tauri::command]
+pub fn update_config(config: State<'_, Arc<Mutex<Config>>>) {
+    let mut config_locked = config.lock().unwrap();
+    let new_config = Settings::current_config();
+    *config_locked = new_config;
 }

@@ -111,15 +111,13 @@ use std::sync::Arc;
 use anyhow::Context;
 use cli::handle_cli_matches;
 use command::settings::ScriptSettings;
-use command::Command;
 use integration::TwitchApiConnection;
 use logging::{LogLevel, Logger};
-use servers::servers_from_settings;
 use settings::Settings;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_cli::CliExt;
 use time::UtcOffset;
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info};
 use tracing_appender::rolling::RollingFileAppender;
 use tracing_appender::rolling::Rotation;
 use tracing_error::ErrorLayer;
@@ -183,70 +181,33 @@ pub async fn run() {
     let logger_layer: Logger = Logger::new();
 
     debug!("Log Established");
-
-    let mut script_settings = command::settings::ScriptSettings::new();
-    script_settings.get_command("hello world").unwrap();
-
-    let mut testing_command = match Command::get("test") {
-        Some(c) => c,
-        None => Command::new(
-            "test",
-            command::RconCommand {
-                prefix: command::Prefix::C,
-                lua_command: command::RconCommandLua::Inline("print('hello working')".to_string()),
-            },
-        ),
-    };
-    testing_command.add_server_trigger(
-        servers::GameServer::try_get("local").unwrap(),
-        command::Trigger::Chat {
-            pattern: "testing9".to_string(),
-        },
-        false,
-    );
-    testing_command.add_server_trigger(
-        servers::GameServer::try_get("local").unwrap(),
-        command::Trigger::Chat {
-            pattern: "testing2".to_string(),
-        },
-        true,
-    );
-    testing_command.remove_server_trigger(
-        servers::GameServer::try_get("local").unwrap(),
-        command::Trigger::Chat {
-            pattern: "testing2".to_string(),
-        },
-    );
-    script_settings.set_command(testing_command);
-    dbg!(script_settings.get_command("test").unwrap());
-    todo!("scripts");
-    match servers_from_settings(config.clone()) {
-        Ok(servers) => {
-            let server_names: Vec<&str> =
-                servers.iter().map(|server| server.name.as_str()).collect();
-            info!("Retrieved configs for servers: {:?}", server_names)
-        }
-        Err(e) => {
-            error!("{:?}", e)
-        }
-    };
+    // match servers_from_settings(config.clone()) {
+    //     Ok(servers) => {
+    //         let server_names: Vec<&str> =
+    //             servers.iter().map(|server| server.name.as_str()).collect();
+    //         info!("Retrieved configs for servers: {:?}", server_names)
+    //     }
+    //     Err(e) => {
+    //         error!("{:?}", e)
+    //     }
+    // };
     let twitch_integration = Arc::new(futures::lock::Mutex::new(TwitchApiConnection::new(
         config.get_table("auth.twitch").unwrap(),
     )));
 
     let twitch_int_clone = Arc::clone(&twitch_integration);
     let config_clone = config.clone();
-    tokio::spawn(async move {
-        let mut twitch_int_clone_lock = twitch_int_clone.lock().await;
-        match twitch_int_clone_lock.check_token().await {
-            Ok(_) => info!("Twitch Token is valid"),
-            Err(e) => info!("Twitch Token is invalid: {:?}", e),
-        };
-        trace!("token");
-        twitch_int_clone_lock
-            .new_websocket(config_clone.clone())
-            .await;
-    });
+    // tokio::spawn(async move {
+    //     let mut twitch_int_clone_lock = twitch_int_clone.lock().await;
+    //     match twitch_int_clone_lock.check_token().await {
+    //         Ok(_) => info!("Twitch Token is valid"),
+    //         Err(e) => info!("Twitch Token is invalid: {:?}", e),
+    //     };
+    //     trace!("token");
+    //     twitch_int_clone_lock
+    //         .new_websocket(config_clone.clone())
+    //         .await;
+    // });
 
     let config_clone = config.clone();
     let twitch_int_clone = Arc::clone(&twitch_integration);
@@ -256,7 +217,11 @@ pub async fn run() {
         .setup(move |app| {
             match app.cli().matches() {
                 Ok(matches) => {
-                    futures::executor::block_on(handle_cli_matches(matches, app, twitch_int_clone));
+                    futures::executor::block_on(handle_cli_matches(
+                        matches,
+                        app,
+                        Arc::clone(&twitch_int_clone),
+                    ));
                 }
                 Err(e) => {
                     println!("{}", e);
@@ -267,6 +232,7 @@ pub async fn run() {
             let default_server = servers::default_server_from_settings(config_clone.clone());
             app.manage(Arc::new(std::sync::Mutex::new(config_clone.clone())));
             app.manage(Arc::new(std::sync::Mutex::new(default_server)));
+            app.manage(twitch_int_clone);
             tracing_subscriber::Registry::default()
                 .with(level_filter)
                 .with(logger_layer)
@@ -300,6 +266,9 @@ pub async fn run() {
             settings::set_config_int,
             settings::set_config_string,
             settings::set_config_uint,
+            settings::update_config,
+            integration::connect_to_integration,
+            integration::list_of_integrations,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

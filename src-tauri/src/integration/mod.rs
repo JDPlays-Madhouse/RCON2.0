@@ -1,15 +1,40 @@
-use std::sync::mpsc::{channel, Receiver, RecvError, SendError, Sender};
+use std::sync::{
+    mpsc::{channel, Receiver, RecvError, SendError, Sender},
+    Arc,
+};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 
 pub mod twitch;
 use config::Value;
 use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
+use tauri::State;
+use tracing::{error, info};
 pub use twitch::TwitchApiConnection;
 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Api {
     Twitch,
     YouTube,
+}
+
+impl TryFrom<config::Value> for Api {
+    type Error = anyhow::Error;
+
+    fn try_from(value: config::Value) -> std::result::Result<Self, Self::Error> {
+        use Api::*;
+        match value
+            .into_string()
+            .expect("shouldn't fail...")
+            .to_lowercase()
+            .as_str()
+        {
+            "twitch" => Ok(Twitch),
+            "youtube" => Ok(YouTube),
+            api => bail!("Non valid api: {}", api),
+        }
+    }
 }
 
 pub type APIConnectionConfig = IndexMap<String, Value>;
@@ -40,7 +65,7 @@ impl<T> Default for IntegrationChannels<T> {
 
 pub struct Integration<P>
 where
-    P: PlatformConnection + PlatformAuthenticate + IntegrationControl,
+    P: PlatformConnection,
 {
     pub api: Api,
     pub connection: Connection,
@@ -180,4 +205,52 @@ pub enum TokenError {
     InvalidToken,
     UnknownError,
     TokenNotAuthorized,
+}
+
+#[tauri::command]
+pub async fn connect_to_integration(
+    api: Api,
+    twitch_integration: State<'_, Arc<futures::lock::Mutex<TwitchApiConnection>>>,
+    config: State<'_, Arc<std::sync::Mutex<config::Config>>>,
+) -> Result<Api, String> {
+    use Api::*;
+    let config = config.lock().unwrap().clone();
+
+    match api {
+        Twitch => {
+            let mut twitch = twitch_integration.lock().await;
+            match twitch.check_token().await {
+                Ok(_t) => {
+                    twitch.new_websocket(config).await;
+                    Ok(Api::Twitch)
+                }
+                Err(e) => {
+                    error!("{:?}", e);
+                    Err("Failed to authenticate.".to_string())
+                }
+            }
+        }
+        _ => unimplemented!("Integration not implemented"),
+    }
+}
+
+#[tauri::command]
+pub async fn list_of_integrations(
+    config: State<'_, Arc<std::sync::Mutex<config::Config>>>,
+) -> Result<Vec<Api>, String> {
+    let config = config.lock().unwrap().clone();
+    match config.get_array("auth.platforms") {
+        Ok(l) => {
+            let platforms = l
+                .iter()
+                .filter_map(|p| Api::try_from(p.clone()).ok())
+                .collect();
+            info!("Selected Integrations: {:?}", &platforms);
+            Ok(platforms)
+        }
+        Err(e) => {
+            error!("{:?}", e);
+            Err("Failed to get list from config.".to_string())
+        }
+    }
 }
