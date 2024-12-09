@@ -10,23 +10,15 @@ config:
 ---
 classDiagram
     direction RL
-    GameServer "0..*" <|--|> "0..1" Command
-    Command <|--|> "0..*" Trigger
     Command "0..*" <|--|> "0..*" Runner
     Runner  <|--|> Integration
+    Command <|--|> "0..*" GameServerTrigger
+    GameServerTrigger <|--|> Trigger
+    GameServerTrigger <|--|> GameServer
 
-    class GameServer{
-
-    }
-    class Command{
-
-    }
-    class Trigger{
-
-    }
-    class Runner{
-
-    }
-    class Integration{
-
-    }
+    class GameServer
+    class Command
+    class Trigger
+    class Runner
+    class Integration
+    class GameServerTrigger

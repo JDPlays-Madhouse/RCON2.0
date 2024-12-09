@@ -52,3 +52,5 @@ export type Command = {
         id: string;
         rcon_lua: RconCommand;
 };
+
+export type Api = "Twitch" | "YouTube";

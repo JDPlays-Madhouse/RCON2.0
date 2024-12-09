@@ -9,7 +9,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import LogArea from "./server-log";
 import { invoke } from "@tauri-apps/api/core";
-import { Command, CommandType, RconCommand, Server } from "@/types";
+import { Api, Command, RconCommand, Server } from "@/types";
 import { Button } from "./ui/button";
 
 interface ServerDashBoardProps extends React.ComponentProps<"div"> {
@@ -34,9 +34,6 @@ export default function ServerDashboard({
     }
   }, [showLog]);
 
-  const variant: CommandType = {
-    type: "Chat",
-  };
   const rconLua: RconCommand = {
     prefix: {
       prefix: "SC",
@@ -47,7 +44,7 @@ export default function ServerDashboard({
     },
   };
   const name: string = "Hello World";
-  const commandProps = { name, variant, rconLua };
+  const commandProps = { name, rconLua };
   useEffect(() => {
     invoke<Command>("create_command", commandProps)
       .then((c) => {
@@ -70,17 +67,41 @@ export default function ServerDashboard({
     }
   }
 
+  function handleConnectToIntegration() {
+    const api: Api = "Twitch";
+    invoke<Api>("connect_to_integration", { api }).then((value) => {
+      console.log({ value, type: typeof value });
+    });
+  }
+  function handleListOfIntegrations() {
+    invoke<Api>("list_of_integrations").then((value) => {
+      console.log({ value, type: typeof value });
+    });
+  }
+  function handleUpdateConfig() {
+    invoke("update_config")
+  }
+
   return (
     <div className={cn("", className)} {...props}>
       <ResizablePanelGroup direction="vertical" className="border max-w-dvw">
         <ResizablePanel defaultSize={70}>
-          <div className="flex flex-col h-full items-center justify-center p-6 my-auto">
+          <div className="flex flex-col h-full items-center justify-center p-6 my-auto gap-2">
             <div className="font-semibold">Dashboard</div>
             <Button onClick={handleOnClick} variant="secondary">
               Send:{" "}
               {command?.rcon_lua?.lua_command.commandType == "Inline"
                 ? command?.rcon_lua?.lua_command.command
                 : command?.rcon_lua?.lua_command.command.command}
+            </Button>
+            <Button onClick={handleConnectToIntegration} variant="secondary">
+              Connect to Twitch
+            </Button>
+            <Button onClick={handleListOfIntegrations} variant="secondary">
+              List of Integrations
+            </Button>
+            <Button onClick={handleUpdateConfig} variant="secondary">
+              Update Config
             </Button>
           </div>
         </ResizablePanel>
