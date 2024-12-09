@@ -6,9 +6,8 @@ use tokio::{
     task::JoinHandle,
 };
 use tracing::{error, info};
-use uuid::Uuid;
 
-use super::Command;
+use super::{settings::ScriptSettings, Command};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunnerError {
@@ -23,7 +22,7 @@ pub enum RunnerError {
 /// Responsible for receiving [IntegrationEvent] and handling them.
 #[derive(Debug)]
 pub struct Runner {
-    id: Uuid,
+    // id: Uuid,
     /// [Receiver] for the runner to listen on.
     rx: Option<Receiver<IntegrationEvent>>,
     /// [Sender] for the runner to pass to subscribers.
@@ -32,15 +31,16 @@ pub struct Runner {
     joinhandle: Option<JoinHandle<Result<(), RunnerError>>>,
 }
 
+#[allow(clippy::new_without_default)]
 impl Runner {
     pub fn new() -> Self {
         let (tx, rx) = channel::<IntegrationEvent>(100);
 
         Self {
-            id: Uuid::new_v4(),
+            // id: Uuid::new_v4(),
             rx: Some(rx),
             tx,
-            commands: Vec::new(),
+            commands: ScriptSettings::get_commands(),
             joinhandle: None,
         }
     }
@@ -68,7 +68,7 @@ impl Runner {
     }
 
     /// TODO: re-write this section.
-    pub fn run(&'static mut self) -> Result<(), RunnerError> {
+    pub fn run(&mut self) -> Result<(), RunnerError> {
         let mut rx = match self.rx.take() {
             Some(rx) => rx,
             None => {
@@ -77,7 +77,7 @@ impl Runner {
                 rx
             }
         };
-        let commands = self.commands.clone();
+        let mut commands = self.commands.clone();
         use IntegrationEvent::*;
         let jh: JoinHandle<std::result::Result<(), RunnerError>> = spawn(async move {
             loop {
@@ -101,8 +101,10 @@ impl Runner {
                         error!("An unknown event occurred")
                     }
                     Some(event) => {
-                        for command in commands.iter() {
-                            // match command.handle_event(event) {}
+                        info!("{:?}", &event);
+                        for command in commands.iter_mut() {
+                            info!("{:?}", &command);
+                            command.handle_event(&event).await;
                         }
                     }
 
@@ -123,7 +125,7 @@ impl Runner {
         }
     }
 
-    /// Run this function after any change to a running [Runner].
+    /// Run this function after any change to the running [Runner].
     pub async fn update(&mut self) -> Result<(), RunnerError> {
         if !self.is_running() {
             return Ok(());

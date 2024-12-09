@@ -165,6 +165,22 @@ impl ScriptSettings {
         }
     }
 
+    /// Gets all commands from the scripts config file.
+    pub fn get_commands() -> Vec<Command> {
+        let script_settings = ScriptSettings::new();
+        let config = script_settings.config();
+
+        config
+            .try_deserialize::<Map<String, Value>>()
+            .unwrap()
+            .iter()
+            .filter_map(|(k, v)| match Command::try_from(v.clone()) {
+                Ok(c) => Some(c.set_name(k)),
+                Err(_e) => None,
+            })
+            .collect()
+    }
+
     /// Sets a command in config and returns [`None`] if no command with that name exists otherwise
     /// returns [`Some<Command>`].
     pub fn set_command(&mut self, command: Command) -> Option<Command> {

@@ -181,33 +181,13 @@ pub async fn run() {
     let logger_layer: Logger = Logger::new();
 
     debug!("Log Established");
-    // match servers_from_settings(config.clone()) {
-    //     Ok(servers) => {
-    //         let server_names: Vec<&str> =
-    //             servers.iter().map(|server| server.name.as_str()).collect();
-    //         info!("Retrieved configs for servers: {:?}", server_names)
-    //     }
-    //     Err(e) => {
-    //         error!("{:?}", e)
-    //     }
-    // };
+
     let twitch_integration = Arc::new(futures::lock::Mutex::new(TwitchApiConnection::new(
         config.get_table("auth.twitch").unwrap(),
     )));
 
     let twitch_int_clone = Arc::clone(&twitch_integration);
     let config_clone = config.clone();
-    // tokio::spawn(async move {
-    //     let mut twitch_int_clone_lock = twitch_int_clone.lock().await;
-    //     match twitch_int_clone_lock.check_token().await {
-    //         Ok(_) => info!("Twitch Token is valid"),
-    //         Err(e) => info!("Twitch Token is invalid: {:?}", e),
-    //     };
-    //     trace!("token");
-    //     twitch_int_clone_lock
-    //         .new_websocket(config_clone.clone())
-    //         .await;
-    // });
 
     let config_clone = config.clone();
     let twitch_int_clone = Arc::clone(&twitch_integration);
@@ -262,6 +242,7 @@ pub async fn run() {
             servers::update_server,
             settings::set_config_array,
             settings::set_config_bool,
+            settings::get_config_bool,
             settings::set_config_float,
             settings::set_config_int,
             settings::set_config_string,

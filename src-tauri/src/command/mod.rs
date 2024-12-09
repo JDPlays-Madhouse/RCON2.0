@@ -7,7 +7,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, LazyLock, Mutex},
 };
-use tracing::{debug, error, info, trace};
+use tracing::{error, info, trace};
 
 mod runner;
 pub mod settings;
@@ -25,8 +25,7 @@ pub use rcon::RconCommand;
 
 use crate::{
     integration::IntegrationEvent,
-    servers::{self, GameServer},
-    settings::Settings,
+    servers::{GameServer, CONNECTIONS},
 };
 
 pub static COMMANDS: LazyLock<Arc<Mutex<HashMap<String, Command>>>> =
@@ -38,7 +37,7 @@ pub struct Command {
     pub rcon_lua: RconCommand,
     pub server_triggers: Vec<GameServerTrigger>,
 }
-
+#[allow(dead_code)]
 impl Command {
     pub fn new<N: Into<String>>(name: N, rcon_lua: RconCommand) -> Self {
         Self {
@@ -104,8 +103,20 @@ impl Command {
         self.rcon_lua.command()
     }
 
-    fn handle_event(&self, event: IntegrationEvent) {
-        todo!()
+    pub async fn handle_event(&mut self, event: &IntegrationEvent) {
+        for trigger in self.server_triggers.clone() {
+            if let Some(server) = trigger.event_triggered(event) {
+                info!("Server {} was triggered by {:?}", server.name, event);
+                let mut connection_lock = CONNECTIONS.lock().await;
+                match connection_lock.get_mut(&server) {
+                    Some(connection) => {
+                        connection.send_command(self.tx_string()).await;
+                        info!("Sent \"{}\" to \"{}\" server.", self.name, &server.name);
+                    }
+                    None => {}
+                }
+            }
+        }
     }
 
     pub fn contains_server_trigger(&self, server: &GameServer, trigger: &Trigger) -> bool {
@@ -126,7 +137,7 @@ impl Command {
                 .server_triggers
                 .clone()
                 .iter()
-                .find_position(|st| *st.clone() == server_trigger)
+                .find_position(|st| (*st).clone() == server_trigger)
             {
                 self.server_triggers[pos] = server_trigger;
                 return Some(old_server_trigger.clone());
@@ -138,8 +149,8 @@ impl Command {
 
     pub fn remove_server_trigger(
         &self,
-        server: GameServer,
-        trigger: Trigger,
+        _server: GameServer,
+        _trigger: Trigger,
     ) -> Option<GameServerTrigger> {
         None
     }
@@ -240,6 +251,19 @@ impl TryFrom<Map<String, Value>> for Command {
         } else {
             Ok(Command::from_config("", rconcommand, server_triggers))
         }
+    }
+}
+
+impl TryFrom<Value> for Command {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Value) -> std::result::Result<Self, Self::Error> {
+        let command_config_map = match value.try_deserialize::<Map<String, Value>>() {
+            Ok(c) => c,
+            Err(e) => bail!(e),
+        };
+
+        Self::try_from(command_config_map)
     }
 }
 

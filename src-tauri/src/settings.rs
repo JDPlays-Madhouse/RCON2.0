@@ -13,7 +13,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tauri::State;
-use tracing::error;
+use tracing::{error, info};
 
 use crate::PROGRAM;
 use config::{Config, Environment, File, FileFormat};
@@ -288,8 +288,13 @@ impl Default for Settings {
         ];
         builder = Settings::default_loop(builder, default_settings_str);
 
-        let default_settings_bool: Vec<DefaultValue<bool>> =
-            vec![("servers.autostart", false), ("debug", true)];
+        let default_settings_bool: Vec<DefaultValue<bool>> = vec![
+            ("servers.autostart", false),
+            ("debug", false),
+            ("auth.twitch.auto_connect", true),
+            ("auth.youtube.auto_connect", true),
+        ];
+
         builder = Settings::default_loop(builder, default_settings_bool);
 
         let default_settings_list_str = vec![
@@ -353,6 +358,7 @@ impl Settings {
 pub fn set_config_string(_key: String, value: String) {
     dbg!(value);
 }
+
 #[tauri::command]
 pub fn set_config_int(_key: String, value: i128) {
     dbg!(value);
@@ -366,6 +372,21 @@ pub fn set_config_uint(_key: String, value: u128) {
 #[tauri::command]
 pub fn set_config_float(_key: String, value: f64) {
     dbg!(value);
+}
+
+#[tauri::command]
+pub fn get_config_bool(key: String, config: State<'_, Arc<Mutex<Config>>>) -> Result<bool, String> {
+    let config = config.lock().unwrap().clone();
+    match config.get_bool(&key) {
+        Ok(b) => {
+            info!("{}: {}", &key, b);
+            Ok(b)
+        }
+        Err(e) => {
+            error!("{:?}", e);
+            Err(format!("{:?}", e))
+        }
+    }
 }
 
 #[tauri::command]

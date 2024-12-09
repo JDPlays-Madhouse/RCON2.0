@@ -14,7 +14,6 @@
       {
         "title": "RCON2.0",
         "resizable": true,
-        "fullscreen": false,
         "maximized": false,
         "focus": false
       }

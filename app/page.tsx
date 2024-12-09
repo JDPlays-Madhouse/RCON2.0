@@ -5,7 +5,7 @@ import ServerControl from "@/components/server-control";
 import ServerDashboard from "@/components/server-dashboard";
 import ServerSwitcher from "@/components/server-switcher";
 import { Server, Servers } from "@/types";
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 import React, { useEffect } from "react";
 
 export default function Home() {

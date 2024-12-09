@@ -1,22 +1,11 @@
+"use client";
+
 import { cn } from "@/lib/utils";
-import { Server } from "@/types";
+import { Server, ServerStatus } from "@/types";
 import { Pause, Play, StopCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Channel, invoke } from "@tauri-apps/api/core";
-
-type ServerStatus =
-    | {
-        event: "connecting";
-        data: { server: Server };
-    }
-    | { event: "connected"; data: { server: Server } }
-    | { event: "checking"; data: { server: Server } }
-    | { event: "error"; data: { msg: string; server: Server } }
-    | {
-        event: "disconnected";
-        data: { server?: Server };
-    };
 
 interface ServerControlProps extends React.ComponentProps<"div"> {
     selectedServer?: Server;
@@ -27,21 +16,40 @@ export default function ServerControl({
     className,
     ...props
 }: ServerControlProps) {
-    const onEvent = new Channel<ServerStatus>();
+    const [channel, setChannel] = useState<Channel<ServerStatus>>();
     const [status, setStatus] = useState<ServerStatus>({
         event: "disconnected",
         data: { server: selectedServer },
     });
     const connected = () => status.event === "connected";
+
     useEffect(() => {
-        handleServerCheck();
-    }, [selectedServer]);
-    onEvent.onmessage = (message) => {
-        console.log(message.data.server, selectedServer);
-        if (message.data.server?.id === selectedServer?.id) {
-            setStatus(message);
+        if (selectedServer) {
+            if (!connected() && status.data.server?.id === selectedServer?.id) {
+                invoke<boolean>("get_config_bool", {
+                    key: "servers.autostart",
+                }).then((connect) => {
+                    if (connect) {
+                        handleServerConnect();
+                    }
+                });
+            } else {
+                handleServerCheck();
+            }
         }
-    };
+    }, [selectedServer]);
+
+    useEffect(() => {
+        const channel = new Channel<ServerStatus>();
+        channel.onmessage = (message) => {
+            // console.log(message.data.server, selectedServer);
+            if (message.data.server?.id === selectedServer?.id) {
+                setStatus(message);
+            }
+            setChannel(channel);
+        };
+    });
+
     function handleOnClick() {
         if (["disconnected", "error"].includes(status.event)) {
             handleServerConnect();
@@ -49,23 +57,54 @@ export default function ServerControl({
             handleServerDisconnect();
         }
     }
+
     function handleServerConnect() {
-        invoke("connect_to_server", { server: selectedServer, channel: onEvent });
+        if (!channel) {
+            const channel = new Channel<ServerStatus>();
+            channel.onmessage = (message) => {
+                // console.log(message.data.server, selectedServer);
+                if (message.data.server?.id === selectedServer?.id) {
+                    setStatus(message);
+                }
+                setChannel(channel);
+            };
+            invoke<Server>("connect_to_server", {
+                server: selectedServer,
+                channel,
+            })
+                .then((server) => {
+                    console.log(`Connected to server: ${server.name}`);
+                })
+                .catch(console.error);
+        } else {
+            invoke<Server>("connect_to_server", {
+                server: selectedServer,
+                channel,
+            })
+                .then((server) => {
+                    console.log(`Connected to server: ${server.name}`);
+                })
+                .catch(console.error);
+        }
     }
+
     function handleServerCheck() {
-        if (selectedServer){
-        invoke<ServerStatus>("check_connection", { server: selectedServer }).then(
-            (s) => {
-                setStatus(s);
-            },
-        ).catch(console.error);}
+        if (selectedServer) {
+            invoke<ServerStatus>("check_connection", { server: selectedServer })
+                .then((s) => {
+                    setStatus(s);
+                })
+                .catch(console.error);
+        }
     }
     function handleServerDisconnect() {
         invoke<ServerStatus>("disconnect_connection", {
             server: selectedServer,
-        }).then((s) => {
-            setStatus(s);
-        });
+        })
+            .then((s) => {
+                setStatus(s);
+            })
+            .catch(console.error);
     }
     const handleMessage = () => {
         switch (status.event) {
@@ -85,6 +124,7 @@ export default function ServerControl({
                 }
         }
     };
+
     if (!selectedServer) {
         return <></>;
     }

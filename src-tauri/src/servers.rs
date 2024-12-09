@@ -12,7 +12,7 @@ use tokio::net::TcpStream;
 use tracing::{debug, error, info, trace};
 
 use crate::{
-    command::{settings, Command},
+    command::Command,
     settings::Settings,
 };
 
@@ -400,11 +400,11 @@ pub fn update_server(server: GameServer, old_server_name: String) -> Result<Game
 pub async fn connect_to_server(
     channel: Channel<ServerStatus>,
     server: GameServer,
-) -> Result<(), String> {
+) -> Result<GameServer, String> {
     match server.connect(channel.clone()).await {
         Ok(s) => {
-            let _ = channel.send(ServerStatus::Connected { server: s });
-            Ok(())
+            let _ = channel.send(ServerStatus::Connected { server: s.clone() });
+            Ok(s)
         }
         Err(e) => {
             error!("{e:?}"); // TODO: Handle errors.

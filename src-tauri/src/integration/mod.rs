@@ -221,7 +221,7 @@ pub async fn connect_to_integration(
             let mut twitch = twitch_integration.lock().await;
             match twitch.check_token().await {
                 Ok(_t) => {
-                    twitch.new_websocket(config).await;
+                    twitch.run(config).await;
                     Ok(Api::Twitch)
                 }
                 Err(e) => {

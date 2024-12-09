@@ -138,6 +138,16 @@ impl TwitchApiConnection {
 }
 
 impl TwitchApiConnection {
+    pub async fn run(&mut self, config: Config) {
+        self.new_websocket(config).await;
+        match self.runner.run() {
+            Ok(_) => {}
+            Err(e) => {
+                error!("{:?}", e)
+            }
+        }
+    }
+
     pub async fn new_websocket(&mut self, config: Config) {
         trace!("new websocket");
         if let Some(joinhandle) = self.websocket_joinhandle.take() {

@@ -48,9 +48,36 @@ export type RconCommand = {
         prefix: RconCommandPrefix;
         lua_command: RconLuaCommand;
 };
+
+export type Trigger =
+        | { trigger: "Chat"; data: { pattern: string } }
+        | { trigger: "ChatRegex"; data: { pattern: string } }
+        | {
+                trigger: "ChannelPointRewardRedeemed";
+                data: { name: string; id: string };
+        };
+
+export type GameServerTrigger = {
+        server: Server;
+        trigger: Trigger;
+        enabled: boolean;
+};
 export type Command = {
-        id: string;
+        name: string;
         rcon_lua: RconCommand;
+        server_triggers: GameServerTrigger[];
 };
 
 export type Api = "Twitch" | "YouTube";
+export type ServerStatus =
+        | {
+                event: "connecting";
+                data: { server: Server };
+        }
+        | { event: "connected"; data: { server: Server } }
+        | { event: "checking"; data: { server: Server } }
+        | { event: "error"; data: { msg: string; server: Server } }
+        | {
+                event: "disconnected";
+                data: { server?: Server };
+        };

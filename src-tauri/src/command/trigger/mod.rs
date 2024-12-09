@@ -21,7 +21,7 @@ pub enum Trigger {
         /// Regular expression.
         pattern: String,
     },
-    ChannelPointRewardRedemed {
+    ChannelPointRewardRedeemed {
         name: String,
         /// Twitch id for this channel points reward redeem.
         id: String,
@@ -38,7 +38,7 @@ impl Trigger {
                     false
                 }
             }
-            Trigger::ChannelPointRewardRedemed { id, .. } => {
+            Trigger::ChannelPointRewardRedeemed { id, .. } => {
                 if let IntegrationEvent::ChannelPoint { id: event_id, .. } = event {
                     event_id == id
                 } else {
@@ -59,7 +59,7 @@ impl Trigger {
             ChatRegex { .. } => ChatRegex {
                 pattern: Default::default(),
             },
-            ChannelPointRewardRedemed { .. } => ChannelPointRewardRedemed {
+            ChannelPointRewardRedeemed { .. } => ChannelPointRewardRedeemed {
                 name: Default::default(),
                 id: Default::default(),
             },
@@ -77,7 +77,7 @@ impl Trigger {
                 msg: Default::default(),
                 author: Default::default(),
             },
-            Trigger::ChannelPointRewardRedemed { .. } => IntegrationEvent::ChannelPoint {
+            Trigger::ChannelPointRewardRedeemed { .. } => IntegrationEvent::ChannelPoint {
                 id: Default::default(),
                 redeemer: Default::default(),
             },
@@ -105,7 +105,7 @@ impl Trigger {
     /// [`ChannelPointRewardRedemed`]: Trigger::ChannelPointRewardRedemed
     #[must_use]
     pub fn is_channel_point_reward_redemed(&self) -> bool {
-        matches!(self, Self::ChannelPointRewardRedemed { .. })
+        matches!(self, Self::ChannelPointRewardRedeemed { .. })
     }
 }
 
@@ -163,7 +163,7 @@ impl TryFrom<Value> for Trigger {
                         vec!["id", "name"]
                     ),
                 };
-                Ok(Self::ChannelPointRewardRedemed { name, id })
+                Ok(Self::ChannelPointRewardRedeemed { name, id })
             }
             trig => {
                 error!("Trigger type has not been implemented: {}", trig);
@@ -191,7 +191,7 @@ impl From<Trigger> for Value {
                 );
                 map.insert("pattern".to_string(), ValueKind::from(pattern));
             }
-            Trigger::ChannelPointRewardRedemed { name, id } => {
+            Trigger::ChannelPointRewardRedeemed { name, id } => {
                 map.insert(
                     "trigger_type".to_string(),
                     ValueKind::from(stringify!(ChannelPointRewardRedemed)),

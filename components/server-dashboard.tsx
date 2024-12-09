@@ -26,6 +26,8 @@ export default function ServerDashboard({
   const logRef = useRef<ImperativePanelHandle>(null);
   const [command, setCommand] = useState<Command>();
 
+  
+
   useEffect(() => {
     if (logRef && logRef.current && showLog) {
       logRef.current.expand();
@@ -33,6 +35,8 @@ export default function ServerDashboard({
       logRef.current.collapse();
     }
   }, [showLog]);
+
+  useEffect(handleAutoAuthenticate, []);
 
   const rconLua: RconCommand = {
     prefix: {
@@ -53,7 +57,7 @@ export default function ServerDashboard({
       })
       .catch(console.log);
     console.log("after create command");
-  }, []); // Needed otherwise ui freezes ...
+  }, []);
 
   function handleOnClick() {
     console.log("HandleOnClick");
@@ -65,6 +69,16 @@ export default function ServerDashboard({
         .then(console.log)
         .catch(console.log);
     }
+  }
+
+  function handleAutoAuthenticate() {
+    invoke<boolean>("get_config_bool", {
+      key: "auth.twitch.auto_connect",
+    }).then((connect) => {
+      if (connect) {
+        handleConnectToIntegration();
+      }
+    });
   }
 
   function handleConnectToIntegration() {
@@ -79,8 +93,10 @@ export default function ServerDashboard({
     });
   }
   function handleUpdateConfig() {
-    invoke("update_config")
+    invoke("update_config");
   }
+
+
 
   return (
     <div className={cn("", className)} {...props}>

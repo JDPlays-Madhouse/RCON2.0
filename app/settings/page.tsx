@@ -41,8 +41,8 @@ export default function Settings() {
           className=""
           selectedServer={selectedServer}
           setSelectedServer={setSelectedServer}
-          servers={servers}
         />
+
         <MainNav server={selectedServer} />
       </header>
       <main className="h-full w-full flex">
