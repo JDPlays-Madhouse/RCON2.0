@@ -13,7 +13,13 @@ use tauri::State;
 use tracing::{error, info};
 pub use twitch::TwitchApiConnection;
 
-#[derive(Debug, Serialize, Deserialize)]
+mod event;
+pub use event::{CustomRewardEvent, IntegrationEvent};
+
+pub mod status;
+pub use status::{integration_status, IntegrationError, IntegrationStatus};
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Api {
     Twitch,
     YouTube,
@@ -72,67 +78,6 @@ where
     pub platform: P,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Hash)]
-pub enum IntegrationEvent {
-    #[default]
-    Connected,
-    Disconnected,
-    Chat {
-        msg: String,
-        author: String,
-    },
-    ChannelPoint {
-        id: String,
-        redeemer: String,
-    },
-    Unknown,
-    Stop,
-    Pause,
-    Continue,
-    /// TODO: add implementation for updating triggers and commands for runner.
-    Update,
-}
-
-impl IntegrationEvent {
-    /// Returns `true` if the integration event is [`Chat`].
-    ///
-    /// [`Chat`]: IntegrationEvent::Chat
-    #[must_use]
-    pub fn is_chat(&self) -> bool {
-        matches!(self, Self::Chat { .. })
-    }
-
-    /// Returns `true` if the integration event is [`ChannelPoint`].
-    ///
-    /// [`ChannelPoint`]: IntegrationEvent::ChannelPoint
-    #[must_use]
-    pub fn is_channel_point(&self) -> bool {
-        matches!(self, Self::ChannelPoint { .. })
-    }
-    /// A default implementation of each enum which can be used for being a key.
-    pub fn event_type(&self) -> Self {
-        use IntegrationEvent::*;
-        match self {
-            Chat { .. } => Chat {
-                msg: Default::default(),
-                author: Default::default(),
-            },
-            Connected => Connected,
-            ChannelPoint { .. } => ChannelPoint {
-                id: Default::default(),
-                redeemer: Default::default(),
-            },
-            Unknown => Unknown,
-            Stop => Stop,
-            Pause => Pause,
-            Continue => Continue,
-            Update => Update,
-            Disconnected => Disconnected,
-        }
-    }
-}
-
 pub trait PlatformConnection {
     fn connect(&self) -> Result<()>;
 }
@@ -164,7 +109,7 @@ pub trait IntegrationControl {
     fn start_thread(&mut self) -> Result<(), RecvError>;
 }
 
-#[derive(Debug, Default, PartialEq, Copy, Clone)]
+#[derive(Debug, Default, PartialEq, Clone)]
 pub enum IntegrationCommand {
     #[default]
     Stop,
@@ -198,13 +143,13 @@ impl IntegrationCommand {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TokenError {
     TokenElapsed,
     InvalidScopes,
     InvalidToken,
     UnknownError,
-    TokenNotAuthorized,
+    NotAuthorized,
 }
 
 #[tauri::command]
@@ -212,7 +157,7 @@ pub async fn connect_to_integration(
     api: Api,
     twitch_integration: State<'_, Arc<futures::lock::Mutex<TwitchApiConnection>>>,
     config: State<'_, Arc<std::sync::Mutex<config::Config>>>,
-) -> Result<Api, String> {
+) -> Result<IntegrationStatus, IntegrationError> {
     use Api::*;
     let config = config.lock().unwrap().clone();
 
@@ -222,11 +167,11 @@ pub async fn connect_to_integration(
             match twitch.check_token().await {
                 Ok(_t) => {
                     twitch.run(config).await;
-                    Ok(Api::Twitch)
+                    Ok(IntegrationStatus::Connected(Api::Twitch))
                 }
                 Err(e) => {
                     error!("{:?}", e);
-                    Err("Failed to authenticate.".to_string())
+                    Err(IntegrationError::Token(e))
                 }
             }
         }

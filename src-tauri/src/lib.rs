@@ -250,6 +250,7 @@ pub async fn run() {
             settings::update_config,
             integration::connect_to_integration,
             integration::list_of_integrations,
+            integration::status::integration_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

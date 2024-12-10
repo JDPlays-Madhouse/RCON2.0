@@ -109,7 +109,7 @@ impl TryFrom<Value> for GameServerTrigger {
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         let gst_map = match value.clone().into_table() {
-            Ok(t) => dbg!(t),
+            Ok(t) => t,
             Err(e) => {
                 error!("Invalid type for conversion");
                 bail!(e)

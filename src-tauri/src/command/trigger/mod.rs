@@ -3,7 +3,7 @@ use config::{Map, Value, ValueKind};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
-use crate::integration::IntegrationEvent;
+use crate::integration::{CustomRewardEvent, IntegrationEvent};
 
 mod server_trigger;
 pub use server_trigger::GameServerTrigger;
@@ -22,14 +22,13 @@ pub enum Trigger {
         pattern: String,
     },
     ChannelPointRewardRedeemed {
-        name: String,
+        title: String,
         /// Twitch id for this channel points reward redeem.
         id: String,
     },
 }
-
-impl Trigger {
-    pub fn is_match(&self, event: &IntegrationEvent) -> bool {
+impl PartialEq<IntegrationEvent> for Trigger {
+    fn eq(&self, event: &IntegrationEvent) -> bool {
         match self {
             Trigger::Chat { pattern } => {
                 if let IntegrationEvent::Chat { msg, .. } = event {
@@ -39,14 +38,20 @@ impl Trigger {
                 }
             }
             Trigger::ChannelPointRewardRedeemed { id, .. } => {
-                if let IntegrationEvent::ChannelPoint { id: event_id, .. } = event {
-                    event_id == id
+                if let IntegrationEvent::ChannelPoint(reward_event) = event {
+                    &reward_event.id == id && reward_event.is_available()
                 } else {
                     false
                 }
             }
             _ => false,
         }
+    }
+}
+
+impl Trigger {
+    pub fn is_match(&self, event: &IntegrationEvent) -> bool {
+        self == event
     }
 
     /// A default implementation of each enum used for being a key.
@@ -60,7 +65,7 @@ impl Trigger {
                 pattern: Default::default(),
             },
             ChannelPointRewardRedeemed { .. } => ChannelPointRewardRedeemed {
-                name: Default::default(),
+                title: Default::default(),
                 id: Default::default(),
             },
         }
@@ -77,10 +82,9 @@ impl Trigger {
                 msg: Default::default(),
                 author: Default::default(),
             },
-            Trigger::ChannelPointRewardRedeemed { .. } => IntegrationEvent::ChannelPoint {
-                id: Default::default(),
-                redeemer: Default::default(),
-            },
+            Trigger::ChannelPointRewardRedeemed { .. } => {
+                IntegrationEvent::ChannelPoint(CustomRewardEvent::default())
+            }
         }
     }
 
@@ -163,7 +167,7 @@ impl TryFrom<Value> for Trigger {
                         vec!["id", "name"]
                     ),
                 };
-                Ok(Self::ChannelPointRewardRedeemed { name, id })
+                Ok(Self::ChannelPointRewardRedeemed { title: name, id })
             }
             trig => {
                 error!("Trigger type has not been implemented: {}", trig);
@@ -191,7 +195,7 @@ impl From<Trigger> for Value {
                 );
                 map.insert("pattern".to_string(), ValueKind::from(pattern));
             }
-            Trigger::ChannelPointRewardRedeemed { name, id } => {
+            Trigger::ChannelPointRewardRedeemed { title: name, id } => {
                 map.insert(
                     "trigger_type".to_string(),
                     ValueKind::from(stringify!(ChannelPointRewardRedemed)),

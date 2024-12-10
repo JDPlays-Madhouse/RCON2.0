@@ -141,6 +141,6 @@ const filterLogs = (logs: Logs) => {
     uuids.add(log.uuid);
     return true;
   });
-  console.log({ log_filtered });
+  // console.log({ log_filtered });
   return log_filtered;
 };

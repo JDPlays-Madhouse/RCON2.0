@@ -1,4 +1,4 @@
-import { Game, games, Servers } from "@/types";
+import { Api, apis, Game, games, IntegrationStatusMap, Servers } from "@/types";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -20,4 +20,13 @@ function gameBuilder(game: Game) {
     label: game,
     servers: [],
   };
+}
+
+export function defaultIntegrationStatus(): IntegrationStatusMap {
+  // @ts-expect-error(Constructing status.)
+  const status: IntegrationStatusMap = {};
+  for (const api of apis) {
+    status[Api[api]] = { status: "Unknown" };
+  }
+  return status;
 }

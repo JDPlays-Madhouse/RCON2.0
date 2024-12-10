@@ -5,7 +5,7 @@ use tokio::{
     sync::mpsc::{channel, error::SendError, Receiver, Sender},
     task::JoinHandle,
 };
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use super::{settings::ScriptSettings, Command};
 
@@ -101,9 +101,9 @@ impl Runner {
                         error!("An unknown event occurred")
                     }
                     Some(event) => {
-                        info!("{:?}", &event);
+                        debug!("{:?}", &event);
                         for command in commands.iter_mut() {
-                            info!("{:?}", &command);
+                            debug!("{:?}", &command);
                             command.handle_event(&event).await;
                         }
                     }

@@ -1,4 +1,5 @@
 "use client";
+import IntegrationStatus from "@/components/integration-status";
 // import { MainContextMenu } from "@/components/main-context-menu";
 import MainNav from "@/components/main-navbar";
 import ServerControl from "@/components/server-control";
@@ -32,6 +33,7 @@ export default function Home() {
             setSelectedServer={setSelectedServer}
           />
           <ServerControl selectedServer={selectedServer} />
+          <IntegrationStatus/>
         </div>
         <MainNav server={selectedServer} />
       </header>

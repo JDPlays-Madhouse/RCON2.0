@@ -82,7 +82,7 @@ export default function ServerDashboard({
   }
 
   function handleConnectToIntegration() {
-    const api: Api = "Twitch";
+    const api: Api = Api.Twitch;
     invoke<Api>("connect_to_integration", { api }).then((value) => {
       console.log({ value, type: typeof value });
     });

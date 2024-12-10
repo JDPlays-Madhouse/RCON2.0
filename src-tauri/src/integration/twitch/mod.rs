@@ -13,10 +13,11 @@ use tracing::{debug, error, info, trace, warn};
 use crate::command::Runner;
 
 use super::{
-    APIConnectionConfig, IntegrationChannels, IntegrationCommand, IntegrationControl,
+    status::{IntegrationError, IntegrationStatus},
+    APIConnectionConfig, Api, IntegrationChannels, IntegrationCommand, IntegrationControl,
     IntegrationEvent, PlatformConnection, TokenError, Transmitter,
 };
-use anyhow::Result;
+use anyhow::{bail, Result};
 use config::Config;
 use reqwest::Client as ReqwestClient;
 use twitch_api::{
@@ -28,6 +29,7 @@ use twitch_api::{
 use twitch_oauth2::UserToken;
 use twitch_oauth2::{Scope, TwitchToken};
 
+mod example;
 pub mod oauth;
 pub mod permissions;
 pub mod websocket;
@@ -35,8 +37,8 @@ pub mod websocket;
 use twitch_types::UserId;
 use websocket::WebsocketClient;
 
-pub static TOKEN: LazyLock<Arc<futures::lock::Mutex<Option<UserToken>>>> =
-    LazyLock::new(|| Arc::new(futures::lock::Mutex::new(None)));
+pub static TOKEN: LazyLock<Arc<tokio::sync::Mutex<Option<UserToken>>>> =
+    LazyLock::new(|| Arc::new(tokio::sync::Mutex::new(None)));
 
 pub struct TwitchApiConnection {
     pub username: Option<UserName>,
@@ -52,6 +54,7 @@ pub struct TwitchApiConnection {
     pub session_id: Option<String>,
     pub scope: Vec<Scope>,
     pub runner: Runner,
+    connecting: bool,
 }
 
 impl std::fmt::Debug for TwitchApiConnection {
@@ -133,6 +136,7 @@ impl TwitchApiConnection {
             websocket_joinhandle: Default::default(),
             session_id: Default::default(),
             runner: Runner::new(),
+            connecting: false,
         }
     }
 }
@@ -240,7 +244,7 @@ impl TwitchApiConnection {
                 match e {
                     ValidationError::NotAuthorized => {
                         error!("Token not authorized");
-                        Err(TokenError::TokenNotAuthorized)
+                        Err(TokenError::NotAuthorized)
                     }
                     ValidationError::RequestParseError(request_parse_error) => {
                         error!("{:?}", request_parse_error);
@@ -257,6 +261,57 @@ impl TwitchApiConnection {
                     _ => {
                         error!("Unknown Error");
                         Err(TokenError::UnknownError)
+                    }
+                }
+            }
+        }
+    }
+
+    pub async fn check_status(&mut self) -> anyhow::Result<IntegrationStatus, IntegrationError> {
+        let api = Api::Twitch;
+        if self.connecting {
+            return Ok(IntegrationStatus::Connecting(api));
+        };
+        let mut token: UserToken = match TOKEN.lock().await.clone() {
+            Some(t) => t,
+            None => return Ok(IntegrationStatus::Disconnected(api)),
+        };
+
+        match token.access_token.validate_token(&self.client).await {
+            Ok(vt) => {
+                if vt.expires_in.expect("Token should have an expiration.")
+                    < Duration::from_secs(15_000)
+                {
+                    if let Err(e) = token.refresh_token(&self.client).await {
+                        error!("{:?}", e);
+                        return Err(IntegrationError::Token(TokenError::UnknownError));
+                    };
+                }
+                let mut token_container = TOKEN.lock().await;
+                *token_container = Some(token.clone());
+                Ok(IntegrationStatus::Connected(api))
+            }
+            Err(e) => {
+                use twitch_oauth2::tokens::errors::ValidationError;
+                match e {
+                    ValidationError::NotAuthorized => {
+                        error!("Token not authorized");
+                        Err(IntegrationError::Token(TokenError::NotAuthorized))
+                    }
+                    ValidationError::RequestParseError(request_parse_error) => {
+                        error!("{:?}", request_parse_error);
+                        Err(IntegrationError::Token(TokenError::UnknownError))
+                    }
+                    ValidationError::Request(e) => {
+                        error!("{:?}", e);
+                        Err(IntegrationError::Token(TokenError::UnknownError))
+                    }
+                    ValidationError::InvalidToken(_) => {
+                        Err(IntegrationError::Token(TokenError::InvalidToken))
+                    }
+                    _ => {
+                        error!("Unknown Error");
+                        Err(IntegrationError::Token(TokenError::UnknownError))
                     }
                 }
             }
@@ -358,6 +413,7 @@ impl PlatformConnection for TwitchApiConnection {
 
 impl TwitchApiConnection {
     pub async fn authenticate(&mut self, use_cache: bool) -> Result<UserToken> {
+        self.connecting = true;
         let token = oauth::oauth(
             self.scope.clone(),
             self.client_id.clone(),
@@ -367,6 +423,7 @@ impl TwitchApiConnection {
         )
         .await
         .unwrap();
+        self.connecting = false;
 
         info!("Twitch Authenticated");
 

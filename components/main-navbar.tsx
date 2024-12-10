@@ -24,7 +24,6 @@ function Link({ href, children }: { href: string; children: React.ReactNode }) {
 
 export default function MainNav({
   className = "",
-  server,
 }: {
   className?: string;
   server?: Server;

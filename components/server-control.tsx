@@ -17,74 +17,71 @@ export default function ServerControl({
     ...props
 }: ServerControlProps) {
     const [channel, setChannel] = useState<Channel<ServerStatus>>();
+    const [autoConnect, setAutoConnect] = useState<boolean>(false);
     const [status, setStatus] = useState<ServerStatus>({
         event: "disconnected",
         data: { server: selectedServer },
     });
     const connected = () => status.event === "connected";
+    const connecting = () => status.event === "connecting";
+    const checking = () => status.event === "checking";
+    console.log({ status, connected: connected() });
 
     useEffect(() => {
-        if (selectedServer) {
-            if (!connected() && status.data.server?.id === selectedServer?.id) {
-                invoke<boolean>("get_config_bool", {
-                    key: "servers.autostart",
-                }).then((connect) => {
-                    if (connect) {
-                        handleServerConnect();
-                    }
-                });
+        invoke<boolean>("get_config_bool", {
+            key: "servers.autostart",
+        }).then((connect) => {
+            setAutoConnect(connect);
+        });
+    }, []);
+
+    useEffect(() => {
+        if (selectedServer && channel) {
+            if (!connected() && autoConnect && !connecting()) {
+                handleServerConnect();
             } else {
                 handleServerCheck();
             }
         }
-    }, [selectedServer]);
+    }, [selectedServer, autoConnect, channel]);
 
     useEffect(() => {
         const channel = new Channel<ServerStatus>();
         channel.onmessage = (message) => {
-            // console.log(message.data.server, selectedServer);
+            console.log("New Message: ", message);
             if (message.data.server?.id === selectedServer?.id) {
                 setStatus(message);
             }
-            setChannel(channel);
         };
-    });
+        setChannel(channel);
+    }, []); // Needs empty array..
 
     function handleOnClick() {
         if (["disconnected", "error"].includes(status.event)) {
             handleServerConnect();
         } else if (status.event == "connected") {
             handleServerDisconnect();
+        } else {
+            handleServerCheck();
         }
     }
 
     function handleServerConnect() {
-        if (!channel) {
-            const channel = new Channel<ServerStatus>();
-            channel.onmessage = (message) => {
-                // console.log(message.data.server, selectedServer);
-                if (message.data.server?.id === selectedServer?.id) {
-                    setStatus(message);
-                }
-                setChannel(channel);
-            };
-            invoke<Server>("connect_to_server", {
+        if (channel && selectedServer) {
+            setStatus({ event: "connecting", data: { server: selectedServer } });
+            invoke<ServerStatus>("connect_to_server", {
                 server: selectedServer,
                 channel,
             })
-                .then((server) => {
-                    console.log(`Connected to server: ${server.name}`);
+                .then((status) => {
+                    console.log(
+                        `Connected to server with channel: ${status.data.server?.name}`,
+                    );
+                    setStatus(status);
                 })
-                .catch(console.error);
-        } else {
-            invoke<Server>("connect_to_server", {
-                server: selectedServer,
-                channel,
-            })
-                .then((server) => {
-                    console.log(`Connected to server: ${server.name}`);
-                })
-                .catch(console.error);
+                .catch((e: ServerStatus) => {
+                    console.log(`Error: ${e.event === "error" ? e.data.msg : "unknown"}`);
+                });
         }
     }
 
@@ -135,11 +132,12 @@ export default function ServerControl({
             {...props}
         >
             <Button
-                variant={!connected() ? "destructive" : "default"}
+                variant={connected() || connecting() ? "default" : "destructive"}
                 size="icon"
                 onClick={handleOnClick}
+                disabled={["connecting", "checking"].includes(status.event)}
             >
-                {connected() ? <StopCircle /> : <Play />}
+                {connected() || connecting() ? <StopCircle /> : <Play />}
             </Button>
             <span onClick={handleServerCheck}>{handleMessage()}</span>
         </div>

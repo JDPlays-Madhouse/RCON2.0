@@ -11,10 +11,7 @@ use tauri::{ipc::Channel, State};
 use tokio::net::TcpStream;
 use tracing::{debug, error, info, trace};
 
-use crate::{
-    command::Command,
-    settings::Settings,
-};
+use crate::{command::Command, settings::Settings};
 
 pub static SERVERS: LazyLock<Mutex<HashMap<String, GameServer>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -76,9 +73,12 @@ impl std::fmt::Debug for GameServerConnected {
 
 impl GameServerConnected {
     pub async fn connect(server: GameServer, channel: Channel<ServerStatus>) -> Result<GameServer> {
-        let _ = channel.send(ServerStatus::Connecting {
+        match channel.send(ServerStatus::Connecting {
             server: server.clone(),
-        });
+        }) {
+            Ok(_) => info!("Sending Connecting"),
+            Err(e) => error!("{:?}", e),
+        };
         match <Connection<TcpStream>>::builder()
             .enable_factorio_quirks(server.game == Game::Factorio)
             .connect(&server.socket_address(), &server.password)
@@ -400,19 +400,27 @@ pub fn update_server(server: GameServer, old_server_name: String) -> Result<Game
 pub async fn connect_to_server(
     channel: Channel<ServerStatus>,
     server: GameServer,
-) -> Result<GameServer, String> {
+) -> Result<ServerStatus, ServerStatus> {
+    match channel.send(ServerStatus::Connecting {
+        server: server.clone(),
+    }) {
+        Ok(_) => info!("Sending Connecting"),
+        Err(e) => error!("{:?}", e),
+    };
     match server.connect(channel.clone()).await {
         Ok(s) => {
-            let _ = channel.send(ServerStatus::Connected { server: s.clone() });
-            Ok(s)
+            let status = ServerStatus::Connected { server: s.clone() };
+            let _ = channel.send(status.clone());
+            Ok(status)
         }
         Err(e) => {
             error!("{e:?}"); // TODO: Handle errors.
-            let _ = channel.send(ServerStatus::Error {
+            let status = ServerStatus::Error {
                 msg: format!("{:?}", e),
                 server,
-            });
-            Err(format!("{e:?}"))
+            };
+            let _ = channel.send(status.clone());
+            Err(status)
         }
     }
 }
@@ -464,6 +472,13 @@ pub async fn check_connection(server: GameServer) -> ServerStatus {
 pub async fn disconnect_connection(server: GameServer) -> ServerStatus {
     match GameServerConnected::disconnect(server).await {
         Ok(s) => ServerStatus::Disconnected { server: Some(s) },
-        Err(_) => ServerStatus::Disconnected { server: None },
+        Err(e) => {
+            let msg = format!(
+                "Error occurred while disconnecting from server \"{}\".",
+                e.name
+            );
+            error!("{}", &msg);
+            ServerStatus::Error { server: e, msg }
+        }
     }
 }

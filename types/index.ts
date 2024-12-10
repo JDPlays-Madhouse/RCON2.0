@@ -12,11 +12,15 @@ export enum Game {
         Factorio = "Factorio",
         Satisfactory = "Satisfactory",
 }
+
 export type GameString = keyof typeof Game;
+
 export const games: GameString[] = Object.keys(Game) as GameString[];
+
 export type Servers = {
         [Property in GameString]: { label: Game; servers: Server[] };
 };
+
 export type Log = {
         uuid: string;
         time: string;
@@ -24,8 +28,11 @@ export type Log = {
         target: string;
         message: string;
 };
+
 export type Logs = Log[];
+
 export type LogLevel = Log["level"];
+
 export type LogLevelColors = {
         [Properties in LogLevel]: string;
 };
@@ -62,13 +69,29 @@ export type GameServerTrigger = {
         trigger: Trigger;
         enabled: boolean;
 };
+
 export type Command = {
         name: string;
         rcon_lua: RconCommand;
         server_triggers: GameServerTrigger[];
 };
 
-export type Api = "Twitch" | "YouTube";
+/// Make sure left side is equal to right.
+export enum Api {
+        Twitch = "Twitch",
+        YouTube = "YouTube",
+}
+export type ApiString = keyof typeof Api;
+
+export const apis: ApiString[] = Object.keys(Api) as ApiString[];
+
+export type TokenError =
+        | "TokenElapsed"
+        | "InvalidScopes"
+        | "InvalidToken"
+        | "UnknownError"
+        | "NotAuthorized";
+
 export type ServerStatus =
         | {
                 event: "connecting";
@@ -81,3 +104,17 @@ export type ServerStatus =
                 event: "disconnected";
                 data: { server?: Server };
         };
+
+export type IntegrationStatusMap = { [Property in Api]: IntegrationStatus };
+
+export type IntegrationStatus =
+        | { status: "Connected"; api: Api }
+        | { status: "Disconnected"; api: Api }
+        | { status: "Connecting"; api: Api }
+        | { status: "Error"; api: { api: Api; error: IntegrationError } }
+        | { status: "Unknown" };
+
+export type IntegrationError =
+        | { error: "Token"; data: TokenError }
+        | { error: "NotImplemented"; data: Api }
+        | { error: "Unknown" };
