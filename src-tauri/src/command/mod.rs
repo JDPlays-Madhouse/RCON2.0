@@ -110,7 +110,7 @@ impl Command {
                 let mut connection_lock = CONNECTIONS.lock().await;
                 match connection_lock.get_mut(&server) {
                     Some(connection) => {
-                        connection.send_command(self.tx_string()).await;
+                        let _ = connection.send_command(self.tx_string()).await;
                         info!("Sent \"{}\" to \"{}\" server.", self.name, &server.name);
                     }
                     None => {}

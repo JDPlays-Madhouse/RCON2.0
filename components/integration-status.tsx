@@ -9,7 +9,6 @@ import { invoke } from "@tauri-apps/api/core";
 import IntegrationLogo from "./icons";
 import Patreon from "@/components/icons/patreon";
 import StreamLabs from "@/components/icons/streamlabs";
-import { stat } from "fs";
 
 interface IntegrationStatusProps extends React.ComponentProps<"div"> {}
 
