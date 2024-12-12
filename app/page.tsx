@@ -7,11 +7,17 @@ import ServerDashboard from "@/components/server-dashboard";
 import ServerSwitcher from "@/components/server-switcher";
 import { Server, Servers } from "@/types";
 import { Channel, invoke } from "@tauri-apps/api/core";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function Home() {
   const [selectedServer, setSelectedServer] = React.useState<Server>();
-  const [showLog, setShowLog] = React.useState(true);
+  const [showLogs, setShowLogs] = useState<boolean>(false);
+
+  useEffect(() => {
+    invoke<boolean>("get_config_bool", { key: "show_logs" }).then((show) =>
+      setShowLogs(show),
+    );
+  }, []);
   useEffect(() => {
     invoke<Server>("get_default_server").then((server: Server) => {
       setSelectedServer(server);
@@ -33,11 +39,15 @@ export default function Home() {
             setSelectedServer={setSelectedServer}
           />
           <ServerControl selectedServer={selectedServer} />
-          <IntegrationStatus/>
+          <IntegrationStatus />
         </div>
         <MainNav server={selectedServer} />
       </header>
-      <ServerDashboard className="flex-auto h-full" showLog={showLog} selectedServer={selectedServer} />
+      <ServerDashboard
+        className="flex-auto h-full"
+        showLog={showLogs}
+        selectedServer={selectedServer}
+      />
       {/* </MainContextMenu> */}
     </div>
   );

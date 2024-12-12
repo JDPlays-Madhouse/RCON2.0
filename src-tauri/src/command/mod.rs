@@ -7,7 +7,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, LazyLock, Mutex},
 };
-use tracing::{error, info, trace};
+use tracing::{error, info, instrument, trace};
 
 mod runner;
 pub mod settings;
@@ -108,12 +108,9 @@ impl Command {
             if let Some(server) = trigger.event_triggered(event) {
                 info!("Server {} was triggered by {:?}", server.name, event);
                 let mut connection_lock = CONNECTIONS.lock().await;
-                match connection_lock.get_mut(&server) {
-                    Some(connection) => {
-                        let _ = connection.send_command(self.tx_string()).await;
-                        info!("Sent \"{}\" to \"{}\" server.", self.name, &server.name);
-                    }
-                    None => {}
+                if let Some(connection) = connection_lock.get_mut(&server) {
+                    let _ = connection.send_command(self.tx_string()).await;
+                    info!("Sent \"{}\" to \"{}\" server.", self.name, &server.name);
                 }
             }
         }
@@ -268,6 +265,7 @@ impl TryFrom<Value> for Command {
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn create_command(name: String, rcon_lua: RconCommand) -> Result<Command, String> {
     trace!("Create Command");
     let command = Command::new(name, rcon_lua);
@@ -278,7 +276,35 @@ pub fn create_command(name: String, rcon_lua: RconCommand) -> Result<Command, St
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn get_command(name: String) -> Result<Option<Command>, String> {
     trace!("Get Command");
     Ok(Command::get(&name))
+}
+
+#[tauri::command]
+#[instrument(level = "trace")]
+pub async fn server_trigger_commands(
+    server: GameServer,
+) -> Result<Vec<(GameServerTrigger, Command)>, String> {
+    let commands = ScriptSettings::get_commands();
+
+    let commands_vec = commands
+        .iter()
+        .filter(|c| {
+            c.server_triggers
+                .clone()
+                .iter()
+                .any(|st| st.server == server)
+        })
+        .cloned()
+        .collect_vec();
+
+    let mut ret_vec = Vec::new();
+    for command in commands_vec {
+        for trigger in &command.server_triggers {
+            ret_vec.push((trigger.clone(), command.clone()));
+        }
+    }
+    Ok(ret_vec)
 }

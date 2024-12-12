@@ -9,14 +9,19 @@ import {
 import { useEffect, useRef, useState } from "react";
 import LogArea from "./server-log";
 import { invoke } from "@tauri-apps/api/core";
-import { Api, Command, RconCommand, Server } from "@/types";
+import { Api, Command, GameServerTrigger, RconCommand, Server } from "@/types";
 import { Button } from "./ui/button";
+import DashboardTable, {
+  column,
+  CommandTrigger,
+  fakeCommandTriggerData,
+} from "./dashboard-table";
 
 interface ServerDashBoardProps extends React.ComponentProps<"div"> {
   showLog: boolean;
   selectedServer?: Server;
 }
-
+type TriggerCommand = [GameServerTrigger, Command];
 export default function ServerDashboard({
   selectedServer,
   className,
@@ -24,7 +29,7 @@ export default function ServerDashboard({
   ...props
 }: ServerDashBoardProps) {
   const logRef = useRef<ImperativePanelHandle>(null);
-  const [command, setCommand] = useState<Command>();
+  const [commands, setCommands] = useState<CommandTrigger[]>([]);
 
   useEffect(() => {
     if (logRef && logRef.current && showLog) {
@@ -34,81 +39,28 @@ export default function ServerDashboard({
     }
   }, [showLog]);
 
-  useEffect(handleAutoAuthenticate, []);
-
-  const rconLua: RconCommand = {
-    prefix: {
-      prefix: "SC",
-    },
-    lua_command: {
-      commandType: "Inline",
-      command: "print('hello world')",
-    },
-  };
-  const name: string = "Hello World";
-  const commandProps = { name, rconLua };
   useEffect(() => {
-    invoke<Command>("create_command", commandProps)
-      .then((c) => {
-        console.log(c);
-        setCommand(c);
-      })
-      .catch(console.log);
-    console.log("after create command");
-  }, []);
-
-  function handleOnClick() {
-    console.log("HandleOnClick");
-    if (command && selectedServer) {
-      invoke<string>("send_command_to_server", {
+    if (selectedServer) {
+      invoke<TriggerCommand[]>("server_trigger_commands", {
         server: selectedServer,
-        command,
-      })
-        .then(console.log)
-        .catch(console.log);
+      }).then((commandtriggers) => {
+        console.log({ commandtriggers });
+        const ret_vec: CommandTrigger[] = [];
+        for (const [trig, comm] of commandtriggers) {
+          ret_vec.push({ serverTrigger: trig, command: comm });
+        }
+        setCommands(ret_vec);
+      });
     }
-  }
-
-  function handleAutoAuthenticate() {
-    invoke<boolean>("get_config_bool", {
-      key: "auth.twitch.auto_connect",
-    }).then((connect) => {
-      if (connect) {
-        handleConnectToIntegration();
-      }
-    });
-  }
-
-  function handleConnectToIntegration() {
-    const api: Api = Api.Twitch;
-    invoke<Api>("connect_to_integration", { api }).then((value) => {
-      console.log({ value, type: typeof value });
-    });
-  }
-  function handleListOfIntegrations() {
-    invoke<Api>("list_of_integrations").then((value) => {
-      console.log({ value, type: typeof value });
-    });
-  }
-  function handleUpdateConfig() {
-    invoke("update_config");
-  }
+  }, [selectedServer]);
 
   return (
     <div className={cn("", className)} {...props}>
       <ResizablePanelGroup direction="vertical" className="border max-w-dvw">
         <ResizablePanel defaultSize={70}>
-          <div className="flex flex-col h-full items-center justify-center p-6 my-auto gap-2">
+          <div className="flex flex-col h-full items-center justify-start p-6 my-auto gap-2">
             <div className="font-semibold">Dashboard</div>
-            <Button onClick={handleOnClick} variant="secondary">
-              Send:{" "}
-              {command?.rcon_lua?.lua_command.commandType == "Inline"
-                ? command?.rcon_lua?.lua_command.command
-                : command?.rcon_lua?.lua_command.command.command}
-            </Button>
-            <Button onClick={handleUpdateConfig} variant="secondary">
-              Update Config
-            </Button>
+            <DashboardTable data={commands} columns={column} />
           </div>
         </ResizablePanel>
         <ResizableHandle withHandle />

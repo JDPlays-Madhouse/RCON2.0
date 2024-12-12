@@ -10,7 +10,7 @@ import IntegrationLogo from "./icons";
 import Patreon from "@/components/icons/patreon";
 import StreamLabs from "@/components/icons/streamlabs";
 
-interface IntegrationStatusProps extends React.ComponentProps<"div"> {}
+interface IntegrationStatusProps extends React.ComponentProps<"div"> { }
 
 export default function IntegrationStatusBar({
   className = "",
@@ -18,7 +18,7 @@ export default function IntegrationStatusBar({
 }: IntegrationStatusProps) {
   let c = 0;
   const [statuses, setStatuses] = useState<IntegrationStatusMap>(
-    defaultIntegrationStatus()
+    defaultIntegrationStatus(),
   );
   const [integrations, setIntegrations] = useState<Api[]>([]);
 
@@ -45,7 +45,7 @@ export default function IntegrationStatusBar({
   function handleSetStatuses(status: IntegrationStatus, api: Api) {
     if (statuses[api].status === status.status) return;
     c += 1;
-    console.log("handleSetStatuses", c, status, api);
+    // console.log("handleSetStatuses", c, status, api);
     statuses[api] = status;
     setStatuses({ ...statuses });
   }
@@ -85,7 +85,15 @@ export default function IntegrationStatusBar({
       case "Unknown":
       case "Error":
       case "Disconnected":
-        statuses[api] = { status: "Connecting", api: Api.Twitch };
+        // console.log(api);
+        if (
+          statuses[api].status === "Error" &&
+          statuses[api].api.error.error === "NotImplemented"
+        ) {
+          // console.log("NotImplemented");
+          return;
+        }
+        statuses[api] = { status: "Connecting", api };
         setStatuses(statuses);
         handleConnectToIntegration(api);
         break;
@@ -107,7 +115,7 @@ export default function IntegrationStatusBar({
         status={statuses.YouTube}
         Logo={YouTube}
         primaryColor="#FF0000"
-        onClick={() => handleOnClick(Api.Twitch)}
+        onClick={() => handleOnClick(Api.YouTube)}
       />
       <IntegrationLogo
         status={statuses.Patreon}

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use tracing::instrument;
 
 use super::{Api, TokenError, TwitchApiConnection};
 
@@ -29,6 +30,7 @@ pub enum IntegrationError {
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub async fn integration_status(
     api: Api,
     twitch_integration: State<'_, Arc<futures::lock::Mutex<TwitchApiConnection>>>,

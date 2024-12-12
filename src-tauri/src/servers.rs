@@ -9,7 +9,7 @@ use rcon::Connection;
 use serde::{ser::SerializeStruct, Deserialize, Serialize};
 use tauri::{ipc::Channel, State};
 use tokio::net::TcpStream;
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info, instrument, trace};
 
 use crate::{command::Command, settings::Settings};
 
@@ -22,9 +22,7 @@ pub static CONNECTIONS: LazyLock<tokio::sync::Mutex<HashMap<GameServer, GameServ
 /// Valid Games
 ///
 /// Dev notes: Update the 2 lower impls (`impl std::fmt::Display for Game`, `impl TryFrom<String> for Game`) to match Factorio.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Hash, PartialOrd, Ord,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub enum Game {
     #[default]
     Factorio,
@@ -94,10 +92,12 @@ impl GameServerConnected {
                     connection,
                 };
                 info!("Connected to server: {}", &server.name);
-                CONNECTIONS
-                    .lock()
-                    .await
-                    .insert(server.clone(), gameserverconnected);
+                {
+                    CONNECTIONS
+                        .lock()
+                        .await
+                        .insert(server.clone(), gameserverconnected);
+                }
                 Ok(server)
             }
             Err(e) => {
@@ -291,23 +291,27 @@ pub fn default_server_from_settings(config: Config) -> Option<GameServer> {
     server_from_settings(config, &default_server.to_lowercase())
 }
 #[tauri::command]
-pub async fn list_game_servers() -> Result<Vec<GameServer>, String> {
-    let settings = crate::settings::Settings::new();
-    let config = settings.config();
+#[instrument(level = "trace")]
+pub async fn list_game_servers(
+    config: State<'_, Arc<futures::lock::Mutex<Config>>>,
+) -> Result<Vec<GameServer>, String> {
+    let config = config.lock().await.clone();
     let servers = servers_from_settings(config).unwrap_or_default();
     Ok(servers)
 }
 
 #[tauri::command]
-pub fn get_default_server(
-    default_server: State<Arc<Mutex<Option<GameServer>>>>,
-    config: State<Arc<Mutex<Config>>>,
+#[instrument(level = "trace")]
+pub async fn get_default_server(
+    default_server: State<'_, Arc<futures::lock::Mutex<Option<GameServer>>>>,
+    config: State<'_, Arc<futures::lock::Mutex<Config>>>,
 ) -> Result<GameServer, String> {
-    let default_server_lock = default_server.lock().unwrap();
+    let default_server_lock = default_server.lock().await;
     if let Some(server) = default_server_lock.clone() {
         return Ok(server);
     }
-    match default_server_from_settings(config.lock().unwrap().clone()) {
+    let config = config.lock().await.clone();
+    match default_server_from_settings(config) {
         Some(server) => Ok(server),
         None => {
             Err("No default server found. Select a server to set it as the default.".to_string())
@@ -316,8 +320,9 @@ pub fn get_default_server(
 }
 
 #[tauri::command]
-pub fn set_default_server(
-    default_server: State<Arc<Mutex<Option<GameServer>>>>,
+#[instrument(level = "trace")]
+pub async fn set_default_server(
+    default_server: State<'_, Arc<futures::lock::Mutex<Option<GameServer>>>>,
     server_name: String,
 ) -> Result<String, String> {
     let mut settings = crate::settings::Settings::new();
@@ -326,7 +331,7 @@ pub fn set_default_server(
         None => return Err(format!("No server found with that name: {:?}", server_name)),
     };
     {
-        let mut default_server_lock = default_server.lock().unwrap();
+        let mut default_server_lock = default_server.lock().await;
         *default_server_lock = Some(server);
     }
     match settings.set_config("servers.default", server_name.to_lowercase()) {
@@ -337,6 +342,7 @@ pub fn set_default_server(
 
 /// TODO: Change to a `impl From<GameServer> for ConfigValue`
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn new_server(server: GameServer) -> Result<GameServer, String> {
     info! {"adding new rcon server: {:?}", server};
     let ret_server = server.clone();
@@ -363,6 +369,7 @@ pub fn new_server(server: GameServer) -> Result<GameServer, String> {
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn update_server(server: GameServer, old_server_name: String) -> Result<GameServer, String> {
     info! {"updating rcon server {old_server_name}: {:?}", server};
 
@@ -397,6 +404,7 @@ pub fn update_server(server: GameServer, old_server_name: String) -> Result<Game
 }
 
 #[tauri::command]
+#[instrument(level = "trace", skip(channel))]
 pub async fn connect_to_server(
     channel: Channel<ServerStatus>,
     server: GameServer,
@@ -426,6 +434,7 @@ pub async fn connect_to_server(
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub async fn send_command_to_server(
     server: GameServer,
     mut command: Command,
@@ -447,6 +456,7 @@ pub async fn send_command_to_server(
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub async fn check_connection(server: GameServer) -> ServerStatus {
     trace!("check_connection");
     let connections = CONNECTIONS.lock().await;
@@ -469,6 +479,7 @@ pub async fn check_connection(server: GameServer) -> ServerStatus {
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub async fn disconnect_connection(server: GameServer) -> ServerStatus {
     match GameServerConnected::disconnect(server).await {
         Ok(s) => ServerStatus::Disconnected { server: Some(s) },

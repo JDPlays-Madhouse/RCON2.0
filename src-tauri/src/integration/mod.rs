@@ -10,7 +10,7 @@ use config::Value;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use tauri::State;
-use tracing::{error, info};
+use tracing::{error, info, instrument};
 pub use twitch::TwitchApiConnection;
 
 mod event;
@@ -155,13 +155,14 @@ pub enum TokenError {
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub async fn connect_to_integration(
     api: Api,
     twitch_integration: State<'_, Arc<futures::lock::Mutex<TwitchApiConnection>>>,
-    config: State<'_, Arc<std::sync::Mutex<config::Config>>>,
+    config: State<'_, Arc<futures::lock::Mutex<config::Config>>>,
 ) -> Result<IntegrationStatus, IntegrationError> {
     use Api::*;
-    let config = config.lock().unwrap().clone();
+    let config = config.lock().await.clone();
 
     match api {
         Twitch => {
@@ -182,10 +183,11 @@ pub async fn connect_to_integration(
 }
 
 #[tauri::command]
+#[instrument(level = "trace", skip(config))]
 pub async fn list_of_integrations(
-    config: State<'_, Arc<std::sync::Mutex<config::Config>>>,
+    config: State<'_, Arc<futures::lock::Mutex<config::Config>>>,
 ) -> Result<Vec<Api>, String> {
-    let config = config.lock().unwrap().clone();
+    let config = config.lock().await.clone();
     match config.get_array("auth.platforms") {
         Ok(l) => {
             let platforms = l

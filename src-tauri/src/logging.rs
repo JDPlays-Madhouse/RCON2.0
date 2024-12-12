@@ -1,9 +1,9 @@
 use crate::settings::ConfigValue;
 use anyhow::{bail, Result};
 use config::ValueKind;
+use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
-use std::sync::Mutex;
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
@@ -12,6 +12,7 @@ use std::{
 use tauri::ipc::Channel;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
 use tracing::error;
+use tracing::instrument;
 use tracing::{debug, info, Subscriber};
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
@@ -198,56 +199,57 @@ impl Logger {
         Self {}
     }
 
-    pub fn subscribe_to_channel(channel: Channel<Log>) -> String {
+    pub async fn subscribe_to_channel(channel: Channel<Log>) -> String {
         let uuid: String = Uuid::new_v4().into();
-        FRONTEND_CHANNELS
-            .lock()
-            .unwrap()
-            .insert(uuid.clone(), channel);
+        FRONTEND_CHANNELS.lock().await.insert(uuid.clone(), channel);
         uuid
     }
 
-    pub fn unsubscribe_channel(uuid: String) -> Option<Channel<Log>> {
-        FRONTEND_CHANNELS.lock().unwrap().remove(&uuid)
+    pub async fn unsubscribe_channel(uuid: String) -> Option<Channel<Log>> {
+        FRONTEND_CHANNELS.lock().await.remove(&uuid)
     }
 
-    fn add_log(log: Log) {
-        if !Logger::log_exists(&log.uuid) {
-            LOGS.lock().unwrap().push(log.clone());
+    async fn add_log(log: Log) {
+        if !Logger::log_exists(&log.uuid).await {
+            LOGS.lock().await.push(log.clone());
         }
     }
 
-    fn find_log(uuid: String) -> Option<Log> {
-        LOGS.lock()
-            .unwrap()
-            .iter()
-            .find(|l| l.uuid == uuid)
-            .cloned()
+    async fn find_log(uuid: String) -> Option<Log> {
+        LOGS.lock().await.iter().find(|l| l.uuid == uuid).cloned()
     }
 
-    fn log_exists(uuid: &str) -> bool {
-        LOGS.lock().unwrap().iter().any(|l| l.uuid == uuid)
+    async fn log_exists(uuid: &str) -> bool {
+        LOGS.lock().await.iter().any(|l| l.uuid == uuid)
     }
 
-    pub fn log_to_channel(uuid: String, level: LogLevel, target: String, message: String) {
+    pub async fn log_to_channel(uuid: String, level: LogLevel, target: String, message: String) {
         let log = Log::new(level, target, message);
-        Logger::add_log(log.clone());
+        Logger::add_log(log.clone()).await;
 
-        let _ = match FRONTEND_CHANNELS.lock().unwrap().get(&uuid) {
+        let _ = match FRONTEND_CHANNELS.lock().await.get(&uuid) {
             Some(channel) => channel.send(log),
             None => Ok(()),
         };
     }
     pub fn log(level: LogLevel, target: String, message: String) {
         let log = Log::new(level, target, message);
-        Logger::add_log(log.clone());
-        Logger::broadcast(log);
+        tauri::async_runtime::spawn(async {
+            Logger::add_log(log.clone()).await;
+            Logger::broadcast(log).await;
+        });
     }
 
-    pub fn broadcast(log: Log) {
-        for channel in FRONTEND_CHANNELS.lock().unwrap().values() {
+    pub async fn broadcast(log: Log) {
+        for channel in FRONTEND_CHANNELS.lock().await.values() {
             let _ = channel.send(log.clone());
         }
+    }
+}
+
+impl Default for Logger {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -279,7 +281,10 @@ where
 
         match visitor.map.get("channel") {
             Some(channel) => {
-                Logger::log_to_channel(channel.to_string(), level, target, message);
+                let id = channel.clone();
+                tauri::async_runtime::spawn(async move {
+                    Logger::log_to_channel(id, level, target, message).await;
+                });
             }
             None => Logger::log(level, target, message),
         }
@@ -334,21 +339,24 @@ impl tracing::field::Visit for FrontendVisitor {
 }
 
 #[tauri::command]
-pub fn subscribe_logging_channel(channel: Channel<Log>) -> String {
-    let uuid = Logger::subscribe_to_channel(channel.clone());
+#[instrument(level = "trace", skip(channel))]
+pub async fn subscribe_logging_channel(channel: Channel<Log>) -> Result<String, String> {
+    let uuid = Logger::subscribe_to_channel(channel.clone()).await;
 
     debug!("Subscribed to channel: {}", uuid.clone());
-    uuid
+    Ok(uuid)
 }
 
 #[tauri::command]
-pub fn fetch_all_logs() -> Vec<Log> {
-    LOGS.lock().unwrap().clone()
+#[instrument(level = "trace")]
+pub async fn fetch_all_logs() -> Result<Vec<Log>, String> {
+    Ok(LOGS.lock().await.clone())
 }
 
 #[tauri::command]
-pub fn unsubscribe_logging_channel(uuid: String) -> Result<(), String> {
-    let unsub = Logger::unsubscribe_channel(uuid.clone());
+#[instrument(level = "trace")]
+pub async fn unsubscribe_logging_channel(uuid: String) -> Result<(), String> {
+    let unsub = Logger::unsubscribe_channel(uuid.clone()).await;
 
     match unsub {
         Some(_channel) => {
@@ -360,6 +368,7 @@ pub fn unsubscribe_logging_channel(uuid: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn log(level: LogLevel, target: String, message: String) {
     use tracing::{debug, error, info, trace, warn};
     use LogLevel::*;
@@ -373,6 +382,7 @@ pub fn log(level: LogLevel, target: String, message: String) {
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn log_to_channel(uuid: String, level: LogLevel, target: String, message: String) {
     use tracing::{debug, error, info, trace, warn};
     use LogLevel::*;

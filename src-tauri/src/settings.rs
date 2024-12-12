@@ -10,10 +10,10 @@ use serde::{
 use std::{
     fmt::Debug,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 use tauri::State;
-use tracing::{error, info};
+use tracing::{error, info, instrument};
 
 use crate::PROGRAM;
 use config::{Config, Environment, File, FileFormat};
@@ -291,6 +291,7 @@ impl Default for Settings {
         let default_settings_bool: Vec<DefaultValue<bool>> = vec![
             ("servers.autostart", false),
             ("debug", false),
+            ("show_logs", true),
             ("auth.twitch.auto_connect", true),
             ("auth.youtube.auto_connect", true),
         ];
@@ -355,28 +356,36 @@ impl Settings {
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn set_config_string(_key: String, value: String) {
     dbg!(value);
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn set_config_int(_key: String, value: i128) {
     dbg!(value);
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn set_config_uint(_key: String, value: u128) {
     dbg!(value);
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn set_config_float(_key: String, value: f64) {
     dbg!(value);
 }
 
 #[tauri::command]
-pub fn get_config_bool(key: String, config: State<'_, Arc<Mutex<Config>>>) -> Result<bool, String> {
-    let config = config.lock().unwrap().clone();
+#[instrument(level = "trace", skip(config))]
+pub async fn get_config_bool(
+    key: String,
+    config: State<'_, Arc<futures::lock::Mutex<Config>>>,
+) -> Result<bool, String> {
+    let config = config.lock().await.clone();
     match config.get_bool(&key) {
         Ok(b) => {
             info!("{}: {}", &key, b);
@@ -390,18 +399,22 @@ pub fn get_config_bool(key: String, config: State<'_, Arc<Mutex<Config>>>) -> Re
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn set_config_bool(_key: String, value: bool) {
     dbg!(value);
 }
 
 #[tauri::command]
+#[instrument(level = "trace")]
 pub fn set_config_array(_key: String, value: Vec<String>) {
     dbg!(value);
 }
 
 #[tauri::command]
-pub fn update_config(config: State<'_, Arc<Mutex<Config>>>) {
-    let mut config_locked = config.lock().unwrap();
+#[instrument(level = "trace", skip_all)]
+pub async fn update_config(config: State<'_, Arc<futures::lock::Mutex<Config>>>) -> Result<(), ()> {
+    let mut config_locked = config.lock().await;
     let new_config = Settings::current_config();
     *config_locked = new_config;
+    Ok(())
 }

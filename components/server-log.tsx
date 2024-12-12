@@ -18,7 +18,6 @@ export default function LogArea({ className }: LogAreaProps) {
       return filterLogs(current_logs);
     });
   };
-  const nullRef = useRef(null);
   const lastLineRef = useRef(null);
   useEffect(() => {
     const onEvent = new Channel<Log>();

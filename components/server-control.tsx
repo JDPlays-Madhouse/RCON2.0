@@ -25,7 +25,7 @@ export default function ServerControl({
     const connected = () => status.event === "connected";
     const connecting = () => status.event === "connecting";
     const checking = () => status.event === "checking";
-    console.log({ status, connected: connected() });
+    // console.log({ status, connected: connected() });
 
     useEffect(() => {
         invoke<boolean>("get_config_bool", {
@@ -48,7 +48,7 @@ export default function ServerControl({
     useEffect(() => {
         const channel = new Channel<ServerStatus>();
         channel.onmessage = (message) => {
-            console.log("New Message: ", message);
+            // console.log("New Message: ", message);
             if (message.data.server?.id === selectedServer?.id) {
                 setStatus(message);
             }
@@ -74,13 +74,13 @@ export default function ServerControl({
                 channel,
             })
                 .then((status) => {
-                    console.log(
-                        `Connected to server with channel: ${status.data.server?.name}`,
-                    );
+                    // console.log(
+                    //     `Connected to server with channel: ${status.data.server?.name}`,
+                    // );
                     setStatus(status);
                 })
                 .catch((e: ServerStatus) => {
-                    console.log(`Error: ${e.event === "error" ? e.data.msg : "unknown"}`);
+                    // console.log(`Error: ${e.event === "error" ? e.data.msg : "unknown"}`);
                 });
         }
     }

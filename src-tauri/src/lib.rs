@@ -210,8 +210,8 @@ pub async fn run() {
                 }
             }
             let default_server = servers::default_server_from_settings(config_clone.clone());
-            app.manage(Arc::new(std::sync::Mutex::new(config_clone.clone())));
-            app.manage(Arc::new(std::sync::Mutex::new(default_server)));
+            app.manage(Arc::new(futures::lock::Mutex::new(config_clone.clone())));
+            app.manage(Arc::new(futures::lock::Mutex::new(default_server)));
             app.manage(twitch_int_clone);
             tracing_subscriber::Registry::default()
                 .with(level_filter)
@@ -225,6 +225,7 @@ pub async fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             command::create_command,
+            command::server_trigger_commands,
             logging::fetch_all_logs,
             logging::log,
             logging::log_to_channel,

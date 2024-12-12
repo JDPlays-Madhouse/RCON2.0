@@ -2,22 +2,27 @@
 // import { MainContextMenu } from "@/components/main-context-menu";
 import MainNav from "@/components/main-navbar";
 import ServerConfig from "@/components/server-config";
-import ServerDashboard from "@/components/server-dashboard";
 import ServerSwitcher from "@/components/server-switcher";
 import { defaultServers } from "@/lib/utils";
 import { Server, Servers } from "@/types";
 import { invoke } from "@tauri-apps/api/core";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function Home() {
   const [selectedServer, setSelectedServer] = React.useState<Server>();
-  const [showLog, setShowLog] = React.useState(true);
+  const [showLogs, setShowLogs] = useState<boolean>(false);
+
+  useEffect(() => {
+    invoke<boolean>("get_config_bool", { key: "show_logs" }).then((show) =>
+      setShowLogs(show),
+    );
+  }, []);
+
   useEffect(() => {
     invoke<Server>("get_default_server").then((server: Server) => {
       setSelectedServer(server);
     });
   }, []);
-
 
   return (
     <div className="flex flex-col h-dvh bg-background">
@@ -36,7 +41,7 @@ export default function Home() {
       </header>
       <ServerConfig
         className="flex-auto h-full"
-        showLog={showLog}
+        showLog={showLogs}
         server={selectedServer}
         setSelectedServer={setSelectedServer}
       />
