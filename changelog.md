@@ -1,4 +1,34 @@
 
+<a name="0.1.5"></a>
+## [0.1.5](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.4...0.1.5) (2024-12-12)
+
+### Build
+
+* **deps:** bump cross-spawn from 7.0.3 to 7.0.6
+
+### Doc
+
+* added mermaid diagrams
+
+### Feat
+
+* Displaying commands and triggers on the ui.
+* added icons for integration status
+* Commands now react to triggers.
+* added listing integrations for menus
+* **commands:** working pathway for commands
+
+### Feature
+
+* **commands:** reading config and lua commands from file.
+* **servers:** fully functional server connections and disconnections.
+* **ui:** added forms for rcons servers
+
+### Pull Requests
+
+* Merge pull request [#1](https://github.com/JDPlays-Madhouse/RCON2.0/issues/1) from JDPlays-Madhouse/dependabot/npm_and_yarn/cross-spawn-7.0.6
+
+
 <a name="0.1.4"></a>
 ## [0.1.4](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.3...0.1.4) (2024-11-13)
 
