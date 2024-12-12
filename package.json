@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "tauri": "tauri",
-    "docs": "cd src-tauri && cargo tree --depth 1  -e normal --prefix none | cut -d' ' -f1,2 | sed 's/ v/@/g'|  xargs printf -- '-p %s\n' | xargs cargo +nightly doc -Z rustdoc-map --no-deps --lib"
+    "docs": "cd src-tauri && cargo tree --depth 1  -e normal --prefix none | cut -d' ' -f1,2 | sed 's/ v/@/g'|  xargs printf -- ' -p %s\n' | xargs cargo +nightly doc -Z rustdoc-map --no-deps --lib"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

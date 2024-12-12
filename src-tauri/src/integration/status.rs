@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tauri::State;
-use tracing::error;
 
 use super::{Api, TokenError, TwitchApiConnection};
 
@@ -39,9 +38,6 @@ pub async fn integration_status(
             let mut twitch_integration_locked = twitch_integration.lock().await;
             twitch_integration_locked.check_status().await
         }
-        _ => {
-            error!("Api not yet implemented: {:?}", api);
-            Err(IntegrationError::NotImplemented(api))
-        }
+        _ => Err(IntegrationError::NotImplemented(api)),
     }
 }

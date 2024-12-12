@@ -14,8 +14,10 @@
       {
         "title": "RCON2.0",
         "resizable": true,
-        "maximized": false,
-        "focus": false
+        "maximized": true,
+        "focus": false,
+        "width": 1280,
+        "height": 960
       }
     ],
     "security": {

@@ -26,8 +26,6 @@ export default function ServerDashboard({
   const logRef = useRef<ImperativePanelHandle>(null);
   const [command, setCommand] = useState<Command>();
 
-  
-
   useEffect(() => {
     if (logRef && logRef.current && showLog) {
       logRef.current.expand();
@@ -96,8 +94,6 @@ export default function ServerDashboard({
     invoke("update_config");
   }
 
-
-
   return (
     <div className={cn("", className)} {...props}>
       <ResizablePanelGroup direction="vertical" className="border max-w-dvw">
@@ -109,12 +105,6 @@ export default function ServerDashboard({
               {command?.rcon_lua?.lua_command.commandType == "Inline"
                 ? command?.rcon_lua?.lua_command.command
                 : command?.rcon_lua?.lua_command.command.command}
-            </Button>
-            <Button onClick={handleConnectToIntegration} variant="secondary">
-              Connect to Twitch
-            </Button>
-            <Button onClick={handleListOfIntegrations} variant="secondary">
-              List of Integrations
             </Button>
             <Button onClick={handleUpdateConfig} variant="secondary">
               Update Config

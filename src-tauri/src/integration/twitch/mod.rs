@@ -17,7 +17,7 @@ use super::{
     APIConnectionConfig, Api, IntegrationChannels, IntegrationCommand, IntegrationControl,
     IntegrationEvent, PlatformConnection, TokenError, Transmitter,
 };
-use anyhow::{bail, Result};
+use anyhow::Result;
 use config::Config;
 use reqwest::Client as ReqwestClient;
 use twitch_api::{

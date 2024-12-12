@@ -1,4 +1,3 @@
-use crate::command::Trigger;
 
 #[allow(dead_code)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Hash)]

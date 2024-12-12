@@ -1,4 +1,3 @@
-use twitch_api::helix::points::CustomReward;
 use twitch_types::RewardId;
 
 struct CustomRewardEvent {

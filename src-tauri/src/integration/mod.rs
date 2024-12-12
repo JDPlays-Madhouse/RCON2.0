@@ -23,6 +23,8 @@ pub use status::{integration_status, IntegrationError, IntegrationStatus};
 pub enum Api {
     Twitch,
     YouTube,
+    Patreon,
+    StreamLabs,
 }
 
 impl TryFrom<config::Value> for Api {
@@ -175,7 +177,7 @@ pub async fn connect_to_integration(
                 }
             }
         }
-        _ => unimplemented!("Integration not implemented"),
+        _ => Err(IntegrationError::NotImplemented(api)),
     }
 }
 
