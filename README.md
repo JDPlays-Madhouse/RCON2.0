@@ -1,13 +1,13 @@
 # RCON2.0
 
-## Minimum Viable Product
+## Minimum Viable Product [v0.1.5](https://github.com/JDPlays-Madhouse/RCON2.0/releases/tag/0.1.5)
 
 - [x] Authenticate with twitch.
 - [x] Connect to twitch websocket.
 - [x] Handle Chat and Channel Point Reward Events.
 - [x] Connect to an Rcon Server.
 - [x] Send commands to Rcon Server.
-- [ ] Configure through TOML commands to send to RCON server with defined triggers.
+- [x] Configure through TOML commands to send to RCON server with defined triggers.
 
 ## Requirements
 
@@ -15,9 +15,9 @@
   - [ ] Events including subs/bits/follows/hype trains
   - [x] Channel Points
   - [x] Chat messages
-- [ ] Detect certain messages and parse the message for battleship. (Only 1 command)
-  - [ ] Example: /muppet_streamer_schedule_explosive_delivery target targetPosition
-- [ ] Convert the parsed message into a valid command.
+- [x] Detect certain messages and parse the message for battleship. (Only 1 command)
+  - [x] Example: /muppet_streamer_schedule_explosive_delivery target targetPosition
+- [x] Convert the parsed message into a valid command.
   - [ ] have default values for commands so invalid data with a valid command
         becomes valid command with default data.
 - [ ] Read from SteamLabs/streamelements Patreon (own api) and Humble
@@ -28,7 +28,7 @@
 - [x] Have a RCON app/interface that takes in specific Factorio commands as well
       as any other games.
 - [x] Rcon interface needs to take configurations for any rcon server.
-- [?] Ensure that the amount of data is below the max per tick amount.
+- [ ] Ensure that the amount of data is below the max per tick amount.
 
 - [ ] Provide visiual feedback through an OBS overlay (website) to give feedback
       on things like the boom factor.
@@ -36,7 +36,7 @@
 - [ ] From twitch events read hype trains and be able to respond.
   - JDGOESBoom with count down, if redeamed again dead factor goes up and
     restart count down.
-- [ ] Be able to add RCON commands, modify, delete, display (CRUD), including
+- [x] Be able to add RCON commands, modify, delete, display (CRUD), including
       default values like deadliness.
 - [ ] Be able to test when adding commands.
 - [x] Output a log with raw output for debugging
@@ -59,13 +59,6 @@
 - One app.
 - Rcon needs a frontend display, webpage or app?
 
-## Todo
-
-1. Start with twitch
-2. Be able to send commands to server over rcon.
-3. Meet in middle with UI.
-4. Add more integration.
-
 -----
 
 ## Integrations
@@ -81,8 +74,7 @@
    2. Linux: ~/.config/RCON2.0
    3. Apple: ~/Library/Application Support/RCON2.0
 4. Add the credentials to auth.twitch.
-5. websocket_subscription are the websocket events that you want to track
-  defined by
+5. websocket_subscription are the websocket events that you want to track defined by
   [twitch docs](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/).
   Currently implemented are listed below, if there any not listed that you
   want, start an issue
@@ -99,3 +91,130 @@ Not yet implemented.
 
 Not yet implemented.
 
+## Commands
+
+At the moment the only way to add commands is through the config file.
+
+```TOML
+[example]
+prefix = "C"
+command_type = "Inline"
+inline = "print('Hello, world!')"
+
+[[example.server_triggers]]
+enabled = true
+server_name = "local"
+trigger_type = "Chat"
+pattern = "test"
+
+[[example.server_triggers]]
+enabled = true
+server_name = "local"
+trigger_type = "ChannelPointRewardRedeemed"
+title = "Player Goes Boom"
+id = "12345678-1234-1234-1234-123456789012"
+
+[[example.server_triggers]]
+enabled = true
+server_name = "Server Doesn't Exist"
+trigger_type = "Chat"
+pattern = "This will never trigger nor appear in dashboard, as the server doesn't exist."
+
+["example 2"]
+prefix = "C"
+command_type = "File"
+relative_path = hello_world.lua # or ./hello_world.lua not /wrong.lua
+```
+
+### Command Name
+
+The command name is defined in the single square brackets.
+If you want a space in the name, use quotation marks around the name.
+
+### Prefix
+
+Any text or command that goes before the lua command.
+
+#### Preset
+
+- "C": /command
+- "SC": /silent-command
+- "MC": /measured-command
+
+#### Custom
+
+For a non preset prefix, type what is required verbatim, including spaces and slashes eg. `/total_custom_prefix `. Take note of the trailing slash when using lua.
+
+### Command Type
+
+#### Inline
+
+This is for lua stored in the config file, ideal for short commands. Also, use Inline when you don't have any lua, just want the prefix.
+
+```toml
+command_type = "Inline"
+inline = "print('Hello, world!')"
+```
+
+#### File
+
+This links a lua script in the scripts folder to a command. Ideal for long commands.
+The path need to be relative to the scripts config file.
+
+```toml
+command_type = "File"
+relative_path = hello_world.lua # or ./hello_world.lua not /wrong.lua
+```
+
+### Server Triggers
+
+Server triggers are used to define when an event occurs send the command to the server.
+To duplicate a server trigger, copy and paste it, then change as required.
+
+```toml
+[[example.server_triggers]]
+enabled = true
+server_name = "local"
+trigger_type = "Chat"
+pattern = "test"
+
+[[example.server_triggers]]
+enabled = true
+server_name = "local"
+trigger_type = "ChannelPointRewardRedeemed"
+title = "Player Goes Boom"
+id = "12345678-1234-1234-1234-123456789012"
+```
+
+Note: the double square brackets indicate a list/array in toml.
+
+#### Enabled
+
+Used to toggle a server trigger without needing to remove and reinsert.
+
+#### Server Name
+
+Must match the exact verbiage used in the core config file, both case and spelling.
+
+#### Trigger
+
+Each `trigger_type` has different properties.
+
+##### Chat
+
+Matches all platforms chat events, matches on exact text. Don't use regex here.
+
+```toml
+trigger_type = "Chat"
+pattern = "test"
+```
+
+##### Channel Point Reward Redeemed
+
+Matches just on twitches channel point reward redeemed. Title is the title of the redeem and the id is the twitch ID.
+
+```toml
+trigger_type = "ChannelPointRewardRedeemed"
+title = "Player Goes Boom"
+id = "12345678-1234-1234-1234-123456789012"
+```
