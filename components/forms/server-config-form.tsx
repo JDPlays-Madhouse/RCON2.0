@@ -57,7 +57,7 @@ export function ServerConfigForm({
       name: server ? server.name : "Local",
       address: server ? server.address : "localhost",
       port: server ? server.port : 2345,
-      password: server ? server.password : "Testing",
+      password: server ? server.password : "PleaseChangeMe",
       game: server ? server.game : Game.Factorio,
     },
     resetOptions: {
@@ -71,7 +71,7 @@ export function ServerConfigForm({
     if (server) {
       form.reset(server);
     }
-  }, []);
+  }, [server]);
 
   function onSubmit(values: z.infer<typeof serverConfigFormSchema>) {
     if (server) {

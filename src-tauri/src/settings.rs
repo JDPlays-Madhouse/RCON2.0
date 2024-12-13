@@ -49,6 +49,25 @@ impl Settings {
             .add_source(Environment::with_prefix(PROGRAM));
         mut_self.config_builder = builder.clone();
         let config = mut_self.config();
+
+        let log_folder = PathBuf::from(
+            config
+                .get_string("log_folder")
+                .expect("Getting log folder path"),
+        );
+        let _ = mut_self.make_config_exists(log_folder.as_path(), FileType::Dir);
+        mut_self.log_folder = log_folder;
+        info!("Config File: {:?}", mut_self.config_filepath());
+        info!("Log Folder: {:?}", &mut_self.log_folder);
+
+        let script_folder = PathBuf::from(
+            config
+                .get_string("script_folder")
+                .expect("Getting script folder path"),
+        );
+        let _ = mut_self.make_config_exists(script_folder.as_path(), FileType::Dir);
+        mut_self.script_folder = script_folder;
+        info!("Script Folder: {:?}", &mut_self.script_folder);
         if config.get_table("servers").unwrap().keys().count() <= 2 {
             builder = Settings::default_loop(
                 builder,
@@ -314,29 +333,15 @@ impl Default for Settings {
         // let default_settings_int: Vec<DefaultValue<u16>> = vec![("servers.example.port", 4312)];
         // builder = Settings::default_loop(builder, default_settings_int);
 
-        let config = builder.build_cloned().expect("Building cloned config");
-        let log_folder = PathBuf::from(
-            config
-                .get_string("log_folder")
-                .expect("Getting log folder path"),
-        );
-        let script_folder = PathBuf::from(
-            config
-                .get_string("script_folder")
-                .expect("Getting script folder path"),
-        );
-
         let settings = Self {
             config_builder: builder,
             config_folder: config_folder.clone(),
             config_filename,
             config_fileformat,
-            log_folder: log_folder.clone(),
-            script_folder: script_folder.clone(),
+            log_folder: default_log_path.clone(),
+            script_folder: default_script_path.clone(),
         };
         let _ = settings.make_config_exists(config_folder.as_path(), FileType::Dir);
-        let _ = settings.make_config_exists(log_folder.as_path(), FileType::Dir);
-        let _ = settings.make_config_exists(script_folder.as_path(), FileType::Dir);
         let _ = settings.make_config_exists(&config_filepath, FileType::File);
         settings
     }
