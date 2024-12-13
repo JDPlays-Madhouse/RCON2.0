@@ -61,7 +61,7 @@ export type Trigger =
   | { trigger: "ChatRegex"; data: { pattern: string } }
   | {
       trigger: "ChannelPointRewardRedeemed";
-      data: { name: string; id: string };
+      data: { title: string; id: string };
     };
 
 export type GameServerTrigger = {

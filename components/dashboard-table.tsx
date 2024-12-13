@@ -115,7 +115,7 @@ export const column: ColumnDef<CommandTrigger>[] = [
         case "ChannelPointRewardRedeemed":
           return (
             <CellToolTip helper="{Channel Points Reward Name} - {Twitch ID for reward}">
-              {`${trigger.data.name} - ${trigger.data.id}`}
+              {`${trigger.data.title} - ${trigger.data.id}`}
             </CellToolTip>
           );
       }
@@ -179,7 +179,7 @@ export default function DashboardTable<TData, TValue>({
   data,
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
+    []
   );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const table = useReactTable({
@@ -222,7 +222,7 @@ export default function DashboardTable<TData, TValue>({
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
-                            header.getContext(),
+                            header.getContext()
                           )}
                     </TableHead>
                   );
@@ -241,7 +241,7 @@ export default function DashboardTable<TData, TValue>({
                     <TableCell key={cell.id} className="text-center">
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext(),
+                        cell.getContext()
                       )}
                     </TableCell>
                   ))}
@@ -317,160 +317,3 @@ function CellToolTip({
 //     ? command?.rcon_lua?.lua_command.command
 //     : command?.rcon_lua?.lua_command.command.command}
 // </Button>
-export async function fakeCommandTriggerData(): Promise<CommandTrigger[]> {
-  return [
-    {
-      serverTrigger: {
-        enabled: true,
-        trigger: {
-          trigger: "Chat",
-          data: {
-            pattern: "test",
-          },
-        },
-        server: {
-          id: "local",
-          name: "local",
-          address: "localhost",
-          port: 1234,
-          password: "A secret word",
-          game: Game.Factorio,
-        },
-      },
-      command: {
-        name: "testing",
-        rcon_lua: {
-          prefix: { prefix: "C" },
-          lua_command: {
-            commandType: "Inline",
-            command: "print('hello world')",
-          },
-        },
-        server_triggers: [
-          {
-            enabled: true,
-            trigger: {
-              trigger: "Chat",
-              data: {
-                pattern: "test",
-              },
-            },
-            server: {
-              id: "local",
-              name: "local",
-              address: "localhost",
-              port: 1234,
-              password: "A secret word",
-              game: Game.Factorio,
-            },
-          },
-          {
-            enabled: true,
-            trigger: {
-              trigger: "ChannelPointRewardRedeemed",
-              data: {
-                id: "1234",
-                name: "JD goes boom",
-              },
-            },
-            server: {
-              id: "local",
-              name: "local",
-              address: "localhost",
-              port: 1234,
-              password: "A secret word",
-              game: Game.Factorio,
-            },
-          },
-        ],
-      },
-    },
-    {
-      serverTrigger: {
-        enabled: true,
-        trigger: {
-          trigger: "ChannelPointRewardRedeemed",
-          data: {
-            id: "1234",
-            name: "JD goes boom",
-          },
-        },
-        server: {
-          id: "local",
-          name: "local",
-          address: "localhost",
-          port: 1234,
-          password: "A secret word",
-          game: Game.Factorio,
-        },
-      },
-      command: {
-        name: "testing",
-        rcon_lua: {
-          prefix: { prefix: "C" },
-          lua_command: {
-            commandType: "Inline",
-            command: "print('hello world')",
-          },
-        },
-        server_triggers: [
-          {
-            enabled: true,
-            trigger: {
-              trigger: "Chat",
-              data: {
-                pattern: "test",
-              },
-            },
-            server: {
-              id: "local",
-              name: "local",
-              address: "localhost",
-              port: 1234,
-              password: "A secret word",
-              game: Game.Factorio,
-            },
-          },
-          {
-            enabled: true,
-            trigger: {
-              trigger: "ChannelPointRewardRedeemed",
-              data: {
-                id: "1234",
-                name: "JD goes boom",
-              },
-            },
-            server: {
-              id: "local",
-              name: "local",
-              address: "localhost",
-              port: 1234,
-              password: "A secret word",
-              game: Game.Factorio,
-            },
-          },
-        ],
-      },
-    },
-    {
-      serverTrigger: {
-        enabled: false,
-        trigger: {
-          trigger: "ChannelPointRewardRedeemed",
-          data: {
-            id: "1234",
-            name: "JD goes boom",
-          },
-        },
-        server: {
-          id: "local",
-          name: "local",
-          address: "localhost",
-          port: 1234,
-          password: "A secret word",
-          game: Game.Factorio,
-        },
-      },
-    },
-  ];
-}

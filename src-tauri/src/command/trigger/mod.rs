@@ -104,11 +104,11 @@ impl Trigger {
         matches!(self, Self::ChatRegex { .. })
     }
 
-    /// Returns `true` if the trigger is [`ChannelPointRewardRedemed`].
+    /// Returns `true` if the trigger is [`ChannelPointRewardRedeemed`].
     ///
-    /// [`ChannelPointRewardRedemed`]: Trigger::ChannelPointRewardRedemed
+    /// [`ChannelPointRewardRedeemed`]: Trigger::ChannelPointRewardRedeemed
     #[must_use]
-    pub fn is_channel_point_reward_redemed(&self) -> bool {
+    pub fn is_channel_point_reward_redeemed(&self) -> bool {
         matches!(self, Self::ChannelPointRewardRedeemed { .. })
     }
 }
@@ -140,7 +140,7 @@ impl TryFrom<Value> for Trigger {
                     vec!["pattern"]
                 ),
             },
-            "channelpointrewardredemed" => {
+            "channelpointrewardredeemed" => {
                 let id = match trigger_table.get("id") {
                     Some(id) => match id.clone().into_string() {
                         Ok(i) => i,
@@ -151,10 +151,10 @@ impl TryFrom<Value> for Trigger {
                     None => bail!(
                         "A trigger_type of '{}' needs the properties: {:?}",
                         trigger_type,
-                        vec!["id", "name"]
+                        vec!["id", "title"]
                     ),
                 };
-                let name = match trigger_table.get("name") {
+                let title = match trigger_table.get("title") {
                     Some(name) => match name.clone().into_string() {
                         Ok(n) => n,
                         Err(e) => {
@@ -164,10 +164,10 @@ impl TryFrom<Value> for Trigger {
                     None => bail!(
                         "A trigger_type of '{}' needs the properties: {:?}",
                         trigger_type,
-                        vec!["id", "name"]
+                        vec!["id", "title"]
                     ),
                 };
-                Ok(Self::ChannelPointRewardRedeemed { title: name, id })
+                Ok(Self::ChannelPointRewardRedeemed { title, id })
             }
             trig => {
                 error!("Trigger type has not been implemented: {}", trig);
@@ -198,7 +198,7 @@ impl From<Trigger> for Value {
             Trigger::ChannelPointRewardRedeemed { title: name, id } => {
                 map.insert(
                     "trigger_type".to_string(),
-                    ValueKind::from(stringify!(ChannelPointRewardRedemed)),
+                    ValueKind::from(stringify!(ChannelPointRewardRedeemed)),
                 );
                 map.insert("name".to_string(), ValueKind::from(name));
                 map.insert("id".to_string(), ValueKind::from(id));
