@@ -10,7 +10,7 @@ import IntegrationLogo from "./icons";
 import Patreon from "@/components/icons/patreon";
 import StreamLabs from "@/components/icons/streamlabs";
 
-interface IntegrationStatusProps extends React.ComponentProps<"div"> { }
+interface IntegrationStatusProps extends React.ComponentProps<"div"> {}
 
 export default function IntegrationStatusBar({
   className = "",
@@ -18,7 +18,7 @@ export default function IntegrationStatusBar({
 }: IntegrationStatusProps) {
   let c = 0;
   const [statuses, setStatuses] = useState<IntegrationStatusMap>(
-    defaultIntegrationStatus(),
+    defaultIntegrationStatus()
   );
   const [integrations, setIntegrations] = useState<Api[]>([]);
 
@@ -106,24 +106,28 @@ export default function IntegrationStatusBar({
       {...props}
     >
       <IntegrationLogo
+        name="Twitch"
         status={statuses.Twitch}
         Logo={Twitch}
         primaryColor="#9146FF"
         onClick={() => handleOnClick(Api.Twitch)}
       />
       <IntegrationLogo
+        name="YouTube"
         status={statuses.YouTube}
         Logo={YouTube}
         primaryColor="#FF0000"
         onClick={() => handleOnClick(Api.YouTube)}
       />
       <IntegrationLogo
+        name="Patreon"
         status={statuses.Patreon}
         Logo={Patreon}
         primaryColor="#000000"
         onClick={() => handleOnClick(Api.Patreon)}
       />
       <IntegrationLogo
+        name="StreamLabs"
         status={statuses.StreamLabs}
         Logo={StreamLabs}
         primaryColor="#80F5D2"

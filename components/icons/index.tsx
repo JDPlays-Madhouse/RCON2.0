@@ -18,14 +18,16 @@ interface IntegrationProps extends TooltipTriggerProps {
   primaryColor?: string;
   secondaryColor?: string;
   Logo: React.FC<LogoProps>;
+  name: string;
 }
 
 export default function IntegrationLogo({
+  name,
+  Logo,
   status,
   className = "w-8 h-8",
   primaryColor = "#FFFFFF",
   secondaryColor = "#1e293b",
-  Logo,
   ...props
 }: IntegrationProps) {
   const [fill, setFill] = React.useState(secondaryColor);
@@ -97,7 +99,7 @@ export default function IntegrationLogo({
         </TooltipTrigger>
         <TooltipContent className="mt-2 text-s bg-secondary">
           <div>
-            {Logo.name}: {displayStatus}
+            {name}: {displayStatus}
           </div>
           <div>{displayText}</div>
         </TooltipContent>
