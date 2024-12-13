@@ -105,6 +105,13 @@ jobs:
       - name: install frontend dependencies
         run: npm install # change this to npm, pnpm or bun depending on which one you use.
 
+      - name: Generate changelog
+        id: gen_changelog
+        uses: bdashrad/git-chglog-action@v2.0.3
+        with:
+          next_version: ${{ github.ref_name }}
+          tag: ${{ github.ref_name }}
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
