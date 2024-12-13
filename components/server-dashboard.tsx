@@ -9,13 +9,8 @@ import {
 import { useEffect, useRef, useState } from "react";
 import LogArea from "./server-log";
 import { invoke } from "@tauri-apps/api/core";
-import { Api, Command, GameServerTrigger, RconCommand, Server } from "@/types";
-import { Button } from "./ui/button";
-import DashboardTable, {
-  column,
-  CommandTrigger,
-  fakeCommandTriggerData,
-} from "./dashboard-table";
+import { Command, GameServerTrigger, RconCommand, Server } from "@/types";
+import DashboardTable, { column, CommandTrigger } from "./dashboard-table";
 
 interface ServerDashBoardProps extends React.ComponentProps<"div"> {
   showLog: boolean;
