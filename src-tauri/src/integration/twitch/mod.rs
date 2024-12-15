@@ -1,3 +1,4 @@
+use item_information::{jd_channel_points, CustomChannelPointRewardInfo};
 use permissions::get_eventsub_consolidated_scopes;
 use std::{
     str::FromStr,
@@ -8,6 +9,7 @@ use std::{
     thread::JoinHandle,
     time::Duration,
 };
+use tauri::State;
 use tracing::{debug, error, info, trace, warn};
 
 use crate::command::Runner;
@@ -29,7 +31,7 @@ use twitch_api::{
 use twitch_oauth2::UserToken;
 use twitch_oauth2::{Scope, TwitchToken};
 
-mod example;
+pub mod item_information;
 pub mod oauth;
 pub mod permissions;
 pub mod websocket;
@@ -174,11 +176,9 @@ impl TwitchApiConnection {
         info!("Websocket Subscriptions: {:?}", subscriptions);
         info!("Channel point rewards: {}", channel_points_enabled);
         if channel_points_enabled {
-            let active_channel_point_custom_reward = self.custom_rewards().await;
-            info!(
-                "Current channel point rewards: {:?}",
-                active_channel_point_custom_reward
-            );
+            let channel_point_custom_reward =
+                CustomChannelPointRewardInfo::from_list(self.custom_rewards().await);
+            CustomChannelPointRewardInfo::list_valid_trigger(channel_point_custom_reward, true);
         }
 
         self.websocket = Some(WebsocketClient::new(
@@ -359,11 +359,6 @@ impl TwitchApiConnection {
                 vec![]
             }
         };
-
-        info!(
-            Location = "Integration::Twitch::CustomPoints",
-            "{:?}", &rewards,
-        );
         rewards
     }
 }
@@ -477,10 +472,22 @@ impl IntegrationControl for TwitchApiConnection {
     }
 }
 
-// #[tauri::command]
-// pub async fn get_channel_point_rewards(twitch: Arc<TwitchApiConnection>) -> Vec<CustomReward> {
-//     twitch.lock().await.custom_rewards().await
-// }
+#[tauri::command]
+pub async fn get_channel_point_rewards(
+    twitch_mutex: State<'_, Arc<futures::lock::Mutex<TwitchApiConnection>>>,
+    testing: bool,
+) -> Result<Vec<CustomChannelPointRewardInfo>, String> {
+    if testing {
+        Ok(CustomChannelPointRewardInfo::from_test_list(
+            jd_channel_points(),
+        ))
+    } else {
+        let mut twitch = twitch_mutex.lock().await;
+        let rewards_list = twitch.custom_rewards().await;
+
+        Ok(CustomChannelPointRewardInfo::from_list(rewards_list))
+    }
+}
 
 // #[cfg(test)]
 // mod tests {

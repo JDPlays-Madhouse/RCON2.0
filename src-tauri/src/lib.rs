@@ -180,8 +180,6 @@ pub async fn run() {
 
     let logger_layer: Logger = Logger::new();
 
-    debug!("Log Established");
-
     let twitch_integration = Arc::new(futures::lock::Mutex::new(TwitchApiConnection::new(
         config.get_table("auth.twitch").unwrap(),
     )));
@@ -220,7 +218,7 @@ pub async fn run() {
                 .with(stdout_layer)
                 .with(ErrorLayer::default())
                 .init();
-
+            debug!("Log Established");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -252,6 +250,7 @@ pub async fn run() {
             integration::connect_to_integration,
             integration::list_of_integrations,
             integration::status::integration_status,
+            integration::twitch::get_channel_point_rewards,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
