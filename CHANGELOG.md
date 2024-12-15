@@ -9,6 +9,7 @@
 
 ### Features
 - **Channel Point Reward:** Added clearer logging of rewards. - [89ec338](https://github.com/JDPlays-Madhouse/RCON2.0/commit/89ec338d4bfd2b2e35b521dce32bf3cddf43f537?w=1&diff=split)
+- **Twitch Triggers:** Channel Subscription. - [9196694](https://github.com/JDPlays-Madhouse/RCON2.0/commit/919669420b6e9ea51ebaf0e34643eef2e709f45c?w=1&diff=split)
 - **UI:** Page Channel Point Rewards added with ability to copy required text for config. - [6119a1a](https://github.com/JDPlays-Madhouse/RCON2.0/commit/6119a1ada3edd6b7489c21386595621136a0d39e?w=1&diff=split)
 
 

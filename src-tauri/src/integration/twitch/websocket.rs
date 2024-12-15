@@ -461,6 +461,22 @@ impl WebsocketClient {
 
                     }
                 }
+                ChannelSubscriptionMessage => {
+                    match self.client
+                        .create_eventsub_subscription(
+                            eventsub::channel::ChannelSubscriptionMessageV1::broadcaster_user_id(self.user_id.clone()), 
+                            transport.clone(), 
+                            &self.token
+                        ).await 
+                    {
+                        Ok(sub)  =>  {
+                            info!("Subscribed to {}", subscription);
+                            debug!{"Subscription: {:?}", sub};
+                        },
+                        Err(e) => {error!("Failed to subscribe to {}: {}", subscription, e)},
+
+                    }
+                }
                 _ => {
                     error!(target:"rcon2::integration::twitch::websocket::subscription", "Tried to subscribe to unimplemented subscription: {}", subscription)
                 }

@@ -82,6 +82,8 @@
    1. channel.chat.message
    2. channel.channel_points_custom_reward_redemption.add
    3. channel.channel_points_custom_reward_redemption.update
+   4. channel.subscribe
+   5. channel.subscription.message
 
 ### YouTube
 
@@ -124,6 +126,11 @@ pattern = "This will never trigger nor appear in dashboard, as the server doesn'
 prefix = "C"
 command_type = "File"
 relative_path = hello_world.lua # or ./hello_world.lua not /wrong.lua
+
+[["example 2".server_triggers]]
+enabled = true
+server_name = "local"
+trigger_type = "Subscription"
 ```
 
 ### Command Name
