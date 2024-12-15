@@ -10,7 +10,7 @@ use std::{
     time::Duration,
 };
 use tauri::State;
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, info, instrument, trace, warn};
 
 use crate::command::Runner;
 
@@ -473,6 +473,7 @@ impl IntegrationControl for TwitchApiConnection {
 }
 
 #[tauri::command]
+#[instrument(skip(twitch_mutex))]
 pub async fn get_channel_point_rewards(
     twitch_mutex: State<'_, Arc<futures::lock::Mutex<TwitchApiConnection>>>,
     testing: bool,

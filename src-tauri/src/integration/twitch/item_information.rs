@@ -134,6 +134,7 @@ impl From<CloneCustomReward> for CustomChannelPointRewardInfo {
     }
 }
 
+/// Clone of the [CustomReward]
 pub struct CloneCustomReward {
     /// ID of the channel the reward is for
     pub broadcaster_id: twitch_types::UserId,

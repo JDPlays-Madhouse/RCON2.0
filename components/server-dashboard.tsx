@@ -17,6 +17,7 @@ interface ServerDashBoardProps extends React.ComponentProps<"div"> {
   selectedServer?: Server;
 }
 type TriggerCommand = [GameServerTrigger, Command];
+
 export default function ServerDashboard({
   selectedServer,
   className,
