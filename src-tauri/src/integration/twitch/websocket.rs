@@ -153,7 +153,7 @@ impl WebsocketClient {
                                         .connect()
                                         .instrument(span)
                                         .await
-                                        ).unwrap();
+                                        ).unwrap(); // BUG: Not handling error.
                                     continue
                                 }
                                 _ => msg.map_err(|_e| WebsocketError::FailedToConnect("When getting message".into()))?,
@@ -173,7 +173,7 @@ impl WebsocketClient {
                             s = WebsocketError::FailedToRun("when reestablishing connection after timeout".into()).map_err(self
                                         .connect()
                                         .await
-                                        ).unwrap();
+                                        ).unwrap(); // BUG: Not handling error.
                             continue
                         }
 
@@ -333,6 +333,7 @@ impl WebsocketClient {
             error!("Token is elapsed");
             return Err(WebsocketError::TokenElapsed);
         }
+
         if let Some(keep_alive) = data.keepalive_timeout_seconds {
             self.keep_alive_seconds =
                 Duration::from_secs(keep_alive as u64) + Duration::from_millis(200);

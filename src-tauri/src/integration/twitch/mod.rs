@@ -199,7 +199,19 @@ impl TwitchApiConnection {
                     Err(TokenElapsed) => {
                         warn!("{:?}", TokenElapsed);
                         let mut token_cont = token_loop.lock().await;
-                        let _ = token_cont.as_mut().unwrap().refresh_token(&client).await;
+                        let old_token = token_cont.clone();
+                        match token_cont.as_mut().unwrap().refresh_token(&client).await {
+                            Ok(_) => info!("Token was refreshed."),
+                            Err(e) => {
+                                error!("Error resfreshing token: {:?}", e)
+                            }
+                        };
+                        if old_token.as_ref().is_none_or(|_| token_cont.is_none())
+                            || old_token.unwrap().access_token
+                                == token_cont.clone().unwrap().access_token
+                        {
+                            warn!("Token not refreshed")
+                        }
                         continue;
                     }
                     Err(InvalidToken) => {

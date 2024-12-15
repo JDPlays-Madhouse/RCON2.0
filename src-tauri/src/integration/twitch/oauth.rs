@@ -114,7 +114,7 @@ pub async fn oauth(
 
     let u = twitch_oauth2::url::Url::parse(&input)
         .context("when parsing the input as a URL")
-        .unwrap();
+        .unwrap(); // BUG: Not handling error.
 
     // Grab the query parameters "state" and "code" from the url the user was redirected to.
     let map: std::collections::HashMap<_, _> = u.query_pairs().collect();
