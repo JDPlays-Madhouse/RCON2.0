@@ -1,3 +1,16 @@
+<a name="unreleased"></a>
+## [Unreleased]
+
+### Debugging Measure
+- **Twitch OAuth Token:** Added extra logging to see details about suspected error. - [e2c24b9](https://github.com/JDPlays-Madhouse/RCON2.0/commit/e2c24b9317394a18414df39f6ffa2c4c62f4b660?w=1&diff=split)
+
+### Documentation
+- Added commit links to changelog to easily see code changes. - [5c028a2](https://github.com/JDPlays-Madhouse/RCON2.0/commit/5c028a2d14d71da7a39b5d0f695d6348ba6bd0fe?w=1&diff=split)
+
+### Features
+- **Channel Point Reward:** Added clearer logging of rewards. - [89ec338](https://github.com/JDPlays-Madhouse/RCON2.0/commit/89ec338d4bfd2b2e35b521dce32bf3cddf43f537?w=1&diff=split)
+- **UI:** Page Channel Point Rewards added with ability to copy required text for config. - [6119a1a](https://github.com/JDPlays-Madhouse/RCON2.0/commit/6119a1ada3edd6b7489c21386595621136a0d39e?w=1&diff=split)
+
 
 <a name="0.1.6"></a>
 ## [0.1.6](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.5...0.1.6) (2024-12-13)
