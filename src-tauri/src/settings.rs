@@ -323,6 +323,8 @@ impl Default for Settings {
                 "auth.twitch.websocket_subscription",
                 vec![
                     "channel.chat.message",
+                    "channel.subscribe",
+                    "channel.subscription.message",
                     "channel.channel_points_custom_reward_redemption.add",
                     "channel.channel_points_custom_reward_redemption.update",
                 ],

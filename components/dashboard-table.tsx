@@ -118,6 +118,12 @@ export const column: ColumnDef<CommandTrigger>[] = [
               {`${trigger.data.title} - ${trigger.data.id}`}
             </CellToolTip>
           );
+        case "Subscription":
+          return (
+          <CellToolTip helper="When a user subscribes to your channel">
+          Subscription
+          </CellToolTip>
+          )
       }
     },
   },

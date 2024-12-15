@@ -26,6 +26,7 @@ pub enum Trigger {
         /// Twitch id for this channel points reward redeem.
         id: String,
     },
+    Subscription,
 }
 impl PartialEq<IntegrationEvent> for Trigger {
     fn eq(&self, event: &IntegrationEvent) -> bool {
@@ -68,6 +69,7 @@ impl Trigger {
                 title: Default::default(),
                 id: Default::default(),
             },
+            Subscription => Subscription,
         }
     }
 
@@ -85,6 +87,10 @@ impl Trigger {
             Trigger::ChannelPointRewardRedeemed { .. } => {
                 IntegrationEvent::ChannelPoint(CustomRewardEvent::default())
             }
+            Trigger::Subscription => IntegrationEvent::Subscription {
+                tier: Default::default(),
+                user_name: Default::default(),
+            },
         }
     }
 
@@ -169,6 +175,7 @@ impl TryFrom<Value> for Trigger {
                 };
                 Ok(Self::ChannelPointRewardRedeemed { title, id })
             }
+            "subscription" => Ok(Self::Subscription),
             trig => {
                 error!("Trigger type has not been implemented: {}", trig);
                 bail!("Trigger type has not been implemented: {}", trig)
@@ -202,6 +209,12 @@ impl From<Trigger> for Value {
                 );
                 map.insert("name".to_string(), ValueKind::from(name));
                 map.insert("id".to_string(), ValueKind::from(id));
+            }
+            Trigger::Subscription => {
+                map.insert(
+                    "trigger_type".to_string(),
+                    ValueKind::from(stringify!(Subscription)),
+                );
             }
         }
         Self::new(None, ValueKind::from(map))

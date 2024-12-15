@@ -1,3 +1,4 @@
+use twitch_types::SubscriptionTier;
 
 #[allow(dead_code)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Hash)]
@@ -10,6 +11,10 @@ pub enum IntegrationEvent {
         author: String,
     },
     ChannelPoint(CustomRewardEvent),
+    Subscription {
+        tier: String,
+        user_name: String,
+    },
     Unknown,
     Stop,
     Pause,
@@ -50,7 +55,28 @@ impl IntegrationEvent {
             Continue => Continue,
             Update => Update,
             Disconnected => Disconnected,
+            Subscription { .. } => Subscription {
+                tier: Default::default(),
+                user_name: Default::default(),
+            },
         }
+    }
+}
+
+pub fn normalise_tier(
+    twitch_tier: Option<SubscriptionTier>,
+    _youtube_tier: Option<String>,
+) -> String {
+    if twitch_tier.is_some() {
+        match twitch_tier.unwrap() {
+            SubscriptionTier::Tier1 => "Tier1".to_string(),
+            SubscriptionTier::Tier2 => "Tier2".to_string(),
+            SubscriptionTier::Tier3 => "Tier3".to_string(),
+            SubscriptionTier::Prime => "Prime".to_string(),
+            SubscriptionTier::Other(t) => t,
+        }
+    } else {
+        String::new()
     }
 }
 

@@ -62,7 +62,8 @@ export type Trigger =
   | {
       trigger: "ChannelPointRewardRedeemed";
       data: { title: string; id: string };
-    };
+    }
+  | { trigger: "Subscription"};
 
 export type GameServerTrigger = {
   server: Server;

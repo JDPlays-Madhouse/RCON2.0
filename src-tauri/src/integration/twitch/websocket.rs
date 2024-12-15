@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use crate::integration::event::normalise_tier;
 use crate::integration::{self, IntegrationEvent};
 use anyhow::Result;
 use futures::stream::FusedStream;
@@ -269,6 +270,52 @@ impl WebsocketClient {
                                     error! {"Unhandled ChannelPointsCustomRewardRedemptionUpdateV1 Payload: {:?}", message}
                                 }
                             },
+                            Event::ChannelSubscribeV1(eventsub::Payload {
+                                message, ..
+                            })=> match message.clone() {
+                                eventsub::Message::Notification(reward_payload) => {
+                                    let message = format!(
+                                        "{:?} subscription: {}",
+                                        reward_payload.tier,
+                                        reward_payload.user_name,
+                                    );
+
+                                    info!(target = "rcon2::integration::twitch::websocket::ChannelSubscribe", message);
+                                    let _ = self
+                                            .event_tx
+                                            .send(IntegrationEvent::Subscription { tier: normalise_tier(Some(reward_payload.tier.clone()), None), user_name: reward_payload.user_name.to_string() } )
+                                            .await;
+
+                                }
+                                _ => {
+                                    error! {"Unhandled ChannelSubscribeV1 Payload: {:?}", message}
+                                }
+                            },
+                            Event::ChannelSubscriptionMessageV1(eventsub::Payload {
+                                message, ..
+                            })=> match message.clone() {
+                                eventsub::Message::Notification(reward_payload) => {
+                                    let message = format!(
+                                        "{:?} subscription: {} - {}",
+                                        reward_payload.tier,
+                                        reward_payload.user_name,
+                                        reward_payload.message.text
+                                    );
+
+                                    info!(target = "rcon2::integration::twitch::websocket::ChannelSubscriptionMessageV1", message);
+                                    let _ = self
+                                            .event_tx
+                                            .send(IntegrationEvent::Subscription {
+                                                tier: normalise_tier(Some(reward_payload.tier.clone()), None), 
+                                                user_name: reward_payload.user_name.to_string() } 
+                                                )
+                                            .await;
+
+                                }
+                                _ => {
+                                    error! {"Unhandled ChannelSubscriptionMessageV1 Payload: {:?}", message}
+                                }
+                            },
 
                             m => {
                                 let message =
@@ -398,9 +445,26 @@ impl WebsocketClient {
                         Err(e) => {error!("Failed to subscribe to {}: {}", subscription, e)},
                     }
                 }
+                ChannelSubscribe => {
+                    match self.client
+                        .create_eventsub_subscription(
+                            eventsub::channel::ChannelSubscribeV1::broadcaster_user_id(self.user_id.clone()), 
+                            transport.clone(), 
+                            &self.token
+                        ).await 
+                    {
+                        Ok(sub)  =>  {
+                            info!("Subscribed to {}", subscription);
+                            debug!{"Subscription: {:?}", sub};
+                        },
+                        Err(e) => {error!("Failed to subscribe to {}: {}", subscription, e)},
+
+                    }
+                }
                 _ => {
                     error!(target:"rcon2::integration::twitch::websocket::subscription", "Tried to subscribe to unimplemented subscription: {}", subscription)
                 }
+                
             }
         }
         Ok(())
