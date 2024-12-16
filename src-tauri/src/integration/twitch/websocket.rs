@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use crate::integration::event::normalise_tier;
-use crate::integration::{self, IntegrationEvent};
+use crate::integration::event::{normalise_tier, CustomRewardVariant};
+use crate::integration::{self, CustomRewardEvent, IntegrationEvent};
 use anyhow::Result;
 use futures::stream::FusedStream;
 use tokio::sync::mpsc::Sender;
@@ -98,12 +98,11 @@ impl WebsocketClient {
         WebsocketError,
     > {
         tracing::debug!("Connecting to Twitch Websocket");
-        let config = tungstenite::protocol::WebSocketConfig {
-            max_message_size: Some(64 << 20), // 64 MiB
-            max_frame_size: Some(16 << 20),   // 16 MiB
-            accept_unmasked_frames: false,
-            ..tungstenite::protocol::WebSocketConfig::default()
-        };
+        let config = tungstenite::protocol::WebSocketConfig::default()
+            .max_message_size(Some(64 << 20))
+            .max_frame_size(Some(16 << 20))
+            .accept_unmasked_frames(false);
+
         match tokio_tungstenite::connect_async_with_config(&self.connect_url, Some(config), false)
             .await
         {
@@ -197,7 +196,7 @@ impl WebsocketClient {
             tungstenite::Message::Text(s) => {
                 tracing::trace!("{s}");
                 // Parse the message into a [twitch_api::eventsub::EventsubWebsocketData]
-                match Event::parse_websocket(&s).unwrap() {
+                match Event::parse_websocket(s.as_str()).unwrap() {
                     EventsubWebsocketData::Welcome {
                         payload: WelcomePayload { session },
                         ..
@@ -247,6 +246,16 @@ impl WebsocketClient {
                                         reward_payload.user_input
                                     );
                                     info!(target = "rcon2::integration::twitch::websocket::ChannelPointsCustomRewardRedemptionAdd", message);
+                                    let _ = self
+                                        .event_tx
+                                        .send(IntegrationEvent::ChannelPoint(CustomRewardEvent {
+                                            event_id: reward_payload.id.to_string(),
+                                            id: reward_payload.reward.id.to_string(),
+                                            title: reward_payload.reward.title,
+                                            user_name: reward_payload.user_name.to_string(),
+                                            status: CustomRewardVariant::New,
+                                        }))
+                                        .await;
                                 }
                                 _ => {
                                     error! {"Unhandled ChannelPointsCustomRewardRedemptionAddV1 Payload: {:?}", message}
@@ -265,35 +274,50 @@ impl WebsocketClient {
                                     );
 
                                     info!(target = "rcon2::integration::twitch::websocket::ChannelPointsCustomRewardRedemptionUpdate", message);
+                                    let _ = self
+                                        .event_tx
+                                        .send(IntegrationEvent::ChannelPoint(CustomRewardEvent {
+                                            event_id: reward_payload.id.to_string(),
+                                            id: reward_payload.reward.id.to_string(),
+                                            title: reward_payload.reward.title,
+                                            user_name: reward_payload.user_name.to_string(),
+                                            status: CustomRewardVariant::Update,
+                                        }))
+                                        .await;
                                 }
                                 _ => {
                                     error! {"Unhandled ChannelPointsCustomRewardRedemptionUpdateV1 Payload: {:?}", message}
                                 }
                             },
-                            Event::ChannelSubscribeV1(eventsub::Payload {
-                                message, ..
-                            })=> match message.clone() {
-                                eventsub::Message::Notification(reward_payload) => {
-                                    let message = format!(
-                                        "{:?} subscription: {}",
-                                        reward_payload.tier,
-                                        reward_payload.user_name,
-                                    );
+                            Event::ChannelSubscribeV1(eventsub::Payload { message, .. }) => {
+                                match message.clone() {
+                                    eventsub::Message::Notification(reward_payload) => {
+                                        let message = format!(
+                                            "{:?} subscription: {}",
+                                            reward_payload.tier, reward_payload.user_name,
+                                        );
 
-                                    info!(target = "rcon2::integration::twitch::websocket::ChannelSubscribe", message);
-                                    let _ = self
+                                        info!(target = "rcon2::integration::twitch::websocket::ChannelSubscribe", message);
+                                        let _ = self
                                             .event_tx
-                                            .send(IntegrationEvent::Subscription { tier: normalise_tier(Some(reward_payload.tier.clone()), None), user_name: reward_payload.user_name.to_string() } )
+                                            .send(IntegrationEvent::Subscription {
+                                                tier: normalise_tier(
+                                                    Some(reward_payload.tier.clone()),
+                                                    None,
+                                                ),
+                                                user_name: reward_payload.user_name.to_string(),
+                                            })
                                             .await;
-
+                                    }
+                                    _ => {
+                                        error! {"Unhandled ChannelSubscribeV1 Payload: {:?}", message}
+                                    }
                                 }
-                                _ => {
-                                    error! {"Unhandled ChannelSubscribeV1 Payload: {:?}", message}
-                                }
-                            },
+                            }
                             Event::ChannelSubscriptionMessageV1(eventsub::Payload {
-                                message, ..
-                            })=> match message.clone() {
+                                message,
+                                ..
+                            }) => match message.clone() {
                                 eventsub::Message::Notification(reward_payload) => {
                                     let message = format!(
                                         "{:?} subscription: {} - {}",
@@ -304,13 +328,15 @@ impl WebsocketClient {
 
                                     info!(target = "rcon2::integration::twitch::websocket::ChannelSubscriptionMessageV1", message);
                                     let _ = self
-                                            .event_tx
-                                            .send(IntegrationEvent::Subscription {
-                                                tier: normalise_tier(Some(reward_payload.tier.clone()), None), 
-                                                user_name: reward_payload.user_name.to_string() } 
-                                                )
-                                            .await;
-
+                                        .event_tx
+                                        .send(IntegrationEvent::Subscription {
+                                            tier: normalise_tier(
+                                                Some(reward_payload.tier.clone()),
+                                                None,
+                                            ),
+                                            user_name: reward_payload.user_name.to_string(),
+                                        })
+                                        .await;
                                 }
                                 _ => {
                                     error! {"Unhandled ChannelSubscriptionMessageV1 Payload: {:?}", message}

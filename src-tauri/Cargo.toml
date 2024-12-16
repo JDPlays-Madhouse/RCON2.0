@@ -1,6 +1,6 @@
 [package]
 name = "RCON2"
-version = "0.1.6"
+version = "0.1.7"
 description = "Rcon integration"
 authors = ["Ozy_Viking<admin@hankin.io>"]
 license = ""
@@ -50,9 +50,10 @@ serde = { version = "1.0.215", features = ["derive"] }
 serde_cbor = "0.11.2"
 serde_json = "1.0.132"
 sha2 = "0.10.8"
-simple-mermaid = "0.1.1"
+simple-mermaid = "0.2.0"
 sled = "0.34.7"
 tauri = { version = "2.1.1", features = ["tracing"] }
+tauri-plugin-clipboard-manager = "2.2.0"
 tauri-plugin-websocket = "2"
 thiserror = "2.0.3"
 time = { version = "0.3.36", features = [
@@ -61,7 +62,7 @@ time = { version = "0.3.36", features = [
   "parsing",
 ] }
 tokio = { version = "1.41.1", features = ["full", "tracing"] }
-tokio-tungstenite = { version = "0.24.0", features = ["native-tls", "url"] }
+tokio-tungstenite = { version = "0.25.0", features = ["native-tls", "url"] }
 toml = "0.8.19"
 tracing = { version = "0.1.40", features = ["async-await", "log"] }
 tracing-appender = "0.2.3"

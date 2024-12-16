@@ -14,7 +14,7 @@ use tracing::{error, info, instrument};
 pub use twitch::TwitchApiConnection;
 
 mod event;
-pub use event::{CustomRewardEvent, IntegrationEvent};
+pub use event::{CustomRewardEvent, CustomRewardVariant, IntegrationEvent};
 
 pub mod status;
 pub use status::{integration_status, IntegrationError, IntegrationStatus};

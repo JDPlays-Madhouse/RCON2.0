@@ -1,9 +1,9 @@
 use anyhow::bail;
 use config::{Map, Value, ValueKind};
 use serde::{Deserialize, Serialize};
-use tracing::error;
+use tracing::{error, warn};
 
-use crate::integration::{CustomRewardEvent, IntegrationEvent};
+use crate::integration::{CustomRewardEvent, CustomRewardVariant, IntegrationEvent};
 
 mod server_trigger;
 pub use server_trigger::GameServerTrigger;
@@ -25,6 +25,7 @@ pub enum Trigger {
         title: String,
         /// Twitch id for this channel points reward redeem.
         id: String,
+        variant: CustomRewardVariant,
     },
     Subscription,
 }
@@ -40,12 +41,23 @@ impl PartialEq<IntegrationEvent> for Trigger {
             }
             Trigger::ChannelPointRewardRedeemed { id, .. } => {
                 if let IntegrationEvent::ChannelPoint(reward_event) = event {
-                    &reward_event.id == id && reward_event.is_available()
+                    &reward_event.id == id
                 } else {
                     false
                 }
             }
-            _ => false,
+            Trigger::ChatRegex { .. } => {
+                error!("Chat Regex as a trigger not implemented yet.");
+                false
+            }
+            Trigger::Subscription => {
+                if let IntegrationEvent::Subscription { .. } = event {
+                    // TODO: Implement tiers for triggers.
+                    true
+                } else {
+                    false
+                }
+            }
         }
     }
 }
@@ -68,6 +80,7 @@ impl Trigger {
             ChannelPointRewardRedeemed { .. } => ChannelPointRewardRedeemed {
                 title: Default::default(),
                 id: Default::default(),
+                variant: Default::default(),
             },
             Subscription => Subscription,
         }
@@ -157,7 +170,7 @@ impl TryFrom<Value> for Trigger {
                     None => bail!(
                         "A trigger_type of '{}' needs the properties: {:?}",
                         trigger_type,
-                        vec!["id", "title"]
+                        vec!["id", "title", "variant"]
                     ),
                 };
                 let title = match trigger_table.get("title") {
@@ -170,10 +183,30 @@ impl TryFrom<Value> for Trigger {
                     None => bail!(
                         "A trigger_type of '{}' needs the properties: {:?}",
                         trigger_type,
-                        vec!["id", "title"]
+                        vec!["id", "title", "variant"]
                     ),
                 };
-                Ok(Self::ChannelPointRewardRedeemed { title, id })
+                let variant = match trigger_table.get("variant") {
+                    Some(name) => match name.clone().into_string() {
+                        Ok(n) => match CustomRewardVariant::try_from(n) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                error!("{}", e);
+                                warn!("Using new variant for {} trigger", title);
+                                CustomRewardVariant::New
+                            }
+                        },
+                        Err(e) => {
+                            bail!(e)
+                        }
+                    },
+                    None => bail!(
+                        "A trigger_type of '{}' needs the properties: {:?}",
+                        trigger_type,
+                        vec!["id", "title", "variant"]
+                    ),
+                };
+                Ok(Self::ChannelPointRewardRedeemed { title, id, variant })
             }
             "subscription" => Ok(Self::Subscription),
             trig => {
@@ -202,13 +235,18 @@ impl From<Trigger> for Value {
                 );
                 map.insert("pattern".to_string(), ValueKind::from(pattern));
             }
-            Trigger::ChannelPointRewardRedeemed { title: name, id } => {
+            Trigger::ChannelPointRewardRedeemed {
+                title: name,
+                id,
+                variant,
+            } => {
                 map.insert(
                     "trigger_type".to_string(),
                     ValueKind::from(stringify!(ChannelPointRewardRedeemed)),
                 );
                 map.insert("name".to_string(), ValueKind::from(name));
                 map.insert("id".to_string(), ValueKind::from(id));
+                map.insert("variant".to_string(), ValueKind::from(variant));
             }
             Trigger::Subscription => {
                 map.insert(

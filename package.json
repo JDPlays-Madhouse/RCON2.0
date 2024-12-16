@@ -1,6 +1,6 @@
 {
   "name": "RCON2.0",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -30,6 +30,7 @@
     "@tanstack/react-table": "^8.20.5",
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/plugin-cli": "^2.0.0",
+    "@tauri-apps/plugin-clipboard-manager": "^2.2.0",
     "@tauri-apps/plugin-websocket": "^2.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

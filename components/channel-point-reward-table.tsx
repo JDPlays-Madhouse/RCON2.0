@@ -41,6 +41,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { DataTablePagination } from "./datatables/pagination";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 export type CustomChannelPointRewardInfo = {
   id: string;
@@ -185,15 +186,19 @@ export const column: ColumnDef<CustomChannelPointRewardInfo>[] = [
               id = &quot;{reward.id}&quot;
               <br />
               title = &quot;{reward.title}&quot;
+              <br />
+              variant = &quot;New&quot;
             </div>
           }
+          asChild
         >
           <Button
             className="w-6 h-6 p-[4px]"
             variant="secondary"
             size="icon"
-            onClick={() => {
+            onClick={async () => {
               navigator.clipboard.writeText(copy_text);
+              // await writeText(copy_text);
             }}
           >
             <ClipboardIcon />
@@ -215,7 +220,9 @@ export default function ChannelPointRewardsTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
   );
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: "is_enabled", desc: true },
+  ]);
   const table = useReactTable({
     data,
     columns,
@@ -302,19 +309,20 @@ export default function ChannelPointRewardsTable<TData, TValue>({
 function CellToolTip({
   helper,
   children,
+  asChild,
 }: {
   helper: string | React.ReactNode;
   children: React.ReactNode;
+  asChild?: boolean;
 }) {
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger>{children}</TooltipTrigger>
+        <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
         <TooltipContent className="mt-2 text-s bg-secondary">
-          <p>{helper}</p>
+          <div>{helper}</div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 }
-

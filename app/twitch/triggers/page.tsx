@@ -77,10 +77,15 @@ export default function Home() {
                                 <TabsTrigger value="channelpointrewards">
                                     Channel Point Rewards
                                 </TabsTrigger>
+
+                                <TabsTrigger value="subscribe">Subscription</TabsTrigger>
                             </TabsList>
                             <TabsContent value="chat">Chat pattern.</TabsContent>
                             <TabsContent value="channelpointrewards" className="w-full mx-10">
                                 <ChannelPointRewardsDashboard />
+                            </TabsContent>
+                            <TabsContent value="subscribe">
+                                Both new subscriptions and resubscriptions.
                             </TabsContent>
                         </Tabs>
                     </div>

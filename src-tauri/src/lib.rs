@@ -98,6 +98,23 @@
 //!
 //! Not yet implemented.
 //!
+//! -----
+//!
+//! ## Testing
+//!
+//! 1. Start a mock-api websocket.
+//!     ```sh
+//!     twitch event websocket start-server
+//!     ```
+//! 2. Start application.
+//!     ```sh
+//!     TWITCH_HELIX_URL=http://localhost:8080 TWITCH_EVENTSUB_WEBSOCKET_URL=ws://127.0.0.1:8080/ws cargo tauri dev
+//!     ```
+//! 3. Send fake events.
+//!     
+//!     ```sh
+//!     twitch event trigger channel.channel_points_custom_reward_redemption.add --transport=websocket -i 1
+//!     ```
 
 pub mod cli;
 pub mod command;
@@ -190,7 +207,8 @@ pub async fn run() {
     let config_clone = config.clone();
     let twitch_int_clone = Arc::clone(&twitch_integration);
     tauri::Builder::default()
-        .plugin(tauri_plugin_websocket::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        // .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_cli::init())
         .setup(move |app| {
             match app.cli().matches() {
