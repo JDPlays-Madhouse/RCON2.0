@@ -1,6 +1,9 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Bug Fixes
+- **ui:** Changed to Pagination Componant - [38b4f77](https://github.com/JDPlays-Madhouse/RCON2.0/commit/38b4f772464adf537ec94a963b3014f92cda87de?w=1&diff=split)
+
 ### Debugging Measure
 - **Twitch OAuth Token:** Added extra logging to see details about suspected error. - [e2c24b9](https://github.com/JDPlays-Madhouse/RCON2.0/commit/e2c24b9317394a18414df39f6ffa2c4c62f4b660?w=1&diff=split)
 
@@ -11,6 +14,7 @@
 - **Channel Point Reward:** Added clearer logging of rewards. - [89ec338](https://github.com/JDPlays-Madhouse/RCON2.0/commit/89ec338d4bfd2b2e35b521dce32bf3cddf43f537?w=1&diff=split)
 - **Twitch Triggers:** Channel Subscription. - [9196694](https://github.com/JDPlays-Madhouse/RCON2.0/commit/919669420b6e9ea51ebaf0e34643eef2e709f45c?w=1&diff=split)
 - **UI:** Page Channel Point Rewards added with ability to copy required text for config. - [6119a1a](https://github.com/JDPlays-Madhouse/RCON2.0/commit/6119a1ada3edd6b7489c21386595621136a0d39e?w=1&diff=split)
+- **Websocket Event:** Handling both new and updated triggers. - [f9fbd71](https://github.com/JDPlays-Madhouse/RCON2.0/commit/f9fbd71bf570ed80885a522e98a38d311af74d92?w=1&diff=split)
 
 
 <a name="0.1.6"></a>
