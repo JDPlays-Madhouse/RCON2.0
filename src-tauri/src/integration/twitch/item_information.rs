@@ -29,7 +29,7 @@ impl Eq for CustomChannelPointRewardInfo {}
 
 impl PartialEq for CustomChannelPointRewardInfo {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id 
+        self.id == other.id
     }
 }
 
@@ -47,21 +47,20 @@ impl CustomChannelPointRewardInfo {
 
     pub fn display_for_log(reward_list: Vec<Self>) {
         info!("Channel Point Rewards: ");
-        for reward in reward_list{
+        for reward in reward_list {
             info!("{}", reward);
         }
     }
 
     /// reward_list: A list of Channel Point Rewards.
     /// display: Whether to log the, to console.
-    pub fn list_valid_trigger(
-        reward_list: Vec<Self>,
-        display: bool) -> Vec<Trigger> {
-        if display{
-        info!("Channel Point Rewards Triggers: ");}
+    pub fn list_valid_trigger(reward_list: Vec<Self>, display: bool) -> Vec<Trigger> {
+        if display {
+            info!("Channel Point Rewards Triggers: ");
+        }
         let triggers = reward_list.into_iter().map(Trigger::from).collect_vec();
-        if display{
-            for trigger in &triggers{
+        if display {
+            for trigger in &triggers {
                 info!("     {:?}", trigger);
             }
         }
@@ -93,10 +92,14 @@ impl From<CustomReward> for CustomChannelPointRewardInfo {
     }
 }
 
-impl From<CustomChannelPointRewardInfo> for Trigger{
+impl From<CustomChannelPointRewardInfo> for Trigger {
     fn from(reward: CustomChannelPointRewardInfo) -> Self {
-        let CustomChannelPointRewardInfo{ title, id , ..} = reward;
-        Trigger::ChannelPointRewardRedeemed { title, id: id.to_string() }
+        let CustomChannelPointRewardInfo { title, id, .. } = reward;
+        Trigger::ChannelPointRewardRedeemed {
+            title,
+            id: id.to_string(),
+            variant: Default::default(),
+        }
     }
 }
 
@@ -105,7 +108,7 @@ impl Display for CustomChannelPointRewardInfo {
         write!(
             f,
             "CustomReward( title: '{}', id: '{}', enabled: {}, paused: {}, in_stock: {} )",
-            self.title, self.id, self.is_enabled,self.is_paused, self.is_in_stock
+            self.title, self.id, self.is_enabled, self.is_paused, self.is_in_stock
         )
     }
 }
@@ -184,10 +187,8 @@ pub struct CloneGlobalCooldown {
     pub global_cooldown_seconds: u32,
 }
 
-pub fn jd_channel_points() -> Vec<CloneCustomReward>{
-
+pub fn jd_channel_points() -> Vec<CloneCustomReward> {
     use twitch_types::points::Max::*;
-
 
     vec![
     CloneCustomReward { 

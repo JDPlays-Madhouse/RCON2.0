@@ -1,3 +1,8 @@
+use std::fmt::Display;
+
+use anyhow::bail;
+use config::ValueKind;
+use serde::{Deserialize, Serialize};
 use twitch_types::SubscriptionTier;
 
 #[allow(dead_code)]
@@ -80,17 +85,48 @@ pub fn normalise_tier(
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Clone, Hash)]
-pub struct CustomRewardEvent {
-    pub id: String,
-    pub title: String,
-    pub is_enabled: bool,
-    pub is_paused: bool,
-    pub is_in_stock: bool,
+#[derive(Debug, Default, PartialEq, Eq, Clone, Hash, Serialize, Deserialize, PartialOrd, Ord)]
+pub enum CustomRewardVariant {
+    #[default]
+    New,
+    Update,
 }
 
-impl CustomRewardEvent {
-    pub fn is_available(&self) -> bool {
-        self.is_enabled && !self.is_paused && self.is_in_stock
+impl Display for CustomRewardVariant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::New => write!(f, "New"),
+            Self::Update => write!(f, "Update"),
+        }
     }
+}
+
+impl TryFrom<String> for CustomRewardVariant {
+    type Error = anyhow::Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.to_lowercase().as_str() {
+            "new" => Ok(Self::New),
+            "update" => Ok(Self::Update),
+            _ => bail!("Invalid input for custom reward variant: {}", value),
+        }
+    }
+}
+
+impl From<CustomRewardVariant> for ValueKind {
+    fn from(variant: CustomRewardVariant) -> Self {
+        Self::String(variant.to_string())
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Clone, Hash)]
+pub struct CustomRewardEvent {
+    /// Occurrence ID
+    pub event_id: String,
+    /// Reward ID
+    pub id: String,
+    /// Reward Title
+    pub title: String,
+    pub user_name: String,
+    pub status: CustomRewardVariant,
 }
