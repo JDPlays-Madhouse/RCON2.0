@@ -30,9 +30,11 @@
 - [x] Rcon interface needs to take configurations for any rcon server.
 - [ ] Ensure that the amount of data is below the max per tick amount.
 
+  - No obvious method for determining this.
+
 - [ ] Provide visiual feedback through an OBS overlay (website) to give feedback
       on things like the boom factor.
-      ![Example of OBS overlay](./docs/Example_visual_feedback.png)
+      <img src="./docs/Example_visual_feedback.png" alt="Example of OBS overlay" width="400"/>
 - [ ] From twitch events read hype trains and be able to respond.
   - JDGOESBoom with count down, if redeamed again dead factor goes up and
     restart count down.
@@ -54,12 +56,7 @@
 - Progress bar has a Nades, then cluster nade, then arty, then nukes for maximum
   effect.
 
-### Assumptions
-
-- One app.
-- Rcon needs a frontend display, webpage or app?
-
------
+---
 
 ## Integrations
 
@@ -67,23 +64,26 @@
 
 1. Get a Client ID and Client Secret from [dev.twitch.tv/console/apps/](https://dev.twitch.tv/console/apps/).
 2. For the redirect url make sure they are exactly the same
-    e.g. `http://localhost:27934/twitch/register`. The port can be changed but
-    both the dev console and the config file need to match.
+   e.g. `http://localhost:27934/twitch/register`. The port can be changed but
+   both the dev console and the config file need to match.
 3. Run the application once and the config file will generate.
    1. Windows: ~\AppData\roaming\RCON2.0
    2. Linux: ~/.config/RCON2.0
    3. Apple: ~/Library/Application Support/RCON2.0
 4. Add the credentials to auth.twitch.
 5. websocket_subscription are the websocket events that you want to track defined by
-  [twitch docs](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/).
-  Currently implemented are listed below, if there any not listed that you
-  want, start an issue
-  [JDPlays-Madhouse/RCON2.0/issues](https://github.com/JDPlays-Madhouse/RCON2.0/issues).
-   1. channel.chat.message
-   2. channel.channel_points_custom_reward_redemption.add
-   3. channel.channel_points_custom_reward_redemption.update
-   4. channel.subscribe
-   5. channel.subscription.message
+   [twitch docs](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/).
+
+#### Current Websocket Subscriptions
+
+If there any not listed that you want, start an issue, and I will add it if possible
+[JDPlays-Madhouse/RCON2.0/issues](https://github.com/JDPlays-Madhouse/RCON2.0/issues).
+
+1. channel.chat.message: Twitch Chat Feed.
+2. channel.channel_points_custom_reward_redemption.add: Initial reward redemption.
+3. channel.channel_points_custom_reward_redemption.update: Amending a reward redemption. (Not Recommended yet)
+4. channel.subscribe: New subscribers
+5. channel.subscription.message: Resubscribers
 
 ### YouTube
 
@@ -93,7 +93,9 @@ Not yet implemented.
 
 Not yet implemented.
 
-## Commands
+---
+
+## Rcon Commands
 
 At the moment the only way to add commands is through the config file.
 
@@ -113,6 +115,7 @@ pattern = "test"
 enabled = true
 server_name = "local"
 trigger_type = "ChannelPointRewardRedeemed"
+variant = "New"
 title = "Player Goes Boom"
 id = "12345678-1234-1234-1234-123456789012"
 
@@ -150,18 +153,30 @@ Any text or command that goes before the lua command.
 
 #### Custom
 
-For a non preset prefix, type what is required verbatim, including spaces and slashes eg. `/total_custom_prefix `. Take note of the trailing slash when using lua.
+For a non preset prefix, type what is required verbatim, including spaces and slashes eg. `/total_custom_prefix `.
+
+> [!IMPORTANT]
+> Take note of the trailing slash when using lua.
+> Otherwise it will be combined with the first part of the lua script.
 
 ### Command Type
 
 #### Inline
 
-This is for lua stored in the config file, ideal for short commands. Also, use Inline when you don't have any lua, just want the prefix.
+This is for lua stored in the config file, ideal for short commands.
 
 ```toml
 command_type = "Inline"
 inline = "print('Hello, world!')"
 ```
+
+> [!TIP]
+> Use Inline when you don't have any lua and just want the prefix.
+>
+> ```toml
+> command_type = "Inline"
+> inline = ""
+> ```
 
 #### File
 
@@ -193,7 +208,8 @@ title = "Player Goes Boom"
 id = "12345678-1234-1234-1234-123456789012"
 ```
 
-Note: the double square brackets indicate a list/array in toml.
+> [!TIP]
+> The double square brackets indicate a list/array in toml.
 
 #### Enabled
 
@@ -201,7 +217,10 @@ Used to toggle a server trigger without needing to remove and reinsert.
 
 #### Server Name
 
-Must match the exact verbiage used in the core config file, both case and spelling.
+The name of the server you want the command to be sent to.
+
+> [!IMPORTANT]
+> Must match the exact verbiage used in the core config file, both case and spelling.
 
 #### Trigger
 
@@ -216,6 +235,14 @@ trigger_type = "Chat"
 pattern = "test"
 ```
 
+Required websocket subscription in main config file.
+
+```toml
+websocket_subscription = [
+    "channel.chat.message",
+]
+```
+
 ##### Channel Point Reward Redeemed
 
 Matches just on twitches channel point reward redeemed. Title is the title of the redeem and the id is the twitch ID.
@@ -224,4 +251,38 @@ Matches just on twitches channel point reward redeemed. Title is the title of th
 trigger_type = "ChannelPointRewardRedeemed"
 title = "Player Goes Boom"
 id = "12345678-1234-1234-1234-123456789012"
+variant = "New"
 ```
+
+Required websocket subscription in main config file.
+`Add` for New redemptions and `Update` for when the user update there redemption.
+
+```toml
+websocket_subscription = [
+    "channel.channel_points_custom_reward_redemption.add",
+    "channel.channel_points_custom_reward_redemption.update",
+]
+```
+
+##### Subsciption
+
+Matches any subscription events.
+
+```toml
+trigger_type = "Subscription"
+```
+
+Required websocket subscription in main config file.
+
+```toml
+    "channel.subscribe", # for new subscriptions.
+    "channel.subscription.message", # for resubsciptions.
+]
+```
+
+> [!NOTE]
+> If you want additional options let me know. Tier or sub length etc.
+
+## Known Bugs
+
+- Cli doesn't work for windows - possible solution [github.com](https://github.com/tauri-apps/tauri/issues/8305#issuecomment-1826871949)
