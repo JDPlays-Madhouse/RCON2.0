@@ -8,6 +8,7 @@
 - **Twitch OAuth Token:** Added extra logging to see details about suspected error. - [e2c24b9](https://github.com/JDPlays-Madhouse/RCON2.0/commit/e2c24b9317394a18414df39f6ffa2c4c62f4b660?w=1&diff=split)
 
 ### Documentation
+- Added subscription and modified reward redemption. - [1495ccf](https://github.com/JDPlays-Madhouse/RCON2.0/commit/1495ccf8aa772eb97b527c4a7783e9be21bb0759?w=1&diff=split)
 - Added commit links to changelog to easily see code changes. - [5c028a2](https://github.com/JDPlays-Madhouse/RCON2.0/commit/5c028a2d14d71da7a39b5d0f695d6348ba6bd0fe?w=1&diff=split)
 
 ### Features
