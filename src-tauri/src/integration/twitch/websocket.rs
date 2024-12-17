@@ -20,6 +20,8 @@ use twitch_api::{
 };
 use twitch_oauth2::{TwitchToken, UserToken};
 
+use super::oauth::refresh_token;
+
 #[derive(Debug)]
 pub enum WebsocketError {
     TokenElapsed,
@@ -403,8 +405,10 @@ impl WebsocketClient {
         }
         // check if the token is expired, if it is, request a new token. This only works if using a oauth service for getting a token
         if self.token.is_elapsed() {
-            error!("Token is elapsed");
-            return Err(WebsocketError::TokenElapsed);
+           self.token = match refresh_token().await{
+            Some(token) => token,
+            None => return Err(WebsocketError::TokenElapsed),
+           };
         }
 
         if let Some(keep_alive) = data.keepalive_timeout_seconds {
