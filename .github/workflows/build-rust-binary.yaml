@@ -39,7 +39,7 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
       - name: install frontend dependencies
-        if: ${{ steps.npm-cache.outputs.cache-hit != 'true' }}
+        # if: ${{ steps.npm-cache.outputs.cache-hit != 'true' }}
         run: npm install
 
       - name: install Rust Stable
