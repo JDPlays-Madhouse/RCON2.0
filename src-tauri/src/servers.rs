@@ -16,6 +16,7 @@ use crate::{command::Command, settings::Settings};
 pub static SERVERS: LazyLock<Mutex<HashMap<String, GameServer>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
+/// Any changes to a [GameServer] will become a new key therefore the connection will be lost.
 pub static CONNECTIONS: LazyLock<tokio::sync::Mutex<HashMap<GameServer, GameServerConnected>>> =
     LazyLock::new(|| tokio::sync::Mutex::new(HashMap::new()));
 
@@ -77,6 +78,14 @@ impl GameServerConnected {
             Ok(_) => info!("Sending Connecting"),
             Err(e) => error!("{:?}", e),
         };
+        {
+            if (CONNECTIONS.lock().await).contains_key(&server) {
+                let _ = channel.send(ServerStatus::Connected {
+                    server: server.clone(),
+                });
+                return Ok(server);
+            }
+        }
         match <Connection<TcpStream>>::builder()
             .enable_factorio_quirks(server.game == Game::Factorio)
             .connect(&server.socket_address(), &server.password)
