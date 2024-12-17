@@ -1,10 +1,12 @@
 use item_information::{jd_channel_points, CustomChannelPointRewardInfo};
+use oauth::refresh_token;
+pub use oauth::TOKEN;
 use permissions::get_eventsub_consolidated_scopes;
 use std::{
     str::FromStr,
     sync::{
         mpsc::{self, RecvError},
-        Arc, LazyLock,
+        Arc,
     },
     thread::JoinHandle,
     time::Duration,
@@ -38,9 +40,6 @@ pub mod websocket;
 
 use twitch_types::UserId;
 use websocket::WebsocketClient;
-
-pub static TOKEN: LazyLock<Arc<tokio::sync::Mutex<Option<UserToken>>>> =
-    LazyLock::new(|| Arc::new(tokio::sync::Mutex::new(None)));
 
 pub struct TwitchApiConnection {
     pub username: Option<UserName>,
@@ -155,7 +154,7 @@ impl TwitchApiConnection {
     }
 
     pub async fn new_websocket(&mut self, config: Config) {
-        trace!("new websocket");
+        debug!("new websocket");
         if let Some(joinhandle) = self.websocket_joinhandle.take() {
             joinhandle.abort();
             info!(
@@ -189,8 +188,6 @@ impl TwitchApiConnection {
             self.runner.tx(),
         ));
         let websocket = self.websocket.clone().unwrap();
-        let client = self.client.clone();
-        let token_loop = Arc::clone(&TOKEN);
         self.websocket_joinhandle = Some(tokio::spawn(async move {
             use websocket::WebsocketError::*;
             loop {
@@ -198,26 +195,12 @@ impl TwitchApiConnection {
                     Ok(_) => {}
                     Err(TokenElapsed) => {
                         warn!("{:?}", TokenElapsed);
-                        let mut token_cont = token_loop.lock().await;
-                        let old_token = token_cont.clone();
-                        match token_cont.as_mut().unwrap().refresh_token(&client).await {
-                            Ok(_) => info!("Token was refreshed."),
-                            Err(e) => {
-                                error!("Error resfreshing token: {:?}", e)
-                            }
-                        };
-                        if old_token.as_ref().is_none_or(|_| token_cont.is_none())
-                            || old_token.unwrap().access_token
-                                == token_cont.clone().unwrap().access_token
-                        {
-                            warn!("Token not refreshed")
-                        }
+                        refresh_token().await;
                         continue;
                     }
                     Err(InvalidToken) => {
                         warn!("{:?}", InvalidToken);
-                        let mut token_cont = token_loop.lock().await;
-                        let _ = token_cont.as_mut().unwrap().refresh_token(&client).await;
+                        refresh_token().await;
                         continue;
                     }
                     Err(e) => {
@@ -318,7 +301,8 @@ impl TwitchApiConnection {
                         error!("{:?}", e);
                         Err(IntegrationError::Token(TokenError::UnknownError))
                     }
-                    ValidationError::InvalidToken(_) => {
+                    ValidationError::InvalidToken(e) => {
+                        error!("Invalid Token: {:?}", e);
                         Err(IntegrationError::Token(TokenError::InvalidToken))
                     }
                     _ => {
