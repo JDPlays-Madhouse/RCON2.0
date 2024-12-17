@@ -201,14 +201,11 @@ pub async fn run() {
         config.get_table("auth.twitch").unwrap(),
     )));
 
-    let twitch_int_clone = Arc::clone(&twitch_integration);
     let config_clone = config.clone();
+    let twitch_int_clone = Arc::clone(&twitch_integration);
 
-    let config_clone = config.clone();
-    let twitch_int_clone = Arc::clone(&twitch_integration);
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
-        // .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_cli::init())
         .setup(move |app| {
             match app.cli().matches() {
@@ -221,14 +218,15 @@ pub async fn run() {
                 }
                 Err(e) => {
                     println!("{}", e);
-
                     std::process::exit(1);
                 }
             }
             let default_server = servers::default_server_from_settings(config_clone.clone());
+
             app.manage(Arc::new(futures::lock::Mutex::new(config_clone.clone())));
             app.manage(Arc::new(futures::lock::Mutex::new(default_server)));
             app.manage(twitch_int_clone);
+
             tracing_subscriber::Registry::default()
                 .with(level_filter)
                 .with(logger_layer)
@@ -237,6 +235,7 @@ pub async fn run() {
                 .with(ErrorLayer::default())
                 .init();
             debug!("Log Established");
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

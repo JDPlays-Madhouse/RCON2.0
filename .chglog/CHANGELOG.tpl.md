@@ -6,7 +6,7 @@
 {{ range .Unreleased.CommitGroups -}}
 ### {{ .Title }}
 {{ range .Commits -}}
-- {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ .Subject }} - [{{ .Hash.Short }}]({{ $.Info.RepositoryURL }}/commit/{{.Hash.Long}}?w=1&diff=split)
+1. {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ .Subject }} - [{{ .Hash.Short }}]({{ $.Info.RepositoryURL }}/commit/{{.Hash.Long}}?w=1&diff=split)
 {{ end }}
 {{ end -}}
 {{ end -}}
@@ -20,7 +20,7 @@
 ### {{ .Title }}
 
 {{ range .Commits -}}
-* {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ .Subject }} - [{{ .Hash.Short }}]({{ $.Info.RepositoryURL }}/commit/{{.Hash.Long}}?w=1&diff=split)
+1. {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ .Subject }} - [{{ .Hash.Short }}]({{ $.Info.RepositoryURL }}/commit/{{.Hash.Long}}?w=1&diff=split)
 {{ end }}
 {{ end -}}
 
@@ -28,7 +28,7 @@
 ### Reverts
 
 {{ range .RevertCommits -}}
-* {{ .Revert.Header }}
+1. {{ .Revert.Header }}
 {{ end }}
 {{ end -}}
 
@@ -36,7 +36,7 @@
 ### Pull Requests
 
 {{ range .MergeCommits -}}
-* {{ .Header }}
+1. {{ .Header }}
 {{ end }}
 {{ end -}}
 
