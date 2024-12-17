@@ -141,7 +141,7 @@ pub async fn oauth(
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let exp = iat + 12 * HOUR;
+    let exp = iat + 12 * HOUR; // Unsure if this actually works.
 
     let current_query = url.query().unwrap_or("");
     url.set_query(Some(

@@ -12,7 +12,7 @@ use std::{
     time::Duration,
 };
 use tauri::State;
-use tracing::{debug, error, info, instrument, trace, warn};
+use tracing::{debug, error, info, instrument, warn};
 
 use crate::command::Runner;
 

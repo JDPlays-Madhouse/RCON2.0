@@ -1,19 +1,31 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+
+<a name="0.1.7"></a>
+## [0.1.7](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.6...0.1.7) (2024-12-17)
+
 ### Bug Fixes
+
+1. **RCON Server:** Multiple connections when reload page. - [36a1dea](https://github.com/JDPlays-Madhouse/RCON2.0/commit/36a1dea7399ff4de4a38146379e57b681306b5f9?w=1&diff=split)
+1. **Twitch OAuth:** Changed to a common refresh function. - [1d27cab](https://github.com/JDPlays-Madhouse/RCON2.0/commit/1d27cabf5bae7b1be44b49117a9cef9af28fab57?w=1&diff=split)
 1. **ui:** Changed to Pagination Componant - [38b4f77](https://github.com/JDPlays-Madhouse/RCON2.0/commit/38b4f772464adf537ec94a963b3014f92cda87de?w=1&diff=split)
 
 ### Debugging Measure
+
 1. **Twitch OAuth Token:** Added extra logging to see details about suspected error. - [e2c24b9](https://github.com/JDPlays-Madhouse/RCON2.0/commit/e2c24b9317394a18414df39f6ffa2c4c62f4b660?w=1&diff=split)
 
 ### Documentation
+
+1. Modified template to use ordered list. - [1c41448](https://github.com/JDPlays-Madhouse/RCON2.0/commit/1c41448dde4488d4fae6959aed8316fe97b31f52?w=1&diff=split)
 1. Added subscription and modified reward redemption. - [1495ccf](https://github.com/JDPlays-Madhouse/RCON2.0/commit/1495ccf8aa772eb97b527c4a7783e9be21bb0759?w=1&diff=split)
 1. Added commit links to changelog to easily see code changes. - [5c028a2](https://github.com/JDPlays-Madhouse/RCON2.0/commit/5c028a2d14d71da7a39b5d0f695d6348ba6bd0fe?w=1&diff=split)
 
 ### Features
+
 1. **Channel Point Reward:** Added clearer logging of rewards. - [89ec338](https://github.com/JDPlays-Madhouse/RCON2.0/commit/89ec338d4bfd2b2e35b521dce32bf3cddf43f537?w=1&diff=split)
 1. **Twitch Triggers:** Channel Subscription. - [9196694](https://github.com/JDPlays-Madhouse/RCON2.0/commit/919669420b6e9ea51ebaf0e34643eef2e709f45c?w=1&diff=split)
+1. **Twitch Websocket:** Uses common refresh function in run function. - [e8ac0e7](https://github.com/JDPlays-Madhouse/RCON2.0/commit/e8ac0e733ee0a11c4573a57bcd314aa49c83e9b7?w=1&diff=split)
 1. **UI:** Page Channel Point Rewards added with ability to copy required text for config. - [6119a1a](https://github.com/JDPlays-Madhouse/RCON2.0/commit/6119a1ada3edd6b7489c21386595621136a0d39e?w=1&diff=split)
 1. **Websocket Event:** Handling both new and updated triggers. - [f9fbd71](https://github.com/JDPlays-Madhouse/RCON2.0/commit/f9fbd71bf570ed80885a522e98a38d311af74d92?w=1&diff=split)
 
