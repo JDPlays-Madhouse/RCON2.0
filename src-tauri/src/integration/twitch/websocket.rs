@@ -20,11 +20,10 @@ use twitch_api::{
 };
 use twitch_oauth2::{TwitchToken, UserToken};
 
-use super::oauth::refresh_token;
-
 #[derive(Debug)]
 pub enum WebsocketError {
     TokenElapsed,
+    Reconnect,
     InvalidToken,
     Terminated,
     FailedToConnect(String),
@@ -117,7 +116,7 @@ impl WebsocketClient {
     }
 
     /// Run the websocket subscriber
-    #[tracing::instrument(name = "Twitch_Websocket", skip_all, fields())]
+    #[tracing::instrument(skip_all, fields())]
     pub async fn run(mut self) -> Result<(), WebsocketError> {
         // Establish the stream
         let mut s = match self.connect().await {
@@ -203,10 +202,7 @@ impl WebsocketClient {
                         payload: WelcomePayload { session },
                         ..
                     }
-                    | EventsubWebsocketData::Reconnect {
-                        payload: ReconnectPayload { session },
-                        ..
-                    } => self.process_welcome_message(session).await,
+                     => self.process_welcome_message(session).await,
                     // Here is where you would handle the events you want to listen to
                     EventsubWebsocketData::Notification {
                         metadata: _,
@@ -360,8 +356,15 @@ impl WebsocketClient {
                         metadata,
                         payload: _,
                     } => {
-                        error!("got revocation event: {metadata:?}");
+                        error!("Revocation event: {metadata:?}");
                         Err(WebsocketError::Terminated)
+                    }
+                    EventsubWebsocketData::Reconnect {
+                        payload: ReconnectPayload { session },
+                        ..
+                    } => {
+                        info!("Reconnect to Websocket");
+                        Err(WebsocketError::Reconnect)
                     }
                     EventsubWebsocketData::Keepalive {
                         metadata: _,
@@ -405,10 +408,7 @@ impl WebsocketClient {
         }
         // check if the token is expired, if it is, request a new token. This only works if using a oauth service for getting a token
         if self.token.is_elapsed() {
-           self.token = match refresh_token().await{
-            Some(token) => token,
-            None => return Err(WebsocketError::TokenElapsed),
-           };
+            return Err(WebsocketError::TokenElapsed);
         }
 
         if let Some(keep_alive) = data.keepalive_timeout_seconds {

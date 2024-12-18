@@ -193,13 +193,8 @@ impl TwitchApiConnection {
             loop {
                 match websocket.clone().run().await {
                     Ok(_) => {}
-                    Err(TokenElapsed) => {
-                        warn!("{:?}", TokenElapsed);
-                        refresh_token().await;
-                        continue;
-                    }
-                    Err(InvalidToken) => {
-                        warn!("{:?}", InvalidToken);
+                    Err(e @ Reconnect) | Err(e @ InvalidToken) | Err(e @ TokenElapsed) => {
+                        info!("{:?}", e);
                         refresh_token().await;
                         continue;
                     }
