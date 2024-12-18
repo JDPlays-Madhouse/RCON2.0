@@ -48,7 +48,7 @@ pub async fn refresh_token() -> Option<UserToken> {
             return None;
         }
     }
-    if old_token.access_token == token.clone().access_token {
+    if old_token.access_token == token.access_token {
         warn!("Token not refreshed!")
     }
     Some(token.clone())

@@ -21,7 +21,7 @@ use super::{
     APIConnectionConfig, Api, IntegrationChannels, IntegrationCommand, IntegrationControl,
     IntegrationEvent, PlatformConnection, TokenError, Transmitter,
 };
-use anyhow::{bail, Result};
+use anyhow::Result;
 use config::Config;
 use reqwest::Client as ReqwestClient;
 use twitch_api::{
@@ -220,69 +220,50 @@ impl TwitchApiConnection {
             None => self.authenticate(true).await.expect("token"),
         };
         if token.is_elapsed() {
-            if let Some(t) = refresh_token().await {
-                token = t
+            token = match refresh_token().await {
+                Some(t) => t,
+                None => {
+                    error!("Lost Token since check.");
+                    return Err(TokenError::UnknownError);
+                }
             }
         }
 
         match token.access_token.validate_token(&self.client).await {
-            Ok(_vt) => {
-                TwitchApiConnection::update_token(Some(token.clone())).await;
+            Ok(vt) => {
+                if vt.expires_in.expect("Token should have an expiration.") < Duration::from_secs(1)
+                {
+                    token = match refresh_token().await {
+                        Some(t) => t,
+                        None => {
+                            error!("Lost Token since check.");
+                            return Err(TokenError::UnknownError);
+                        }
+                    }
+                }
+
+                TwitchApiConnection::update_token(Some(token.clone()))
                 Ok(token)
             }
             Err(e) => {
                 use twitch_oauth2::tokens::errors::ValidationError;
                 match e {
-                    ValidationError::NotAuthorized => match self.authenticate(false).await {
-                        Ok(t) => {
-                            TwitchApiConnection::update_token(Some(token.clone())).await;
-                            Ok(t)
-                        }
-                        Err(e) => {
-                            error!("ValidationError::NotAuthorized: {:?}", e);
-                            Err(TokenError::UnknownError)
-                        }
-                    },
+                    ValidationError::NotAuthorized => {
+                        error!("Token not authorized");
+                        Err(TokenError::NotAuthorized)
+                    }
                     ValidationError::RequestParseError(request_parse_error) => {
                         error!("{:?}", request_parse_error);
-
-                        match self.authenticate(false).await {
-                            Ok(t) => {
-                                TwitchApiConnection::update_token(Some(token.clone())).await;
-                                Ok(t)
-                            }
-                            Err(e) => {
-                                error!("ValidationError::RequestParseError: {:?}", e);
-                                Err(TokenError::UnknownError)
-                            }
-                        }
+                        self.authenticate(false).await.map_err(|e| {
+                            error!("{e:?}");
+                            TokenError::UnknownError
+                        })
                     }
                     ValidationError::Request(e) => {
-                        error!("ValidationError::Request: {:?}", e);
-                        match self.authenticate(false).await {
-                            Ok(t) => {
-                                TwitchApiConnection::update_token(Some(token.clone())).await;
-                                Ok(t)
-                            }
-                            Err(e) => {
-                                error!("ValidationError::RequestParseError: {:?}", e);
-                                Err(TokenError::UnknownError)
-                            }
-                        }
+                        error!("{:?}", e);
+                        Err(TokenError::UnknownError)
                     }
-                    ValidationError::InvalidToken(e) => {
-                        error!("ValidationError::InvalidToken: {:?}", e);
-                        match self.authenticate(false).await {
-                            Ok(t) => {
-                                TwitchApiConnection::update_token(Some(token.clone())).await;
-                                Ok(t)
-                            }
-                            Err(e) => {
-                                error!("ValidationError::InvalidToken: {:?}", e);
-                                Err(TokenError::UnknownError)
-                            }
-                        }
-                    }
+                    ValidationError::InvalidToken(_) => Err(TokenError::InvalidToken),
                     _ => {
                         error!("Unknown Error: InvalidToken");
                         Err(TokenError::UnknownError)
@@ -440,7 +421,7 @@ impl PlatformConnection for TwitchApiConnection {
 impl TwitchApiConnection {
     pub async fn authenticate(&mut self, use_cache: bool) -> Result<UserToken> {
         self.connecting = true;
-        let token = match oauth::oauth(
+        let token = oauth::oauth(
             self.scope.clone(),
             self.client_id.clone(),
             self.client_secret.clone(),
@@ -448,13 +429,7 @@ impl TwitchApiConnection {
             use_cache,
         )
         .await
-        {
-            Ok(t) => t,
-            Err(e) => {
-                error!("TwitchApiConnection::authenticate: {:?}", e);
-                bail!(e);
-            }
-        };
+        .unwrap();
         self.connecting = false;
 
         info!("Twitch Authenticated");
