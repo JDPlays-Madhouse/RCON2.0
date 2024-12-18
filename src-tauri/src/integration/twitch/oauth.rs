@@ -19,6 +19,7 @@ pub static TOKEN: LazyLock<Arc<tokio::sync::Mutex<Option<UserToken>>>> =
 
 /// Refreshes the token if it exists. Returns the new token if successful.
 pub async fn refresh_token() -> Option<UserToken> {
+    info!("Refreshing OAuth Token.");
     let mut token_cont = TOKEN.lock().await;
     let token = match token_cont.as_mut() {
         Some(t) => t,
@@ -37,6 +38,16 @@ pub async fn refresh_token() -> Option<UserToken> {
             error!("Error refreshing token: {}", e);
         }
     };
+
+    match token.validate_token(&reqwest_client).await {
+        Ok(_t) => {
+            info!("Token Validated.")
+        }
+        Err(e) => {
+            error!("Validation Error: {:?}", e);
+            return None;
+        }
+    }
     if old_token.access_token == token.clone().access_token {
         warn!("Token not refreshed!")
     }
