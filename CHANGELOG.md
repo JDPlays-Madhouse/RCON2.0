@@ -2,11 +2,26 @@
 ## [Unreleased]
 
 
+<a name="0.1.8"></a>
+## [0.1.8](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.7...0.1.8) (2024-12-18)
+
+### Bug Fixes
+
+1. **Twitch OAuth:** Removed early refresh of token. - [7750d3e](https://github.com/JDPlays-Madhouse/RCON2.0/commit/7750d3eb8c2a41c292c11c0508a1c0ca93dc91bc?w=1&diff=split)
+1. **Twitch OAuth:** Added validation to refresh. - [8356914](https://github.com/JDPlays-Madhouse/RCON2.0/commit/8356914507a3d94490d6d10c1331a4a533c0d4e6?w=1&diff=split)
+
+### Features
+
+1. **UI:** Changed over to component based routing. - [1e1fb57](https://github.com/JDPlays-Madhouse/RCON2.0/commit/1e1fb57b2db8e36faa51c8c866c420dc56206b63?w=1&diff=split)
+
+
 <a name="0.1.7"></a>
 ## [0.1.7](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.6...0.1.7) (2024-12-17)
 
 ### Bug Fixes
 
+1. **CICD:** Auto changelog removed - [c584304](https://github.com/JDPlays-Madhouse/RCON2.0/commit/c584304a1a52f6a6eb0bcd556df2ace8d0fb9da6?w=1&diff=split)
+1. **CICD:** Auto changelog removed - [1acfbbd](https://github.com/JDPlays-Madhouse/RCON2.0/commit/1acfbbd4002bfa7a84f278a1c99a0b0246560e20?w=1&diff=split)
 1. **RCON Server:** Multiple connections when reload page. - [36a1dea](https://github.com/JDPlays-Madhouse/RCON2.0/commit/36a1dea7399ff4de4a38146379e57b681306b5f9?w=1&diff=split)
 1. **Twitch OAuth:** Changed to a common refresh function. - [1d27cab](https://github.com/JDPlays-Madhouse/RCON2.0/commit/1d27cabf5bae7b1be44b49117a9cef9af28fab57?w=1&diff=split)
 1. **ui:** Changed to Pagination Componant - [38b4f77](https://github.com/JDPlays-Madhouse/RCON2.0/commit/38b4f772464adf537ec94a963b3014f92cda87de?w=1&diff=split)
@@ -91,15 +106,7 @@
 
 
 <a name="0.1.1"></a>
-## [0.1.1](https://github.com/JDPlays-Madhouse/RCON2.0/compare/RCON2.0-v0.1.0...0.1.1) (2024-11-06)
-
-### Bug Fixes
-
-1. **lib:** bug in tauri thread spawn, changed to tokio. - [3155bed](https://github.com/JDPlays-Madhouse/RCON2.0/commit/3155bed7142102b669133e4ff2af0fcaa48e97ee?w=1&diff=split)
-
-
-<a name="RCON2.0-v0.1.0"></a>
-## [RCON2.0-v0.1.0](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.0...RCON2.0-v0.1.0) (2024-11-05)
+## [0.1.1](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.0...0.1.1) (2024-11-06)
 
 ### Bug Fixes
 
@@ -109,6 +116,7 @@
 1. **cicd:** added a cd to src-tauri - [3f43285](https://github.com/JDPlays-Madhouse/RCON2.0/commit/3f432858eaa01815ed187d296de0071263e24532?w=1&diff=split)
 1. **cicd:** fix to env variables - [c2706e2](https://github.com/JDPlays-Madhouse/RCON2.0/commit/c2706e2d6e57416f1439f5685cfe9ff536cf9ef9?w=1&diff=split)
 1. **cicd:** manual_dispatch to workflow_dispatch - [e770482](https://github.com/JDPlays-Madhouse/RCON2.0/commit/e77048274f4eef64d1d301724e287b468aeb9de9?w=1&diff=split)
+1. **lib:** bug in tauri thread spawn, changed to tokio. - [3155bed](https://github.com/JDPlays-Madhouse/RCON2.0/commit/3155bed7142102b669133e4ff2af0fcaa48e97ee?w=1&diff=split)
 
 
 <a name="0.1.0"></a>
