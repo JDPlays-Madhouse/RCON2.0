@@ -123,10 +123,10 @@ impl TwitchApiConnection {
         // get_all_required_scopes(scope);
         debug!("Scope: {:?}", scope);
         Self {
-            username: Some(UserName::new(username.into())),
-            client_id: client_id.into(),
-            client_secret: client_secret.into(),
-            redirect_url: redirect_url.into(),
+            username: Some(UserName::new(username)),
+            client_id,
+            client_secret,
+            redirect_url,
 
             scope,
             event_tx: None,
@@ -223,15 +223,19 @@ impl TwitchApiConnection {
         match token.access_token.validate_token(&self.client).await {
             Ok(vt) => {
                 if vt.expires_in.expect("Token should have an expiration.")
-                    < Duration::from_secs(15_000)
+                    < Duration::from_secs(3_600)
                 {
-                    if let Err(e) = token.refresh_token(&self.client).await {
-                        error!("{:?}", e);
-                        return Err(TokenError::UnknownError);
-                    };
+                    token = match refresh_token().await {
+                        Some(t) => t,
+                        None => {
+                            error!("Lost Token since check.");
+                            return Err(TokenError::UnknownError);
+                        }
+                    }
                 }
-                let mut token_container = TOKEN.lock().await;
-                *token_container = Some(token.clone());
+
+                let mut token_cont = TOKEN.lock().await;
+                *token_cont = Some(token.clone());
                 Ok(token)
             }
             Err(e) => {
@@ -254,7 +258,7 @@ impl TwitchApiConnection {
                     }
                     ValidationError::InvalidToken(_) => Err(TokenError::InvalidToken),
                     _ => {
-                        error!("Unknown Error");
+                        error!("Unknown Error: InvalidToken");
                         Err(TokenError::UnknownError)
                     }
                 }
@@ -335,17 +339,17 @@ impl TwitchApiConnection {
         let request = GetCustomRewardRequest::broadcaster_id(
             self.user_id().await.expect("Everytoken has a user id."),
         );
-        let rewards = match self.client.helix.req_get(request, &(token.clone())).await {
+        match self.client.helix.req_get(request, &(token.clone())).await {
             Ok(twitch_api::helix::Response { data, .. }) => data,
             Err(e) => {
                 let message = e.to_string();
                 error!(message);
                 vec![]
             }
-        };
-        rewards
+        }
     }
 }
+
 impl Transmitter for TwitchApiConnection {
     /// Adds or changes the integration event transmitor.
     ///
