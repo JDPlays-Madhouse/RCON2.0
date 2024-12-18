@@ -1,6 +1,5 @@
 "use client";
 
-import { Command, Game, GameServerTrigger, Trigger } from "@/types";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -15,14 +14,7 @@ import {
 import { ClipboardIcon, MoreHorizontal } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import {
   Table,
   TableBody,
@@ -40,8 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DataTablePagination } from "./datatables/pagination";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { DataTablePagination } from "@/components/datatables/pagination";
 
 export type CustomChannelPointRewardInfo = {
   id: string;

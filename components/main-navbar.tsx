@@ -1,5 +1,4 @@
-"use client";
-import { Server } from "@/types";
+import { Page, Server } from "@/types";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -14,68 +13,36 @@ import { cn } from "@/lib/utils";
 import NextLink from "next/link";
 import { DarkModeToggle } from "./dark-mode-button";
 import React from "react";
-import Twitch from "./icons/twitch";
 
-function Link({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <NextLink href={href} legacyBehavior passHref>
-      <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-        {children}
-      </NavigationMenuLink>
-    </NextLink>
-  );
+
+interface MainNavProps{
+  className?: string,
+  page: Page,
+  setPage: React.Dispatch<React.SetStateAction<Page>>
 }
-
+interface ListItemProps extends Omit<React.ComponentPropsWithoutRef<"a">, "href">{
+  href: Page
+}
 export default function MainNav({
   className = "",
-}: {
-  className?: string;
-  server?: Server;
-}) {
+  page,
+  setPage
+}: MainNavProps) {
+
+  function Link({ href, children }: { href: Page; children: React.ReactNode }) {
   return (
-    <NavigationMenu
-      className={cn("flex items-center space-x-4 lg:space-x-6", className)}
-    >
-      <NavigationMenuList>
-        <NavigationMenuItem key="Dashboard">
-          <Link href={"/"}>Dashboard</Link>
-        </NavigationMenuItem>
-        <NavigationMenuItem key="Twitch">
-          <NavigationMenuTrigger>Twitch</NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
-                            <ListItem href="/twitch/triggers" title="Triggers">
-                Trigger specific for Twitch.
-              </ListItem>
-              <ListItem href="#" title="Some Helpful Information">
-                Some holder text
-              </ListItem>
-              <ListItem href="#" title="Some other Helpful Information">
-                Some holder text
-              </ListItem>
-            </ul>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
-        <NavigationMenuItem key="mainnavServerSettings">
-          <Link href="/server-config">Server Config</Link>
-        </NavigationMenuItem>
-        <NavigationMenuItem key="mainnavSettings">
-          <Link href="/settings">Settings</Link>
-        </NavigationMenuItem>
-        <NavigationMenuIndicator />
-        {/* TODO: Work out indicator or remove it */}
-      </NavigationMenuList>
-      <DarkModeToggle />
-    </NavigationMenu>
+      <NavigationMenuLink onClick={() => {setPage(href)}} className={cn(navigationMenuTriggerStyle(), "cursor-pointer")}>
+        {children}
+      </NavigationMenuLink>
   );
 }
 const ListItem = React.forwardRef<
   React.ElementRef<"a">,
-  React.ComponentPropsWithoutRef<"a">
->(({ className, title, children, ...props }, ref) => {
+  ListItemProps
+>(({ className, title, href, children, ...props }, ref) => {
   return (
-    <li>
-      <NavigationMenuLink asChild>
+    <li className="cursor-pointer">
+      <NavigationMenuLink asChild onClick={() => {setPage(href)}}>
         <a
           ref={ref}
           className={cn(
@@ -94,3 +61,35 @@ const ListItem = React.forwardRef<
   );
 });
 ListItem.displayName = "ListItem";
+  return (
+    <NavigationMenu
+      className={cn("flex items-center space-x-4 lg:space-x-6", className)}
+    >
+      <NavigationMenuList>
+        <NavigationMenuItem key="Dashboard">
+          <Link href={Page.Dashboard}>Dashboard</Link>
+        </NavigationMenuItem>
+        <NavigationMenuItem key="Twitch">
+          <NavigationMenuTrigger>Twitch</NavigationMenuTrigger>
+          <NavigationMenuContent>
+            <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
+              <ListItem href={Page.TwitchTriggers} title="Triggers">
+                Trigger specific for Twitch.
+              </ListItem>
+            </ul>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
+        <NavigationMenuItem key="mainnavServerSettings">
+          <Link href={Page.ServerSettings}>Server Config</Link>
+        </NavigationMenuItem>
+        <NavigationMenuItem key="mainnavSettings">
+          <Link href={Page.Settings}>Settings</Link>
+        </NavigationMenuItem>
+        <NavigationMenuIndicator />
+        {/* TODO: Work out indicator or remove it */}
+      </NavigationMenuList>
+      <DarkModeToggle />
+    </NavigationMenu>
+  );
+}
+

@@ -1,3 +1,10 @@
+export enum Page {
+  Dashboard,
+  ServerSettings,
+  TwitchTriggers,
+  Settings,
+}
+
 export type Server = {
   id: string;
   name: string;
@@ -40,9 +47,9 @@ export type LogLevelColors = {
 // Commands
 export type RconCommandPrefix =
   | {
-      prefix: "Custom";
-      data: string;
-    }
+    prefix: "Custom";
+    data: string;
+  }
   | { prefix: "SC" }
   | { prefix: "MC" }
   | { prefix: "C" };
@@ -60,10 +67,10 @@ export type Trigger =
   | { trigger: "Chat"; data: { pattern: string } }
   | { trigger: "ChatRegex"; data: { pattern: string } }
   | {
-      trigger: "ChannelPointRewardRedeemed";
-      data: { title: string; id: string };
-    }
-  | { trigger: "Subscription"};
+    trigger: "ChannelPointRewardRedeemed";
+    data: { title: string; id: string };
+  }
+  | { trigger: "Subscription" };
 
 export type GameServerTrigger = {
   server: Server;
@@ -97,16 +104,16 @@ export type TokenError =
 
 export type ServerStatus =
   | {
-      event: "connecting";
-      data: { server: Server };
-    }
+    event: "connecting";
+    data: { server: Server };
+  }
   | { event: "connected"; data: { server: Server } }
   | { event: "checking"; data: { server: Server } }
   | { event: "error"; data: { msg: string; server: Server } }
   | {
-      event: "disconnected";
-      data: { server?: Server };
-    };
+    event: "disconnected";
+    data: { server?: Server };
+  };
 
 export type IntegrationStatusMap = { [Property in Api]: IntegrationStatus };
 

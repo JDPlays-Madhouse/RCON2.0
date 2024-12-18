@@ -36,7 +36,7 @@ import {
 import FactorioLogo from "@/app/images/factorio.ico";
 import { GameString, Server, Servers, games } from "@/types";
 import { invoke } from "@tauri-apps/api/core";
-import { ServerConfigForm } from "./forms/server-config-form";
+import { ServerConfigForm } from "@/components/forms/server-config-form";
 import { useEffect, useState } from "react";
 
 type PopoverTriggerProps = React.ComponentPropsWithoutRef<
