@@ -38,7 +38,6 @@ pub struct Settings {
 impl Settings {
     pub fn new() -> Self {
         let mut mut_self = Self::default();
-
         let mut builder = mut_self
             .config_builder
             .clone()
@@ -57,8 +56,6 @@ impl Settings {
         );
         let _ = mut_self.make_config_exists(log_folder.as_path(), FileType::Dir);
         mut_self.log_folder = log_folder;
-        info!("Config File: {:?}", mut_self.config_filepath());
-        info!("Log Folder: {:?}", &mut_self.log_folder);
 
         let script_folder = PathBuf::from(
             config
@@ -67,7 +64,6 @@ impl Settings {
         );
         let _ = mut_self.make_config_exists(script_folder.as_path(), FileType::Dir);
         mut_self.script_folder = script_folder;
-        info!("Script Folder: {:?}", &mut_self.script_folder);
         if config.get_table("servers").unwrap().keys().count() <= 2 {
             builder = Settings::default_loop(
                 builder,

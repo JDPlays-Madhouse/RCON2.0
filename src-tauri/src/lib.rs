@@ -148,6 +148,7 @@ pub const PROGRAM: &str = "RCON2.0";
 #[allow(unused_variables, unreachable_code)]
 pub async fn run() {
     let settings = Settings::new();
+
     let config = settings.config();
     let _script_settings = ScriptSettings::new();
     let log_level = if config.get_bool("debug").unwrap() {
@@ -235,6 +236,9 @@ pub async fn run() {
                 .with(ErrorLayer::default())
                 .init();
             debug!("Log Established");
+            info!("Config File: {:?}", &settings.config_filepath());
+            info!("Log Folder: {:?}", &settings.log_folder);
+            info!("Script Folder: {:?}", &settings.script_folder);
 
             Ok(())
         })
