@@ -230,8 +230,16 @@ impl TwitchApiConnection {
         }
 
         match token.access_token.validate_token(&self.client).await {
-            Ok(_vt) => {
+            Ok(vt) => {
                 TwitchApiConnection::update_token(Some(token.clone())).await;
+                let token_exp = vt
+                    .expires_in
+                    .expect("Token should have an expiration.")
+                    .as_secs();
+                let hours = token_exp / 3600;
+                let mins = (token_exp % 3600) / 60;
+                let secs = token_exp % 60;
+                info!("Token expires in {}:{}:{}", hours, mins, secs);
                 Ok(token)
             }
             Err(e) => {
