@@ -9,6 +9,7 @@ import LogArea from "@/components/servers/server-log";
 import ServerSwitcher from "@/components/servers/server-switcher";
 import Settings from "@/components/settings/settings";
 import TwitchTrigger from "@/components/twitch/twitch-triggers";
+import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -35,7 +36,7 @@ export default function Home() {
 
   useEffect(() => {
     invoke<boolean>("get_config_bool", { key: "show_logs" }).then((show) =>
-      setShowLogs(show),
+      setShowLogs(show)
     );
   }, []);
   useEffect(() => {
@@ -60,12 +61,27 @@ export default function Home() {
           />
           <ServerControl selectedServer={selectedServer} />
           <IntegrationStatus />
+          <Button
+            onClick={() => {
+              invoke<Channel>("refresh_twitch_websocket", {})
+                .then(console.log)
+                .catch(console.log);
+            }}
+            className="text-white"
+          >
+            Refresh Twitch Websocket
+          </Button>
         </div>
-        <MainNav  page={page} setPage={setPage} />
+
+        <MainNav page={page} setPage={setPage} />
       </header>
       <ResizablePanelGroup direction="vertical" className="border max-w-dvw">
         <ResizablePanel defaultSize={70}>
-          <Router page={page} selectedServer={selectedServer} setSelectedServer={setSelectedServer}/>
+          <Router
+            page={page}
+            selectedServer={selectedServer}
+            setSelectedServer={setSelectedServer}
+          />
         </ResizablePanel>
         <ResizableHandle withHandle />
 
@@ -86,7 +102,7 @@ export default function Home() {
 type RouterProps = {
   page: Page;
   selectedServer?: Server;
-  setSelectedServer: React.Dispatch<React.SetStateAction<Server | undefined>>
+  setSelectedServer: React.Dispatch<React.SetStateAction<Server | undefined>>;
 };
 
 function Router({ page, selectedServer, setSelectedServer }: RouterProps) {
@@ -99,19 +115,17 @@ function Router({ page, selectedServer, setSelectedServer }: RouterProps) {
           selectedServer={selectedServer}
         />
       );
-    case Page.ServerSettings: 
+    case Page.ServerSettings:
       return (
-      <ServerConfig
-        className=""
-        server={selectedServer}
-        setSelectedServer={setSelectedServer}
-      />
-      )
+        <ServerConfig
+          className=""
+          server={selectedServer}
+          setSelectedServer={setSelectedServer}
+        />
+      );
     case Page.TwitchTriggers:
-      return (
-      <TwitchTrigger/>
-      )
+      return <TwitchTrigger />;
     case Page.Settings:
-      return <Settings />
+      return <Settings />;
   }
 }
