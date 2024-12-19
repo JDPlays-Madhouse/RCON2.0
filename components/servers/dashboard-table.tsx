@@ -40,7 +40,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DataTablePagination } from "./datatables/pagination";
+import { DataTablePagination } from "../datatables/pagination";
+import { cn } from "@/lib/utils";
 
 export type CommandTrigger = {
   serverTrigger: GameServerTrigger;
@@ -103,28 +104,37 @@ export const column: ColumnDef<CommandTrigger>[] = [
       switch (trigger.trigger) {
         case "Chat":
           return (
-            <CellToolTip helper="The pattern that will trigger the command.">
+            <CellToolTip
+              helper="The pattern that will trigger the command."
+              className="cursor-text"
+            >
               {trigger.data.pattern}
             </CellToolTip>
           );
         case "ChatRegex":
           return (
-            <CellToolTip helper="The pattern that will trigger the command.">
+            <CellToolTip
+              helper="The pattern that will trigger the command."
+              className="cursor-text"
+            >
               {trigger.data.pattern}
             </CellToolTip>
           );
         case "ChannelPointRewardRedeemed":
           return (
-            <CellToolTip helper="{Channel Points Reward Name} - {Twitch ID for reward}">
+            <CellToolTip
+              helper="{Channel Points Reward Name} - {Twitch ID for reward}"
+              className="cursor-text"
+            >
               {`${trigger.data.title} - ${trigger.data.id}`}
             </CellToolTip>
           );
         case "Subscription":
           return (
-          <CellToolTip helper="When a user subscribes to your channel">
-          Subscription
-          </CellToolTip>
-          )
+            <CellToolTip helper="When a user subscribes to your channel">
+              Subscription
+            </CellToolTip>
+          );
       }
     },
   },
@@ -267,7 +277,8 @@ export default function DashboardTable<TData, TValue>({
           </TableBody>
         </Table>
         <div className="flex items-center justify-end space-x-2 py-4">
-          <DataTablePagination table={table}/>        </div>
+          <DataTablePagination table={table} />{" "}
+        </div>
       </div>
     </div>
   );
@@ -276,21 +287,24 @@ export default function DashboardTable<TData, TValue>({
 function CellToolTip({
   helper,
   children,
+  className = "",
 }: {
   helper: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger>{children}</TooltipTrigger>
-        <TooltipContent className="mt-2 text-s bg-secondary">
-          <p>{helper}</p>
+        <TooltipTrigger className={className}>{children}</TooltipTrigger>
+        <TooltipContent className={cn("mt-2 text-s bg-secondary")}>
+          <div>{helper}</div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 }
+
 // function handleOnClick() {
 //    console.log("HandleOnClick");
 //    if (command && selectedServer) {

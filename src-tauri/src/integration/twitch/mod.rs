@@ -50,8 +50,8 @@ pub struct TwitchApiConnection {
     pub command_joinhandle: Option<JoinHandle<Result<(), mpsc::RecvError>>>,
     pub redirect_url: String,
     pub client: TwitchClient<'static, ReqwestClient>,
-    pub websocket: Option<WebsocketClient>,
-    pub websocket_joinhandle: Option<tokio::task::JoinHandle<()>>,
+    pub websocket: Option<WebsocketClient>, // TODO: Change to Option<Arc<Mutex<WebsocketClient>>>
+    pub websocket_joinhandle: Option<tauri::async_runtime::JoinHandle<()>>,
     pub session_id: Option<String>,
     pub scope: Vec<Scope>,
     pub runner: Runner,
@@ -143,8 +143,8 @@ impl TwitchApiConnection {
 }
 
 impl TwitchApiConnection {
-    pub async fn run(&mut self, config: Config) {
-        self.new_websocket(config).await;
+    pub async fn run(&mut self, config: Config, force: bool) {
+        self.new_websocket(config, force).await;
         match self.runner.run() {
             Ok(_) => {}
             Err(e) => {
@@ -153,13 +153,13 @@ impl TwitchApiConnection {
         }
     }
 
-    pub async fn new_websocket(&mut self, config: Config) {
+    pub async fn new_websocket(&mut self, config: Config, _force: bool) {
         debug!("new websocket");
         if let Some(joinhandle) = self.websocket_joinhandle.take() {
             joinhandle.abort();
             info!(
                 "Old Twitch Websocket is finished: {}",
-                joinhandle.is_finished()
+                joinhandle.inner().is_finished()
             );
         }
         let token = self.check_token().await.unwrap();
@@ -188,14 +188,23 @@ impl TwitchApiConnection {
             self.runner.tx(),
         ));
         let websocket = self.websocket.clone().unwrap();
-        self.websocket_joinhandle = Some(tokio::spawn(async move {
+        self.websocket_joinhandle = Some(tauri::async_runtime::spawn(async move {
             use websocket::WebsocketError::*;
+            let mut websocket_loop = websocket.clone();
             loop {
-                match websocket.clone().run().await {
+                match websocket_loop.run().await {
                     Ok(_) => {}
                     Err(e @ Reconnect) | Err(e @ InvalidToken) | Err(e @ TokenElapsed) => {
                         info!("{:?}", e);
-                        refresh_token().await;
+                        match refresh_token().await {
+                            Some(t) => {
+                                websocket_loop.token = t;
+                            }
+                            None => {
+                                error!("No token found");
+                                break;
+                            }
+                        };
                         continue;
                     }
                     Err(e) => {
@@ -508,6 +517,20 @@ pub async fn get_channel_point_rewards(
 
         Ok(CustomChannelPointRewardInfo::from_list(rewards_list))
     }
+}
+
+#[tauri::command]
+#[instrument(skip(twitch_mutex))]
+pub async fn refresh_twitch_websocket(
+    twitch_mutex: State<'_, Arc<futures::lock::Mutex<TwitchApiConnection>>>,
+    config: State<'_, Arc<futures::lock::Mutex<config::Config>>>,
+) -> Result<(), String> {
+    let mut twitch = twitch_mutex.lock().await;
+    let config = config.lock().await.clone();
+    info!("Refreshing websocket");
+    twitch.new_websocket(config, true).await;
+    info!("Websocket refreshed");
+    Ok(())
 }
 
 // #[cfg(test)]

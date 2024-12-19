@@ -4,7 +4,10 @@ import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Command, GameServerTrigger, RconCommand, Server } from "@/types";
-import DashboardTable, { column, CommandTrigger } from "@/components/dashboard-table";
+import DashboardTable, {
+  column,
+  CommandTrigger,
+} from "@/components/servers/dashboard-table";
 
 interface ServerDashBoardProps extends React.ComponentProps<"div"> {
   showLog: boolean;
@@ -39,7 +42,7 @@ export default function ServerDashboard({
     <div
       className={cn(
         "flex flex-col h-full items-center justify-start p-6 my-auto gap-2",
-        className,
+        className
       )}
       {...props}
     >

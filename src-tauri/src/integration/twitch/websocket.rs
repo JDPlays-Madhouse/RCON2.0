@@ -117,7 +117,7 @@ impl WebsocketClient {
 
     /// Run the websocket subscriber
     #[tracing::instrument(skip_all, fields())]
-    pub async fn run(mut self) -> Result<(), WebsocketError> {
+    pub async fn run(&mut self) -> Result<(), WebsocketError> {
         // Establish the stream
         let mut s = match self.connect().await {
             Ok(s) => s,

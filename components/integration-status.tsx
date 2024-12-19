@@ -50,9 +50,9 @@ export default function IntegrationStatusBar({
     setStatuses({ ...statuses });
   }
 
-  function handleConnectToIntegration(api: Api) {
+  function handleConnectToIntegration(api: Api, force = false) {
     // handleSetStatuses({ status: "Connecting", api }, api);
-    invoke<IntegrationStatus>("connect_to_integration", { api })
+    invoke<IntegrationStatus>("connect_to_integration", { api, force })
       .then((status) => {
         handleSetStatuses(status, api);
       })

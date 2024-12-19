@@ -271,6 +271,7 @@ pub async fn run() {
             integration::list_of_integrations,
             integration::status::integration_status,
             integration::twitch::get_channel_point_rewards,
+            integration::twitch::refresh_twitch_websocket,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

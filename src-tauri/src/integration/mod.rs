@@ -160,6 +160,7 @@ pub async fn connect_to_integration(
     api: Api,
     twitch_integration: State<'_, Arc<futures::lock::Mutex<TwitchApiConnection>>>,
     config: State<'_, Arc<futures::lock::Mutex<config::Config>>>,
+    force: bool,
 ) -> Result<IntegrationStatus, IntegrationError> {
     use Api::*;
     let config = config.lock().await.clone();
@@ -169,7 +170,7 @@ pub async fn connect_to_integration(
             let mut twitch = twitch_integration.lock().await;
             match twitch.check_token().await {
                 Ok(_t) => {
-                    twitch.run(config).await;
+                    twitch.run(config, force).await;
                     Ok(IntegrationStatus::Connected(Api::Twitch))
                 }
                 Err(e) => {
