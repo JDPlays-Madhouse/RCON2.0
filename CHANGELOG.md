@@ -1,17 +1,25 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+
+<a name="0.1.9"></a>
+## [0.1.9](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.8...0.1.9) (2024-12-19)
+
 ### Bug Fixes
+
 1. **Twitch Websocket:** Potential fix for token elapsing and added a force button. - [641d504](https://github.com/JDPlays-Madhouse/RCON2.0/commit/641d504c962aa2a84d4272ac68c8436e40dfc699?w=1&diff=split)
 1. **Twitch Websocket:** Handling reconnect the same as token elapsed. - [c6be250](https://github.com/JDPlays-Madhouse/RCON2.0/commit/c6be250793490346dc1c379b281e1f4c1ad4dadb?w=1&diff=split)
 
 ### Development
+
 1. Added separate token cache for development. - [ccd5aa6](https://github.com/JDPlays-Madhouse/RCON2.0/commit/ccd5aa6757c8fa2b8c49f2a0de7365262c99e000?w=1&diff=split)
 
 ### Documentation
+
 1. Add to known bugs. - [762cbe3](https://github.com/JDPlays-Madhouse/RCON2.0/commit/762cbe3babfc0246f40f564154b516f9aec80746?w=1&diff=split)
 
 ### Features
+
 1. **UI:** Added refresh Twitch Websocket button to UI. - [afb1b05](https://github.com/JDPlays-Madhouse/RCON2.0/commit/afb1b05e3688ce4e7c0bca8faeacd9c9ff3370ce?w=1&diff=split)
 
 
