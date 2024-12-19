@@ -320,19 +320,7 @@ impl TwitchApiConnection {
         };
 
         match token.access_token.validate_token(&self.client).await {
-            Ok(vt) => {
-                if vt.expires_in.expect("Token should have an expiration.")
-                    < Duration::from_secs(15_000)
-                {
-                    if let Err(e) = token.refresh_token(&self.client).await {
-                        error!("{:?}", e);
-                        return Err(IntegrationError::Token(TokenError::UnknownError));
-                    };
-                }
-                let mut token_container = TOKEN.lock().await;
-                *token_container = Some(token.clone());
-                Ok(IntegrationStatus::Connected(api))
-            }
+            Ok(vt) => Ok(IntegrationStatus::Connected(api)),
             Err(e) => {
                 use twitch_oauth2::tokens::errors::ValidationError;
                 match e {

@@ -363,7 +363,7 @@ impl WebsocketClient {
                         payload: ReconnectPayload { session },
                         ..
                     } => {
-                        info!("Reconnect to Websocket");
+                        info!("Reconnect to Websocket: {}", session.id);
                         Err(WebsocketError::Reconnect)
                     }
                     EventsubWebsocketData::Keepalive {
