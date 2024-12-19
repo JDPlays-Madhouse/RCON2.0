@@ -239,7 +239,7 @@ impl TwitchApiConnection {
                 let hours = token_exp / 3600;
                 let mins = (token_exp % 3600) / 60;
                 let secs = token_exp % 60;
-                info!("Token expires in {}:{}:{}", hours, mins, secs);
+                info!("Token expires in {}:{:02}:{:02}", hours, mins, secs);
                 Ok(token)
             }
             Err(e) => {
