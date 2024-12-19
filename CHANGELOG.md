@@ -1,6 +1,12 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Bug Fixes
+1. **Twitch Websocket:** Handling reconnect the same as token elapsed. - [c6be250](https://github.com/JDPlays-Madhouse/RCON2.0/commit/c6be250793490346dc1c379b281e1f4c1ad4dadb?w=1&diff=split)
+
+### Development
+1. Added separate token cache for development. - [ccd5aa6](https://github.com/JDPlays-Madhouse/RCON2.0/commit/ccd5aa6757c8fa2b8c49f2a0de7365262c99e000?w=1&diff=split)
+
 
 <a name="0.1.8"></a>
 ## [0.1.8](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.7...0.1.8) (2024-12-18)
