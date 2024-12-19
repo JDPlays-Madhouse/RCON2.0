@@ -12,7 +12,7 @@ use std::{
     time::Duration,
 };
 use tauri::State;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, info, instrument};
 
 use crate::command::Runner;
 
@@ -377,7 +377,7 @@ impl TwitchApiConnection {
 }
 
 impl Transmitter for TwitchApiConnection {
-    /// Adds or changes the integration event transmitor.
+    /// Adds or changes the integration event transmittor.
     ///
     /// Returns the old transmittor in an option.
     fn add_transmitter(
@@ -529,7 +529,7 @@ pub async fn get_channel_point_rewards(
 //     }
 //
 //     #[rstest]
-//     fn connection_initilization(twitch_connection: TwitchApiConnection) {
+//     fn connection_initialization(twitch_connection: TwitchApiConnection) {
 //         let empty_vec: Vec<&str> = Vec::new();
 //         assert_eq!(twitch_connection.username, "username");
 //         assert_eq!(twitch_connection.client_id, "client_id");

@@ -71,10 +71,12 @@ impl From<UserToken> for SerializableUserToken {
 
 pub fn token_cache(key: String) -> DiskCache<String, SerializableUserToken> {
     let config = sled::Config::new().flush_every_ms(None);
+    let folder = if cfg!(dev) { "RCON2.0-dev" } else { "RCON2.0" };
+    debug!("Cache folder: {}", folder);
     DiskCacheBuilder::new(key)
         .set_connection_config(config)
         .set_sync_to_disk_on_cache_change(true)
-        .set_disk_directory(dirs::cache_dir().unwrap().join("RCON2.0"))
+        .set_disk_directory(dirs::cache_dir().unwrap().join(folder))
         .build()
         .context("Token cache build")
         .unwrap()

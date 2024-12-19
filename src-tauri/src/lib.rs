@@ -204,7 +204,6 @@ pub async fn run() {
 
     let config_clone = config.clone();
     let twitch_int_clone = Arc::clone(&twitch_integration);
-
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_cli::init())
