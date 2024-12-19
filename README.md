@@ -83,7 +83,7 @@ If there any not listed that you want, start an issue, and I will add it if poss
 2. channel.channel_points_custom_reward_redemption.add: Initial reward redemption.
 3. channel.channel_points_custom_reward_redemption.update: Amending a reward redemption. (Not Recommended yet)
 4. channel.subscribe: New subscribers
-5. channel.subscription.message: Resubscribers
+5. channel.subscription.message: Re-subscribers
 
 ### YouTube
 
@@ -243,6 +243,15 @@ websocket_subscription = [
 ]
 ```
 
+> [!TIP]
+> If you want to trigger on every message, set the pattern to "".
+>
+> ```toml
+> trigger_type = "Chat"
+> pattern = ""
+> ```
+>
+
 ##### Channel Point Reward Redeemed
 
 Matches just on twitches channel point reward redeemed. Title is the title of the redeem and the id is the twitch ID.
@@ -264,7 +273,7 @@ websocket_subscription = [
 ]
 ```
 
-##### Subsciption
+##### Subscription
 
 Matches any subscription events.
 
@@ -276,7 +285,7 @@ Required websocket subscription in main config file.
 
 ```toml
     "channel.subscribe", # for new subscriptions.
-    "channel.subscription.message", # for resubsciptions.
+    "channel.subscription.message", # for re-subscriptions.
 ]
 ```
 
@@ -285,4 +294,11 @@ Required websocket subscription in main config file.
 
 ## Known Bugs
 
-- Cli doesn't work for windows - possible solution [github.com](https://github.com/tauri-apps/tauri/issues/8305#issuecomment-1826871949)
+- [ ] Cli doesn't work for windows - possible solution [github.com](https://github.com/tauri-apps/tauri/issues/8305#issuecomment-1826871949)
+- [ ] On the main page of UI, unable to highlight trigger text in table.
+- [ ] Warning log saying, please ignore for now:
+
+  ```text
+  3:40:34 pm - WARNING - log - NewEvents emitted without explicit RedrawEventsCleared
+  3:40:34 pm - WARNING - log - RedrawEventsCleared emitted without explicit MainEventsCleared
+  ```
