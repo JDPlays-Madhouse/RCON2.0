@@ -1,6 +1,10 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Debugging Measure
+1. **Twitch OAuth Token:** Displaying the remaining time of token. - [5919617](https://github.com/JDPlays-Madhouse/RCON2.0/commit/591961773d823863376d7b61b1dc075a1c5f8f03?w=1&diff=split)
+1. **Twitch OAuth Token:** Displaying the remaining time of token. - [ffee655](https://github.com/JDPlays-Madhouse/RCON2.0/commit/ffee6557ff7082f28ec016a55d4ee8bb52b88b30?w=1&diff=split)
+
 
 <a name="0.1.9"></a>
 ## [0.1.9](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.8...0.1.9) (2024-12-19)
