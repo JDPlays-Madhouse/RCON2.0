@@ -9,7 +9,6 @@ use std::{
         Arc,
     },
     thread::JoinHandle,
-    time::Duration,
 };
 use tauri::State;
 use tracing::{debug, error, info, instrument};
@@ -197,8 +196,8 @@ impl TwitchApiConnection {
                     Err(e @ Reconnect) | Err(e @ InvalidToken) | Err(e @ TokenElapsed) => {
                         info!("{:?}", e);
                         match refresh_token().await {
-                            Some(t) => {
-                                websocket_loop.token = t;
+                            Some(token) => {
+                                websocket_loop.token = token;
                             }
                             None => {
                                 error!("No token found");
@@ -229,7 +228,7 @@ impl TwitchApiConnection {
             }
         }
 
-        match token.access_token.validate_token(&self.client).await {
+        match token.validate_token(&self.client).await {
             Ok(vt) => {
                 TwitchApiConnection::update_token(Some(token.clone())).await;
                 let token_exp = vt
@@ -314,13 +313,13 @@ impl TwitchApiConnection {
         if self.connecting {
             return Ok(IntegrationStatus::Connecting(api));
         };
-        let mut token: UserToken = match TOKEN.lock().await.clone() {
+        let token: UserToken = match TOKEN.lock().await.clone() {
             Some(t) => t,
             None => return Ok(IntegrationStatus::Disconnected(api)),
         };
 
-        match token.access_token.validate_token(&self.client).await {
-            Ok(vt) => Ok(IntegrationStatus::Connected(api)),
+        match token.validate_token(&self.client).await {
+            Ok(_vt) => Ok(IntegrationStatus::Connected(api)),
             Err(e) => {
                 use twitch_oauth2::tokens::errors::ValidationError;
                 match e {

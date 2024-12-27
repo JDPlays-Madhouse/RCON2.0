@@ -29,6 +29,7 @@ pub enum IntegrationError {
     Unknown,
 }
 
+/// TODO: Add clearer UI indication of check.
 #[tauri::command]
 #[instrument(level = "trace")]
 pub async fn integration_status(

@@ -9,12 +9,12 @@
 //! - [x] Connect to an Rcon Server.
 //! - [x] Send commands to Rcon Server.
 //! - [x] Configure through TOML commands to send to RCON server with defined triggers.
-//! - [ ] React to triggers and send events to RCON server.
+//! - [x] React to triggers and send events to RCON server.
 //!
 //! ## Todo
 //!
-//! - [ ] Write commands to file.
-//! - [ ] React to events.
+//! - [x] Write commands to file.
+//! - [x] React to events.
 //!
 //! ## Classes
 #![doc = simple_mermaid::mermaid!("../../docs/mermaid/classes.mmd")]
