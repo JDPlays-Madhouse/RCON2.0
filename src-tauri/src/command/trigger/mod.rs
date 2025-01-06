@@ -8,6 +8,13 @@ use crate::integration::{CustomRewardEvent, CustomRewardVariant, IntegrationEven
 mod server_trigger;
 pub use server_trigger::GameServerTrigger;
 
+mod subscription;
+pub use subscription::SubscriptionTier;
+mod comparison_operator;
+pub use comparison_operator::ComparisonOperator;
+
+
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Hash, Eq, PartialOrd, Ord)]
 #[serde(tag = "trigger", content = "data")]
 pub enum Trigger {
@@ -27,8 +34,9 @@ pub enum Trigger {
         id: String,
         variant: CustomRewardVariant,
     },
-    Subscription,
+    Subscription {tier: SubscriptionTier, comparison_operator: ComparisonOperator},
 }
+
 impl PartialEq<IntegrationEvent> for Trigger {
     fn eq(&self, event: &IntegrationEvent) -> bool {
         match self {
@@ -50,10 +58,22 @@ impl PartialEq<IntegrationEvent> for Trigger {
                 error!("Chat Regex as a trigger not implemented yet.");
                 false
             }
-            Trigger::Subscription => {
-                if let IntegrationEvent::Subscription { .. } = event {
-                    // TODO: Implement tiers for triggers.
-                    true
+            Trigger::Subscription { tier, comparison_operator  } => {
+                let trigger_tier = tier.clone();
+                if let IntegrationEvent::Subscription { tier , ..  } = event {
+                    let event_tier = tier.clone();
+
+                    let result = dbg!(event_tier.cmp(&trigger_tier));
+                    use ComparisonOperator::*;
+                    match comparison_operator {
+                        Lt => result.is_lt(),
+                        Le => result.is_le(),
+                        Eq => result.is_eq(),
+                        Gt =>  result.is_gt(),
+                        Ge =>  result.is_ge(),
+                        Ne =>  result.is_ne(),
+                        Any => true,
+                    }
                 } else {
                     false
                 }
@@ -82,7 +102,10 @@ impl Trigger {
                 id: Default::default(),
                 variant: Default::default(),
             },
-            Subscription => Subscription,
+            Subscription {..} => Subscription{
+                tier: SubscriptionTier::default(),
+                comparison_operator: ComparisonOperator::default(),
+            },
         }
     }
 
@@ -100,7 +123,7 @@ impl Trigger {
             Trigger::ChannelPointRewardRedeemed { .. } => {
                 IntegrationEvent::ChannelPoint(CustomRewardEvent::default())
             }
-            Trigger::Subscription => IntegrationEvent::Subscription {
+            Trigger::Subscription {..} => IntegrationEvent::Subscription {
                 tier: Default::default(),
                 user_name: Default::default(),
             },
@@ -208,7 +231,33 @@ impl TryFrom<Value> for Trigger {
                 };
                 Ok(Self::ChannelPointRewardRedeemed { title, id, variant })
             }
-            "subscription" => Ok(Self::Subscription),
+            "subscription" => {
+                let tier = match trigger_table.get("tier") {
+                    Some(t) => t.clone().into(),
+                    None => {warn!(
+                        "A trigger_type of '{}' needs the properties: {:?}. Defaulting to \"{:?}\"",
+                        trigger_type,
+                        vec!["tier", "comparison_operator"],
+                        SubscriptionTier::default()
+                    );
+
+                    SubscriptionTier::default()}
+                };
+                let comparison_operator = match trigger_table.get("comparison_operator"){
+                    Some(t) => t.clone().into(),
+                    None => {
+                        warn!(
+                        "A trigger_type of '{}' needs the properties: {:?} Defaulting to \"{:?}\"",
+                        trigger_type,
+                        vec!["tier", "comparison_operator"],
+                        ComparisonOperator::default()
+
+                    );
+                    ComparisonOperator::default()
+                    }
+            };
+                Ok(Self::Subscription { tier, comparison_operator })
+            }
             trig => {
                 error!("Trigger type has not been implemented: {}", trig);
                 bail!("Trigger type has not been implemented: {}", trig)
@@ -248,13 +297,293 @@ impl From<Trigger> for Value {
                 map.insert("id".to_string(), ValueKind::from(id));
                 map.insert("variant".to_string(), ValueKind::from(variant));
             }
-            Trigger::Subscription => {
+            Trigger::Subscription{ tier, comparison_operator } => {
                 map.insert(
                     "trigger_type".to_string(),
                     ValueKind::from(stringify!(Subscription)),
                 );
+                map.insert("tier".to_string(), ValueKind::from(tier));
+                map.insert("comparison_operator".to_string(), ValueKind::from(comparison_operator));
             }
         }
         Self::new(None, ValueKind::from(map))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("test", false, IntegrationEvent::Chat { msg: "test".to_string(), author: String::new() })]
+    #[case("test", true, IntegrationEvent::Chat { msg: "test".to_string(), author: String::new() })]
+    #[case("Test", false, IntegrationEvent::Chat { msg: "test".to_string(), author: String::new() })]
+    #[case("test", false, IntegrationEvent::Chat { msg: "testa".to_string(), author: String::new() })]
+    #[case("test", true, IntegrationEvent::Chat { msg: "testa".to_string(), author: String::new() })]
+    #[case("Test", false, IntegrationEvent::Chat { msg: "testa".to_string(), author: String::new() })]
+    fn chat_triggered(
+        #[case] pattern: &str,
+        #[case] case_sensitive: bool,
+        #[case] event: IntegrationEvent,
+    ) {
+        assert_eq!(
+            Trigger::Chat {
+                pattern: pattern.to_string(),
+                case_sensitive
+            },
+            event
+        )
+    }
+
+    #[rstest]
+    #[case("testa", false, IntegrationEvent::Chat { msg: "test".to_string(), author: String::new() })]
+    #[case("testa", true, IntegrationEvent::Chat { msg: "test".to_string(), author: String::new() })]
+    #[case("Test", true, IntegrationEvent::Chat { msg: "test".to_string(), author: String::new() })]
+    fn chat_not_triggered(
+        #[case] pattern: &str,
+        #[case] case_sensitive: bool,
+        #[case] event: IntegrationEvent,
+    ) {
+        assert_ne!(
+            Trigger::Chat {
+                pattern: pattern.to_string(),
+                case_sensitive
+            },
+            event
+        )
+    }
+
+    #[rstest]
+    #[case("Testing", "1", CustomRewardVariant::New , IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "1".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::New }))]
+    #[case("Testing", "1", CustomRewardVariant::Update , IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "1".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::Update }))]
+    #[case(
+        "ting", 
+        "1", 
+        CustomRewardVariant::New, 
+        IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "1".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::New })
+    )]    
+    #[case("Testing", "2", CustomRewardVariant::Update , IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "2".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::Update }))]
+    fn channel_point_rewards_triggered(
+        #[case] title: &str,
+        #[case] id: &str,
+        #[case] variant: CustomRewardVariant,
+        #[case] event: IntegrationEvent,
+    ) {
+        assert_eq!(
+            Trigger::ChannelPointRewardRedeemed {
+                title: title.to_string(),
+                id: id.to_string(),
+                variant
+            },
+            event
+        )
+    }
+
+    #[rstest]
+    #[case(
+        "Testing", 
+        "1", 
+        CustomRewardVariant::Update, 
+        IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "1".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::New })
+    )]
+    #[case(
+        "Testing", 
+        "2", 
+        CustomRewardVariant::New, 
+        IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "1".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::New })
+    )]
+    fn channel_point_rewards_not_triggered(
+        #[case] title: &str,
+        #[case] id: &str,
+        #[case] variant: CustomRewardVariant,
+        #[case] event: IntegrationEvent,
+    ) {
+        assert_ne!(
+            Trigger::ChannelPointRewardRedeemed {
+                title: title.to_string(),
+                id: id.to_string(),
+                variant
+            },
+            event)
+    }
+
+    #[rstest]
+    #[case(
+        SubscriptionTier::Tier1,
+        ComparisonOperator::Any, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier2, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier2,
+        ComparisonOperator::Any, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier1, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier3,
+        ComparisonOperator::Any, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier1, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Prime,
+        ComparisonOperator::Any, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Prime, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Other(String::from("Test_Tier")),
+        ComparisonOperator::Any, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Other(String::from("Test_Tier1")), user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Other(String::from("Test_Tier")),
+        ComparisonOperator::Any, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Other(String::from("Test_Tier")), user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier1,
+        ComparisonOperator::Eq, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier1, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier2,
+        ComparisonOperator::Eq, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier2, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier3,
+        ComparisonOperator::Eq, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier3, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Prime,
+        ComparisonOperator::Eq, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Prime, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Other(String::from("Test_Tier")),
+        ComparisonOperator::Eq, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Other(String::from("Test_Tier")), user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier2,
+        ComparisonOperator::Lt, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier1, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier2,
+        ComparisonOperator::Le, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier1, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier2,
+        ComparisonOperator::Le, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier2, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier3,
+        ComparisonOperator::Ne, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier1, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Prime,
+        ComparisonOperator::Gt, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier2, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Other(String::from("Test_Tier")),
+        ComparisonOperator::Ge, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier3, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Other(String::from("Test_Tier")),
+        ComparisonOperator::Ge, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Other(String::from("Test_Tier")), user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Other(String::from("Test_Tier")),
+        ComparisonOperator::Any, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Other(String::from("Test_Tier21")), user_name: String::new()}
+    )]
+    fn channel_subscription_triggered(
+        #[case] tier: SubscriptionTier,
+        #[case] comparison_operator: ComparisonOperator,
+        #[case] event: IntegrationEvent,
+    ) {
+        assert_eq!(
+            Trigger::Subscription { tier, comparison_operator },
+            event
+        )
+    }
+
+    #[rstest]
+    #[case(
+        SubscriptionTier::Tier2,
+        ComparisonOperator::Eq, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier1, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier3,
+        ComparisonOperator::Eq, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier2, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier3,
+        ComparisonOperator::Eq, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Prime, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Other(String::from("Test_Tier")),
+        ComparisonOperator::Eq, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Other(String::from("Test_Tier1")), user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Prime,
+        ComparisonOperator::Eq, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Other(String::from("Test_Tier1")), user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier2,
+        ComparisonOperator::Lt, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier3, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier2,
+        ComparisonOperator::Le, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier3, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Prime,
+        ComparisonOperator::Le, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier2, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier3,
+        ComparisonOperator::Ne, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier3, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier2,
+        ComparisonOperator::Gt, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Tier2, user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier2,
+        ComparisonOperator::Gt, 
+        IntegrationEvent::Subscription { tier: SubscriptionTier::Other(String::from("Test")), user_name: String::new()}
+    )]
+    #[case(
+        SubscriptionTier::Tier2,
+        ComparisonOperator::Gt, 
+        IntegrationEvent::Chat { msg: String::from("Test"), author: String::from("Test") }
+    )]
+    fn channel_subscription_not_triggered(
+        #[case] tier: SubscriptionTier,
+        #[case] comparison_operator: ComparisonOperator,
+        #[case] event: IntegrationEvent,
+    ) {
+        assert_ne!(
+            Trigger::Subscription { tier, comparison_operator },
+            event
+        )
     }
 }

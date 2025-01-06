@@ -61,16 +61,6 @@ export default function Home() {
           />
           <ServerControl selectedServer={selectedServer} />
           <IntegrationStatus />
-          <Button
-            onClick={() => {
-              invoke<Channel>("refresh_twitch_websocket", {})
-                .then(console.log)
-                .catch(console.log);
-            }}
-            className="text-white"
-          >
-            Refresh Twitch Websocket
-          </Button>
         </div>
 
         <MainNav page={page} setPage={setPage} />

@@ -6,7 +6,7 @@ use anyhow::Result;
 use futures::stream::FusedStream;
 use tokio::sync::mpsc::Sender;
 use tokio_tungstenite::tungstenite;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use tracing::{trace, Instrument};
 use twitch_api::{
     client::ClientDefault,

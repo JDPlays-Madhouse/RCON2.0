@@ -11,7 +11,7 @@ use tracing::{error, info, instrument, trace};
 
 mod runner;
 pub mod settings;
-mod trigger;
+pub mod trigger;
 pub use runner::Runner;
 pub use trigger::{GameServerTrigger, Trigger};
 mod command_type;

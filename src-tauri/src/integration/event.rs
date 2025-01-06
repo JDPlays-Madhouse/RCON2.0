@@ -5,6 +5,8 @@ use config::ValueKind;
 use serde::{Deserialize, Serialize};
 use twitch_types::SubscriptionTier;
 
+use crate::command::trigger;
+
 #[allow(dead_code)]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Hash)]
 pub enum IntegrationEvent {
@@ -17,7 +19,7 @@ pub enum IntegrationEvent {
     },
     ChannelPoint(CustomRewardEvent),
     Subscription {
-        tier: String,
+        tier: trigger::SubscriptionTier,
         user_name: String,
     },
     Unknown,
@@ -71,24 +73,26 @@ impl IntegrationEvent {
 pub fn normalise_tier(
     twitch_tier: Option<SubscriptionTier>,
     _youtube_tier: Option<String>,
-) -> String {
+) -> trigger::SubscriptionTier {
     if twitch_tier.is_some() {
         match twitch_tier.unwrap() {
-            SubscriptionTier::Tier1 => "Tier1".to_string(),
-            SubscriptionTier::Tier2 => "Tier2".to_string(),
-            SubscriptionTier::Tier3 => "Tier3".to_string(),
-            SubscriptionTier::Prime => "Prime".to_string(),
-            SubscriptionTier::Other(t) => t,
+            SubscriptionTier::Tier1 => trigger::SubscriptionTier::Tier1,
+            SubscriptionTier::Tier2 => trigger::SubscriptionTier::Tier2,
+            SubscriptionTier::Tier3 => trigger::SubscriptionTier::Tier3,
+            SubscriptionTier::Prime => trigger::SubscriptionTier::Prime,
+            SubscriptionTier::Other(t) => trigger::SubscriptionTier::Other(t),
         }
     } else {
-        String::new()
+        trigger::SubscriptionTier::Other(String::new())
     }
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Hash, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum CustomRewardVariant {
     #[default]
+    /// Needs subscription to "channel.channel_points_custom_reward_redemption.add"
     New,
+    /// Needs subscription to "channel.channel_points_custom_reward_redemption.update"
     Update,
 }
 
@@ -128,5 +132,5 @@ pub struct CustomRewardEvent {
     /// Reward Title
     pub title: String,
     pub user_name: String,
-    pub status: CustomRewardVariant,
+    pub variant: CustomRewardVariant,
 }
