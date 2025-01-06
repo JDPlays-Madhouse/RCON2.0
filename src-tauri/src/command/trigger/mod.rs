@@ -22,6 +22,7 @@ pub enum Trigger {
     Chat {
         /// continuous text, case insensitive. not regex.
         pattern: String,
+        case_sensitive: bool,
     },
     /// Trigger for chat messages using regular expression. Not Implemented.
     ChatRegex {
@@ -40,16 +41,25 @@ pub enum Trigger {
 impl PartialEq<IntegrationEvent> for Trigger {
     fn eq(&self, event: &IntegrationEvent) -> bool {
         match self {
-            Trigger::Chat { pattern } => {
+            Trigger::Chat {
+                pattern,
+                case_sensitive,
+            } => {
                 if let IntegrationEvent::Chat { msg, .. } = event {
-                    msg.as_str().contains(pattern)
+                    let mut msg_match = msg.clone();
+                    let mut pattern_match = pattern.clone();
+                    if !case_sensitive {
+                        msg_match = msg_match.to_lowercase();
+                        pattern_match = pattern_match.to_lowercase();
+                    }
+                    msg_match.as_str().contains(&pattern_match)
                 } else {
                     false
                 }
             }
-            Trigger::ChannelPointRewardRedeemed { id, .. } => {
+            Trigger::ChannelPointRewardRedeemed { id, variant, .. } => {
                 if let IntegrationEvent::ChannelPoint(reward_event) = event {
-                    &reward_event.id == id
+                    &reward_event.id == id && &reward_event.variant == variant
                 } else {
                     false
                 }
@@ -93,6 +103,7 @@ impl Trigger {
         match self {
             Chat { .. } => Chat {
                 pattern: Default::default(),
+                case_sensitive: true,
             },
             ChatRegex { .. } => ChatRegex {
                 pattern: Default::default(),
@@ -173,7 +184,31 @@ impl TryFrom<Value> for Trigger {
         match trigger_type.to_lowercase().as_str() {
             "chat" => match trigger_table.get("pattern") {
                 Some(p) => match p.clone().into_string() {
-                    Ok(pattern) => Ok(Self::Chat { pattern }),
+                    Ok(pattern) => {
+                        let case_sensitive = match trigger_table.get("case_sensitive") {
+                            Some(c) => match c.clone().into_bool() {
+                                Ok(b) => b,
+                                Err(e) => {
+                                    error!(
+                                        "Invalid case_sensitve property for chat trigger: {:?}",
+                                        e
+                                    );
+                                    warn!("Setting value to true");
+                                    true
+                                }
+                            },
+                            None => {
+                                error!("Missing case_sensitve property for chat trigger");
+                                warn!("Setting value to true");
+                                true
+                            }
+                        };
+
+                        Ok(Self::Chat {
+                            pattern,
+                            case_sensitive,
+                        })
+                    }
                     Err(e) => bail!(e),
                 },
                 None => bail!(
@@ -270,12 +305,19 @@ impl From<Trigger> for Value {
     fn from(trigger: Trigger) -> Self {
         let mut map = Map::new();
         match trigger {
-            Trigger::Chat { pattern } => {
+            Trigger::Chat {
+                pattern,
+                case_sensitive,
+            } => {
                 map.insert(
                     "trigger_type".to_string(),
                     ValueKind::from(stringify!(Chat)),
                 );
                 map.insert("pattern".to_string(), ValueKind::from(pattern));
+                map.insert(
+                    "case_sensitive".to_string(),
+                    ValueKind::from(case_sensitive),
+                );
             }
             Trigger::ChatRegex { pattern } => {
                 map.insert(

@@ -187,6 +187,7 @@ mod tests {
     fn trigger() -> Trigger {
         Trigger::Chat {
             pattern: "test".to_string(),
+            case_sensitive: true,
         }
     }
 
