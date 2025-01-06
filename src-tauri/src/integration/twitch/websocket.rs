@@ -115,6 +115,47 @@ impl WebsocketClient {
         }
     }
 
+    /// Refreshes the token if it exists. Returns the new token if successful.
+    pub async fn refresh_token(&mut self) -> Option<UserToken> {
+        info!("Refreshing OAuth Token.");
+        
+        let old_token = self.token.clone();
+
+        let reqwest_client = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .unwrap();
+
+        match self.token.refresh_token(&reqwest_client).await {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Error refreshing token: {}", e);
+            }
+        };
+
+        match self.token.validate_token(&reqwest_client).await {
+            Ok(vt) => {
+                let token_exp = vt
+                    .expires_in
+                    .expect("Token should have an expiration.")
+                    .as_secs();
+                let hours = token_exp / 3600;
+                let mins = (token_exp % 3600) / 60;
+                let secs = token_exp % 60;
+                info!("Valid token expires in {}:{:02}:{:02}", hours, mins, secs);
+            }
+            Err(e) => {
+                error!("Validation Error: {:?}", e);
+                return None;
+            }
+        }
+        if old_token.access_token == self.token.access_token {
+            info!("{} == {}: {}", old_token.access_token.secret(), self.token.access_token.secret(), old_token.access_token == self.token.access_token);
+            warn!("Token not refreshed!")
+        }
+        Some(self.token.clone())
+    }
+
     /// Run the websocket subscriber
     #[tracing::instrument(skip_all, fields())]
     pub async fn run(&mut self) -> Result<(), WebsocketError> {
@@ -132,14 +173,11 @@ impl WebsocketClient {
                 return Err(WebsocketError::Terminated);
             }
 
-            if self.token.is_elapsed() {
-                error!("Token Expired!!");
-                return Err(WebsocketError::TokenElapsed);
-            }
+
             let next = futures::StreamExt::next(&mut s);
-            let next = async_std::future::timeout(self.keep_alive_seconds, next);
+            let next_with_timeout = async_std::future::timeout(self.keep_alive_seconds, next);
             tokio::select!(
-                msg_result = next => {
+                msg_result = next_with_timeout => {
                     match msg_result {
                         Ok(Some(msg)) => {
                             let span = tracing::info_span!("message received", raw_message = ?msg);
@@ -202,144 +240,34 @@ impl WebsocketClient {
                         payload: WelcomePayload { session },
                         ..
                     }
+                    | EventsubWebsocketData::Reconnect {
+                        payload: ReconnectPayload { session },
+                        ..
+                    }
                      => self.process_welcome_message(session).await,
-                    // Here is where you would handle the events you want to listen to
                     EventsubWebsocketData::Notification {
                         metadata: _,
                         payload,
                     } => {
                         match payload {
-                            Event::ChannelChatMessageV1(eventsub::Payload { message, .. }) => {
-                                match message.clone() {
-                                    eventsub::Message::Notification(chat_payload) => {
-                                        let message = chat_payload.chatter_user_name.to_string()
-                                            + " - "
-                                            + &chat_payload.message.text;
-                                        info!(
-                                            target = "rcon2::integration::twitch::websocket::ChannelChatMessage",
-                                            message
-                                        );
-                                        let _ = self
-                                            .event_tx
-                                            .send(IntegrationEvent::Chat {
-                                                msg: chat_payload.message.text.to_string(),
-                                                author: chat_payload.chatter_user_name.to_string(),
-                                            })
-                                            .await;
-                                    }
-                                    _ => {
-                                        error! {"Unhandled Message Payload: {:?}", message}
-                                    }
-                                };
-                            }
+                            Event::ChannelChatMessageV1(eventsub::Payload { message, .. }
+                            ) => self.channel_chat_message(message).await,
+
                             Event::ChannelPointsCustomRewardRedemptionAddV1(
                                 eventsub::Payload { message, .. },
-                            ) => match message.clone() {
-                                eventsub::Message::Notification(reward_payload) => {
-                                    let message = format!(
-                                        "New: {}({}) redeemed by {}: {}",
-                                        reward_payload.reward.title,
-                                        reward_payload.reward.id,
-                                        reward_payload.user_name,
-                                        reward_payload.user_input
-                                    );
-                                    info!(target = "rcon2::integration::twitch::websocket::ChannelPointsCustomRewardRedemptionAdd", message);
-                                    let _ = self
-                                        .event_tx
-                                        .send(IntegrationEvent::ChannelPoint(CustomRewardEvent {
-                                            event_id: reward_payload.id.to_string(),
-                                            id: reward_payload.reward.id.to_string(),
-                                            title: reward_payload.reward.title,
-                                            user_name: reward_payload.user_name.to_string(),
-                                            status: CustomRewardVariant::New,
-                                        }))
-                                        .await;
-                                }
-                                _ => {
-                                    error! {"Unhandled ChannelPointsCustomRewardRedemptionAddV1 Payload: {:?}", message}
-                                }
-                            },
+                            ) => self.channel_points_custom_reward_redemption_add(message).await,
+
                             Event::ChannelPointsCustomRewardRedemptionUpdateV1(
                                 eventsub::Payload { message, .. },
-                            ) => match message.clone() {
-                                eventsub::Message::Notification(reward_payload) => {
-                                    let message = format!(
-                                        "Update: {}({}) redeemed by {}: {}",
-                                        reward_payload.reward.title,
-                                        reward_payload.reward.id,
-                                        reward_payload.user_name,
-                                        reward_payload.user_input
-                                    );
+                            ) => self.channel_points_custom_reward_redemption_update(message).await,
 
-                                    info!(target = "rcon2::integration::twitch::websocket::ChannelPointsCustomRewardRedemptionUpdate", message);
-                                    let _ = self
-                                        .event_tx
-                                        .send(IntegrationEvent::ChannelPoint(CustomRewardEvent {
-                                            event_id: reward_payload.id.to_string(),
-                                            id: reward_payload.reward.id.to_string(),
-                                            title: reward_payload.reward.title,
-                                            user_name: reward_payload.user_name.to_string(),
-                                            status: CustomRewardVariant::Update,
-                                        }))
-                                        .await;
-                                }
-                                _ => {
-                                    error! {"Unhandled ChannelPointsCustomRewardRedemptionUpdateV1 Payload: {:?}", message}
-                                }
-                            },
-                            Event::ChannelSubscribeV1(eventsub::Payload { message, .. }) => {
-                                match message.clone() {
-                                    eventsub::Message::Notification(reward_payload) => {
-                                        let message = format!(
-                                            "{:?} subscription: {}",
-                                            reward_payload.tier, reward_payload.user_name,
-                                        );
-
-                                        info!(target = "rcon2::integration::twitch::websocket::ChannelSubscribe", message);
-                                        let _ = self
-                                            .event_tx
-                                            .send(IntegrationEvent::Subscription {
-                                                tier: normalise_tier(
-                                                    Some(reward_payload.tier.clone()),
-                                                    None,
-                                                ),
-                                                user_name: reward_payload.user_name.to_string(),
-                                            })
-                                            .await;
-                                    }
-                                    _ => {
-                                        error! {"Unhandled ChannelSubscribeV1 Payload: {:?}", message}
-                                    }
-                                }
-                            }
+                            Event::ChannelSubscribeV1(eventsub::Payload { message, .. }
+                            ) => self.channel_subscribe(message).await,
+                            
                             Event::ChannelSubscriptionMessageV1(eventsub::Payload {
                                 message,
                                 ..
-                            }) => match message.clone() {
-                                eventsub::Message::Notification(reward_payload) => {
-                                    let message = format!(
-                                        "{:?} subscription: {} - {}",
-                                        reward_payload.tier,
-                                        reward_payload.user_name,
-                                        reward_payload.message.text
-                                    );
-
-                                    info!(target = "rcon2::integration::twitch::websocket::ChannelSubscriptionMessageV1", message);
-                                    let _ = self
-                                        .event_tx
-                                        .send(IntegrationEvent::Subscription {
-                                            tier: normalise_tier(
-                                                Some(reward_payload.tier.clone()),
-                                                None,
-                                            ),
-                                            user_name: reward_payload.user_name.to_string(),
-                                        })
-                                        .await;
-                                }
-                                _ => {
-                                    error! {"Unhandled ChannelSubscriptionMessageV1 Payload: {:?}", message}
-                                }
-                            },
+                            }) => self.channel_subscribe_message(message).await,
 
                             m => {
                                 let message =
@@ -358,13 +286,6 @@ impl WebsocketClient {
                     } => {
                         error!("Revocation event: {metadata:?}");
                         Err(WebsocketError::Terminated)
-                    }
-                    EventsubWebsocketData::Reconnect {
-                        payload: ReconnectPayload { session },
-                        ..
-                    } => {
-                        info!("Reconnect to Websocket: {}", session.id);
-                        Err(WebsocketError::Reconnect)
                     }
                     EventsubWebsocketData::Keepalive {
                         metadata: _,
@@ -396,6 +317,141 @@ impl WebsocketClient {
         }
     }
 
+    async fn channel_subscribe_message(&mut self, message: eventsub::Message<eventsub::channel::ChannelSubscriptionMessageV1>) {
+        match message.clone() {
+            eventsub::Message::Notification(reward_payload) => {
+                let message = format!(
+                    "{:?} subscription: {} - {}",
+                    reward_payload.tier,
+                    reward_payload.user_name,
+                    reward_payload.message.text
+                );
+
+                info!(target = "rcon2::integration::twitch::websocket::ChannelSubscriptionMessageV1", message);
+                let _ = self
+                    .event_tx
+                    .send(IntegrationEvent::Subscription {
+                        tier: normalise_tier(
+                            Some(reward_payload.tier.clone()),
+                            None,
+                        ),
+                        user_name: reward_payload.user_name.to_string(),
+                    })
+                    .await;
+            }
+            _ => {
+                error! {"Unhandled ChannelSubscriptionMessageV1 Payload: {:?}", message}
+            }
+        }
+    }
+
+    async fn channel_subscribe(&mut self, message: eventsub::Message<eventsub::channel::ChannelSubscribeV1>) {
+        match message.clone() {
+            eventsub::Message::Notification(reward_payload) => {
+                let message = format!(
+                    "{:?} subscription: {}",
+                    reward_payload.tier, reward_payload.user_name,
+                );
+
+                info!(target = "rcon2::integration::twitch::websocket::ChannelSubscribe", message);
+                let _ = self
+                    .event_tx
+                    .send(IntegrationEvent::Subscription {
+                        tier: normalise_tier(
+                            Some(reward_payload.tier.clone()),
+                            None,
+                        ),
+                        user_name: reward_payload.user_name.to_string(),
+                    })
+                    .await;
+            }
+            _ => {
+                error! {"Unhandled ChannelSubscribeV1 Payload: {:?}", message}
+            }
+        }
+    }
+
+    async fn channel_points_custom_reward_redemption_update(&mut self, message: eventsub::Message<eventsub::channel::ChannelPointsCustomRewardRedemptionUpdateV1>) {
+        match message.clone() {
+            eventsub::Message::Notification(reward_payload) => {
+                let message = format!(
+                    "Update: {}({}) redeemed by {}: {}",
+                    reward_payload.reward.title,
+                    reward_payload.reward.id,
+                    reward_payload.user_name,
+                    reward_payload.user_input
+                );
+
+                info!(target = "rcon2::integration::twitch::websocket::ChannelPointsCustomRewardRedemptionUpdate", message);
+                let _ = self
+                    .event_tx
+                    .send(IntegrationEvent::ChannelPoint(CustomRewardEvent {
+                        event_id: reward_payload.id.to_string(),
+                        id: reward_payload.reward.id.to_string(),
+                        title: reward_payload.reward.title,
+                        user_name: reward_payload.user_name.to_string(),
+                        variant: CustomRewardVariant::Update,
+                    }))
+                    .await;
+            }
+            _ => {
+                error! {"Unhandled ChannelPointsCustomRewardRedemptionUpdateV1 Payload: {:?}", message}
+            }
+        }
+    }
+
+    async fn channel_points_custom_reward_redemption_add(&mut self, message: eventsub::Message<eventsub::channel::ChannelPointsCustomRewardRedemptionAddV1>) {
+        match message.clone() {
+        eventsub::Message::Notification(reward_payload) => {
+            let message = format!(
+                "New: {}({}) redeemed by {}: {}",
+                reward_payload.reward.title,
+                reward_payload.reward.id,
+                reward_payload.user_name,
+                reward_payload.user_input
+            );
+            info!(target = "rcon2::integration::twitch::websocket::ChannelPointsCustomRewardRedemptionAdd", message);
+            let _ = self
+                .event_tx
+                .send(IntegrationEvent::ChannelPoint(CustomRewardEvent {
+                    event_id: reward_payload.id.to_string(),
+                    id: reward_payload.reward.id.to_string(),
+                    title: reward_payload.reward.title,
+                    user_name: reward_payload.user_name.to_string(),
+                    variant: CustomRewardVariant::New,
+                }))
+                .await;
+        }
+        _ => {
+            error! {"Unhandled ChannelPointsCustomRewardRedemptionAddV1 Payload: {:?}", message}
+        }
+                                    }
+    }
+
+    async fn channel_chat_message(&mut self, message: eventsub::Message<eventsub::channel::ChannelChatMessageV1>) {
+        match message.clone() {
+            eventsub::Message::Notification(chat_payload) => {
+                let message = chat_payload.chatter_user_name.to_string()
+                    + " - "
+                    + &chat_payload.message.text;
+                info!(
+                    target = "rcon2::integration::twitch::websocket::ChannelChatMessage",
+                    message
+                );
+                let _ = self
+                    .event_tx
+                    .send(IntegrationEvent::Chat {
+                        msg: chat_payload.message.text.to_string(),
+                        author: chat_payload.chatter_user_name.to_string(),
+                    })
+                    .await;
+            }
+            _ => {
+                error! {"Unhandled Message Payload: {:?}", message}
+            }
+        };
+    }
+
     pub async fn process_welcome_message(
         &mut self,
         data: SessionData<'_>,
@@ -406,9 +462,16 @@ impl WebsocketClient {
                 .map_err(url.parse())
                 .unwrap();
         }
-        // check if the token is expired, if it is, request a new token. This only works if using a oauth service for getting a token
+
         if self.token.is_elapsed() {
-            return Err(WebsocketError::TokenElapsed);
+            match self.refresh_token().await{
+                Some(t) => {
+                    self.token = t
+                }
+                None => {
+                    return Err(WebsocketError::TokenElapsed);
+                }
+            };
         }
 
         if let Some(keep_alive) = data.keepalive_timeout_seconds {

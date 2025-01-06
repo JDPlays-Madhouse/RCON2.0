@@ -1,57 +1,48 @@
-use std::sync::{Arc, LazyLock};
 use std::time::SystemTime;
 
-use anyhow::Context;
+use anyhow::{bail, Context, Result};
 use cached::{stores::DiskCacheBuilder, DiskCache, IOCached};
 use http::{Response, StatusCode};
+use reqwest::Client as ReqwestClient;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufStream};
 use tokio::net::TcpListener;
-use tracing::{debug, error, info, warn};
-use twitch_oauth2::TwitchToken;
+use tracing::{debug, error, info, instrument, warn};
+use twitch_api::TwitchClient;
+use twitch_oauth2::TwitchToken as _;
 use twitch_oauth2::{tokens::UserTokenBuilder, AccessToken, RefreshToken, Scope, UserToken};
 
 const HOUR: u64 = 3600;
 
-/// The token used to authenticate with the Twitch API.
-pub static TOKEN: LazyLock<Arc<tokio::sync::Mutex<Option<UserToken>>>> =
-    LazyLock::new(|| Arc::new(tokio::sync::Mutex::new(None)));
-
-/// Refreshes the token if it exists. Returns the new token if successful.
-pub async fn refresh_token() -> Option<UserToken> {
+/// Refreshes the token. Returns the new token if successful.
+#[instrument(skip(client))]
+pub async fn refresh_token(
+    mut token: UserToken,
+    client: &TwitchClient<'static, ReqwestClient>,
+) -> Result<UserToken> {
     info!("Refreshing OAuth Token.");
-    let mut token_cont = TOKEN.lock().await;
-    let token = match token_cont.as_mut() {
-        Some(t) => t,
-        None => return None,
-    };
     let old_token = token.clone();
 
-    let reqwest_client = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .unwrap();
-
-    match (*token).refresh_token(&reqwest_client).await {
+    match token.refresh_token(client).await {
         Ok(_) => {}
         Err(e) => {
             error!("Error refreshing token: {}", e);
         }
     };
 
-    match token.validate_token(&reqwest_client).await {
+    match token.validate_token(client).await {
         Ok(_t) => {
             info!("Token Validated.")
         }
         Err(e) => {
             error!("Validation Error: {:?}", e);
-            return None;
+            bail!(e)
         }
     }
     if old_token.access_token == token.access_token {
         warn!("Token not refreshed!")
     }
-    Some(token.clone())
+    Ok(token.clone())
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
