@@ -1,9 +1,20 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
-### Debugging Measure
-1. **Twitch OAuth Token:** Displaying the remaining time of token. - [5919617](https://github.com/JDPlays-Madhouse/RCON2.0/commit/591961773d823863376d7b61b1dc075a1c5f8f03?w=1&diff=split)
-1. **Twitch OAuth Token:** Displaying the remaining time of token. - [ffee655](https://github.com/JDPlays-Madhouse/RCON2.0/commit/ffee6557ff7082f28ec016a55d4ee8bb52b88b30?w=1&diff=split)
+
+<a name="0.1.10"></a>
+## [0.1.10](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.9...0.1.10) (2025-01-07)
+
+### Bug Fixes
+
+1. **Twitch OAuth Token:** Removed over refreshing of token. - [80d5555](https://github.com/JDPlays-Madhouse/RCON2.0/commit/80d5555b001aa803e6d670528094e78945bd37dd?w=1&diff=split)
+1. **Twitch Token:** Refreshing the token correctly after the roughly 14,000 secs. - [05e10cc](https://github.com/JDPlays-Madhouse/RCON2.0/commit/05e10ccf79bdd9120609e86347b9c0357608e66f?w=1&diff=split)
+1. **Twitch Websocket:** Reconnecting to stream correctly now. - [82b5b1a](https://github.com/JDPlays-Madhouse/RCON2.0/commit/82b5b1aa0134f61cee77b1d58d4cb1882be6f4b7?w=1&diff=split)
+
+### Features
+
+1. **Twitch Trigger:** Case sensitive can be set for chat trigger. - [9a93e9e](https://github.com/JDPlays-Madhouse/RCON2.0/commit/9a93e9eea42f1cfd0b8b39bbae410ae4567d7a10?w=1&diff=split)
+1. **Twitch Trigger:** Added subscription tier comparison for trigger. - [5ae49a3](https://github.com/JDPlays-Madhouse/RCON2.0/commit/5ae49a3529f8f0ab1892525ec234eac4e7a8a784?w=1&diff=split)
 
 
 <a name="0.1.9"></a>
@@ -13,6 +24,11 @@
 
 1. **Twitch Websocket:** Potential fix for token elapsing and added a force button. - [641d504](https://github.com/JDPlays-Madhouse/RCON2.0/commit/641d504c962aa2a84d4272ac68c8436e40dfc699?w=1&diff=split)
 1. **Twitch Websocket:** Handling reconnect the same as token elapsed. - [c6be250](https://github.com/JDPlays-Madhouse/RCON2.0/commit/c6be250793490346dc1c379b281e1f4c1ad4dadb?w=1&diff=split)
+
+### Debugging Measure
+
+1. **Twitch OAuth Token:** Displaying the remaining time of token. - [5919617](https://github.com/JDPlays-Madhouse/RCON2.0/commit/591961773d823863376d7b61b1dc075a1c5f8f03?w=1&diff=split)
+1. **Twitch OAuth Token:** Displaying the remaining time of token. - [ffee655](https://github.com/JDPlays-Madhouse/RCON2.0/commit/ffee6557ff7082f28ec016a55d4ee8bb52b88b30?w=1&diff=split)
 
 ### Development
 
