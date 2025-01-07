@@ -14,7 +14,6 @@ mod comparison_operator;
 pub use comparison_operator::ComparisonOperator;
 
 
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Hash, Eq, PartialOrd, Ord)]
 #[serde(tag = "trigger", content = "data")]
 pub enum Trigger {
@@ -182,41 +181,6 @@ impl TryFrom<Value> for Trigger {
         };
 
         match trigger_type.to_lowercase().as_str() {
-            "chat" => match trigger_table.get("pattern") {
-                Some(p) => match p.clone().into_string() {
-                    Ok(pattern) => {
-                        let case_sensitive = match trigger_table.get("case_sensitive") {
-                            Some(c) => match c.clone().into_bool() {
-                                Ok(b) => b,
-                                Err(e) => {
-                                    error!(
-                                        "Invalid case_sensitve property for chat trigger: {:?}",
-                                        e
-                                    );
-                                    warn!("Setting value to true");
-                                    true
-                                }
-                            },
-                            None => {
-                                error!("Missing case_sensitve property for chat trigger");
-                                warn!("Setting value to true");
-                                true
-                            }
-                        };
-
-                        Ok(Self::Chat {
-                            pattern,
-                            case_sensitive,
-                        })
-                    }
-                    Err(e) => bail!(e),
-                },
-                None => bail!(
-                    "A trigger_type of '{}' needs the properties: {:?}",
-                    trigger_type,
-                    vec!["pattern"]
-                ),
-            },
             "channelpointrewardredeemed" => {
                 let id = match trigger_table.get("id") {
                     Some(id) => match id.clone().into_string() {
@@ -266,6 +230,41 @@ impl TryFrom<Value> for Trigger {
                 };
                 Ok(Self::ChannelPointRewardRedeemed { title, id, variant })
             }
+            "chat" => match trigger_table.get("pattern") {
+                Some(p) => match p.clone().into_string() {
+                    Ok(pattern) => {
+                        let case_sensitive = match trigger_table.get("case_sensitive") {
+                            Some(c) => match c.clone().into_bool() {
+                                Ok(b) => b,
+                                Err(e) => {
+                                    error!(
+                                        "Invalid case_sensitve property for chat trigger: {:?}",
+                                        e
+                                    );
+                                    warn!("Setting value to true");
+                                    true
+                                }
+                            },
+                            None => {
+                                error!("Missing case_sensitve property for chat trigger");
+                                warn!("Setting value to true");
+                                true
+                            }
+                        };
+
+                        Ok(Self::Chat {
+                            pattern,
+                            case_sensitive,
+                        })
+                    }
+                    Err(e) => bail!(e),
+                },
+                None => bail!(
+                    "A trigger_type of '{}' needs the properties: {:?}",
+                    trigger_type,
+                    vec!["pattern"]
+                ),
+            },
             "subscription" => {
                 let tier = match trigger_table.get("tier") {
                     Some(t) => t.clone().into(),

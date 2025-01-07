@@ -89,7 +89,10 @@ webbrowser = "1.0.2"
 
 
 [dev-dependencies]
-rstest = "0.23.0"
+rstest = "0.24.0"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-cli = "2"
+
+[features]
+mock_api = ["twitch_api/mock_api"]

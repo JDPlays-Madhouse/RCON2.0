@@ -51,7 +51,7 @@ impl TryFrom<Map<String, Value>> for RconCommandLua {
             None => bail!("No 'command_type' specified."),
         };
         match command_type.to_lowercase().as_str() {
-            "script" => {
+            "file" => {
                 let script_key = "relative_path";
                 match value.get(script_key) {
                     Some(s) => {

@@ -4,10 +4,13 @@ use crate::integration::event::{normalise_tier, CustomRewardVariant};
 use crate::integration::{self, CustomRewardEvent, IntegrationEvent};
 use anyhow::Result;
 use futures::stream::FusedStream;
+use futures::TryStreamExt;
+use itertools::Itertools;
 use tokio::sync::mpsc::Sender;
 use tokio_tungstenite::tungstenite;
 use tracing::{debug, error, info, warn};
 use tracing::{trace, Instrument};
+use twitch_api::eventsub::EventType;
 use twitch_api::{
     client::ClientDefault,
     eventsub::{
@@ -20,7 +23,7 @@ use twitch_api::{
 };
 use twitch_oauth2::{TwitchToken, UserToken};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum WebsocketError {
     TokenElapsed,
     Reconnect,
@@ -46,6 +49,7 @@ pub struct WebsocketClient {
     pub user_id: types::UserId,
     pub connect_url: url::Url,
     pub subscriptions: Vec<eventsub::EventType>,
+    pub subscribed: Vec<eventsub::EventType>,
     pub event_tx: Sender<integration::IntegrationEvent>,
     keep_alive_seconds: Duration,
 }
@@ -84,6 +88,7 @@ impl WebsocketClient {
             user_id,
             connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
             subscriptions,
+            subscribed: Vec::new(),
             keep_alive_seconds: Duration::from_secs(10),
             event_tx,
         }
@@ -150,7 +155,6 @@ impl WebsocketClient {
             }
         }
         if old_token.access_token == self.token.access_token {
-            info!("{} == {}: {}", old_token.access_token.secret(), self.token.access_token.secret(), old_token.access_token == self.token.access_token);
             warn!("Token not refreshed!")
         }
         Some(self.token.clone())
@@ -159,20 +163,17 @@ impl WebsocketClient {
     /// Run the websocket subscriber
     #[tracing::instrument(skip_all, fields())]
     pub async fn run(&mut self) -> Result<(), WebsocketError> {
-        // Establish the stream
         let mut s = match self.connect().await {
             Ok(s) => s,
             Err(e) => return Err(e),
         };
         info!("Connected to Twitch's Websocket");
-        // Loop over the stream, processing messages as they come in.
 
         loop {
             if s.is_terminated() {
                 error!("Websocket Terminated");
                 return Err(WebsocketError::Terminated);
             }
-
 
             let next = futures::StreamExt::next(&mut s);
             let next_with_timeout = async_std::future::timeout(self.keep_alive_seconds, next);
@@ -201,9 +202,18 @@ impl WebsocketClient {
                                 .instrument(span)
                                 .await {
                                 Ok(m) => m,
-                                Err(e) => return Err(e),
+                                Err(e) => {
+                                    if e == WebsocketError::Reconnect {
+                                        s = WebsocketError::FailedToRun("When reconnecting to websocket".into()).map_err(self
+                                        .connect()
+                                        .await
+                                        ).unwrap(); // BUG: Not handling error.
+                                    continue
+                                    } else {
+                                    return Err(e)}
+                                }
                             }
-                            }
+                        }
                         Ok(None) => {
                             error!("Received none");
                         }
@@ -239,12 +249,32 @@ impl WebsocketClient {
                     EventsubWebsocketData::Welcome {
                         payload: WelcomePayload { session },
                         ..
-                    }
-                    | EventsubWebsocketData::Reconnect {
+                    } => self.process_welcome_message(session).await,
+
+                    EventsubWebsocketData::Reconnect {
                         payload: ReconnectPayload { session },
                         ..
+                    } => {
+                        self.session_id = Some(session.id.to_string());
+                        if let Some(url) = session.reconnect_url {
+                            self.connect_url = WebsocketError::InvalidURL(url.to_string())
+                                .map_err(url.parse())
+                                .unwrap();
+                        }
+
+                        if self.token.is_elapsed() {
+                            match self.refresh_token().await{
+                                Some(t) => {
+                                    self.token = t
+                                }
+                                None => {
+                                    return Err(WebsocketError::TokenElapsed);
+                                }
+                            };
+                        }
+                        Err(WebsocketError::Reconnect)
                     }
-                     => self.process_welcome_message(session).await,
+
                     EventsubWebsocketData::Notification {
                         metadata: _,
                         payload,
@@ -481,6 +511,10 @@ impl WebsocketClient {
         let transport = eventsub::Transport::websocket(data.id.clone());
 
         for subscription in self.subscriptions.clone() {
+            if self.subscribed.contains(&subscription){
+                info!("Already subscribed to: {}", &subscription);
+                continue;
+            }
             use eventsub::EventType::*;
             match subscription {
                 ChannelPointsCustomRewardRedemptionAdd => {
@@ -495,10 +529,11 @@ impl WebsocketClient {
                     .await
                     {
                         Ok(sub)  =>  {
+                            self.subscribed.push(subscription);
                             info!("Subscribed to {}", subscription);
                             debug!{"Subscription: {:?}", sub};
                         },
-                        Err(e) => {error!("Failed to subscribe to {}: {}", subscription, e)},
+                        Err(e) => {warn!("Failed to subscribe to {}: {}", subscription, e)},
                     }
                 }
                 ChannelPointsCustomRewardRedemptionUpdate => {
@@ -513,10 +548,11 @@ impl WebsocketClient {
                     .await
                     {
                         Ok(sub)  =>  {
+                            self.subscribed.push(subscription);
                             info!("Subscribed to {}", subscription);
                             debug!{"Subscription: {:?}", sub};
                         },
-                        Err(e) => {error!("Failed to subscribe to {}: {}", subscription, e)},
+                        Err(e) => {warn!("Failed to subscribe to {}: {}", subscription, e)},
                     }
                 }
                 ChannelChatMessage => {
@@ -532,10 +568,11 @@ impl WebsocketClient {
                         .await
                     {
                         Ok(sub)  =>  {
+                            self.subscribed.push(subscription);
                             info!("Subscribed to {}", subscription);
                             debug!{"Subscription: {:?}", sub};
                         },
-                        Err(e) => {error!("Failed to subscribe to {}: {}", subscription, e)},
+                        Err(e) => {warn!("Failed to subscribe to {}: {}", subscription, e)},
                     }
                 }
                 ChannelSubscribe => {
@@ -547,10 +584,11 @@ impl WebsocketClient {
                         ).await 
                     {
                         Ok(sub)  =>  {
+                            self.subscribed.push(subscription);
                             info!("Subscribed to {}", subscription);
                             debug!{"Subscription: {:?}", sub};
                         },
-                        Err(e) => {error!("Failed to subscribe to {}: {}", subscription, e)},
+                        Err(e) => {warn!("Failed to subscribe to {}: {}", subscription, e)},
 
                     }
                 }
@@ -563,19 +601,35 @@ impl WebsocketClient {
                         ).await 
                     {
                         Ok(sub)  =>  {
+                            self.subscribed.push(subscription);
                             info!("Subscribed to {}", subscription);
                             debug!{"Subscription: {:?}", sub};
                         },
-                        Err(e) => {error!("Failed to subscribe to {}: {}", subscription, e)},
+                        Err(e) => {warn!("Failed to subscribe to {}: {}", subscription, e)},
 
                     }
                 }
                 _ => {
                     error!(target:"rcon2::integration::twitch::websocket::subscription", "Tried to subscribe to unimplemented subscription: {}", subscription)
                 }
-                
             }
         }
+        self.current_subsciptions().await;
         Ok(())
     }
+
+    /// TODO: Make return result and compare to current subscribed
+    async fn current_subsciptions(&mut self) -> Vec<EventType> {
+        let mut subscribed: Vec<EventType> = Vec::new();
+        let _ = self.client.get_eventsub_subscriptions(None, None, None, &self.token)
+            .map_ok(|r| {
+                let mut subs = r.subscriptions.into_iter().map(|s| s.type_).collect_vec();
+                subscribed.append(&mut subs);
+            })
+            .try_collect::<Vec<_>>()
+            .await;
+
+        subscribed = subscribed.into_iter().unique_by(|s| s.to_str()).collect_vec();
+        subscribed
+    } 
 }

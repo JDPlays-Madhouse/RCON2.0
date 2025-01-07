@@ -233,6 +233,7 @@ Matches all platforms chat events, matches on exact text. Don't use regex here.
 ```toml
 trigger_type = "Chat"
 pattern = "test"
+case_sensative = false
 ```
 
 Required websocket subscription in main config file.
@@ -249,6 +250,7 @@ websocket_subscription = [
 > ```toml
 > trigger_type = "Chat"
 > pattern = ""
+> case_sensative = true
 > ```
 >
 
@@ -279,7 +281,27 @@ Matches any subscription events.
 
 ```toml
 trigger_type = "Subscription"
+tier = "Tier1"
+comparison_operator = "Any"
 ```
+
+Valid Comaparison Operators:
+
+- `"Any"` | `"*"`: All tiers will trigger.
+- `">"`: Tiers greater than this tier will trigger.
+- `">="`: Tiers greater than and equal to this tier will trigger.
+- `"=="`: Only tiers equal to this tier will trigger.
+- `"!="`: Only tiers not equal to this tier will trigger.
+- `"<"`: Tiers less than this tier will trigger.
+- `"<="`: Tiers less than and equal to this tier will trigger.
+
+Tiers Ordering (High number is greater):
+
+1. Custom (Any text other than those listed below, case insensitive)
+1. Prime
+1. Tier1
+1. Tier2
+1. Tier3
 
 Required websocket subscription in main config file.
 
@@ -302,3 +324,6 @@ Required websocket subscription in main config file.
   3:40:34 pm - WARNING - log - NewEvents emitted without explicit RedrawEventsCleared
   3:40:34 pm - WARNING - log - RedrawEventsCleared emitted without explicit MainEventsCleared
   ```
+
+- [ ] Writing to script file removes any `ChannelPointRewardRedeemed` trigger,
+      therefore writing is disabled until solved.

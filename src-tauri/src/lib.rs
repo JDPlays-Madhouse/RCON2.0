@@ -108,7 +108,7 @@
 //!     ```
 //! 2. Start application.
 //!     ```sh
-//!     TWITCH_HELIX_URL=http://localhost:8080 TWITCH_EVENTSUB_WEBSOCKET_URL=ws://127.0.0.1:8080/ws cargo tauri dev
+//!     TWITCH_HELIX_URL=http://localhost:8080 TWITCH_EVENTSUB_WEBSOCKET_URL=ws://127.0.0.1:8080/ws cargo tauri dev -- --features mock_api
 //!     ```
 //! 3. Send fake events.
 //!     

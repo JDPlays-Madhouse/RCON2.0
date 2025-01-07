@@ -170,7 +170,7 @@ impl ScriptSettings {
         let script_settings = ScriptSettings::new();
         let config = script_settings.config();
 
-        config
+        let commands = config
             .try_deserialize::<Map<String, Value>>()
             .unwrap()
             .iter()
@@ -178,7 +178,10 @@ impl ScriptSettings {
                 Ok(c) => Some(c.set_name(k)),
                 Err(_e) => None,
             })
-            .collect()
+            .collect();
+        // BUG: Removes Channel point rewards...
+        // script_settings.set_commands(&commands);
+        commands
     }
 
     /// Sets a command in config and returns [`None`] if no command with that name exists otherwise
@@ -193,6 +196,18 @@ impl ScriptSettings {
         self.config_builder = builder;
         let _ = self.write();
         old_command
+    }
+
+    pub fn set_commands(&mut self, commands: &Vec<Command>) {
+        let commands = commands.clone();
+        let mut builder = self.config_builder.clone();
+        for command in commands {
+            builder = builder
+                .set_override(command.name.clone(), command.clone())
+                .expect("Setting override");
+        }
+        self.config_builder = builder;
+        let _ = self.write();
     }
 
     pub fn write(&self) -> std::io::Result<()> {
