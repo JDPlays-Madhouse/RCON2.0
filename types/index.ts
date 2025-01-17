@@ -118,7 +118,7 @@ export type ServerStatus =
 export type IntegrationStatusMap = { [Property in Api]: IntegrationStatus };
 
 export type IntegrationStatus =
-  | { status: "Connected"; api: Api }
+  | { status: "Connected"; api: { api: Api; expires_at?: number } }
   | { status: "Disconnected"; api: Api }
   | { status: "Connecting"; api: Api }
   | { status: "Error"; api: { api: Api; error: IntegrationError } }

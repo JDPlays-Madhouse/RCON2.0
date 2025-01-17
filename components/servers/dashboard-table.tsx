@@ -57,7 +57,7 @@ export const column: ColumnDef<CommandTrigger>[] = [
         <Button
           variant="ghost"
           onClick={() => {
-            console.log(column.getIsSorted());
+            // console.log(column.getIsSorted());
             column.toggleSorting(column.getIsSorted() === "asc");
           }}
         >
@@ -67,13 +67,13 @@ export const column: ColumnDef<CommandTrigger>[] = [
       );
     },
     cell: ({ row, cell }) => {
-      console.log({ row, cell });
+      // console.log({ row, cell });
       return (
         <Checkbox
           checked={cell.getValue() as boolean}
           onCheckedChange={(value) => {
             row.original.serverTrigger.enabled = !cell.getValue() as boolean;
-            console.log(row.original);
+            // console.log(row.original);
           }}
           aria-label="Enable command."
         />
@@ -100,7 +100,7 @@ export const column: ColumnDef<CommandTrigger>[] = [
     header: "Trigger",
     cell: ({ cell }) => {
       const trigger: Trigger = cell.getValue() as Trigger;
-      console.log("Trigger: ", trigger);
+      // console.log("Trigger: ", trigger);
       switch (trigger.trigger) {
         case "Chat":
           return (
@@ -196,7 +196,7 @@ export default function DashboardTable<TData, TValue>({
   data,
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+    [],
   );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const table = useReactTable({
@@ -238,9 +238,9 @@ export default function DashboardTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
                     </TableHead>
                   );
                 })}
@@ -258,7 +258,7 @@ export default function DashboardTable<TData, TValue>({
                     <TableCell key={cell.id} className="text-center">
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -9,7 +12,10 @@ use super::{Api, TokenError, TwitchApiConnection};
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "status", content = "api")]
 pub enum IntegrationStatus {
-    Connected(Api),
+    Connected {
+        api: Api,
+        expires_at: Option<i64>,
+    },
     Connecting(Api),
     Disconnected(Api),
     Error {
@@ -18,6 +24,16 @@ pub enum IntegrationStatus {
     },
     #[default]
     Unknown,
+}
+impl IntegrationStatus {
+    pub fn seconds_to(duration: Duration) -> i64 {
+        dbg!(&duration);
+        let expires_at = SystemTime::now() + duration;
+        match expires_at.duration_since(UNIX_EPOCH) {
+            Ok(exp) => exp.as_secs() as i64,
+            Err(e) => -(e.duration().as_secs() as i64),
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]

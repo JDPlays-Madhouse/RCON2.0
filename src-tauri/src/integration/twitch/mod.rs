@@ -317,7 +317,12 @@ impl TwitchApiConnection {
         };
 
         match token.validate_token(&self.client).await {
-            Ok(_vt) => Ok(IntegrationStatus::Connected(api)),
+            Ok(vt) => Ok(IntegrationStatus::Connected {
+                api,
+                expires_at: Some(IntegrationStatus::seconds_to(
+                    vt.expires_in.expect("Should not have non-expiring tokens"),
+                )),
+            }),
             Err(e) => {
                 use twitch_oauth2::tokens::errors::ValidationError;
                 match e {

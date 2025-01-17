@@ -10,15 +10,14 @@ import IntegrationLogo from "./icons";
 import Patreon from "@/components/icons/patreon";
 import StreamLabs from "@/components/icons/streamlabs";
 
-interface IntegrationStatusProps extends React.ComponentProps<"div"> {}
+interface IntegrationStatusProps extends React.ComponentProps<"div"> { }
 
 export default function IntegrationStatusBar({
   className = "",
   ...props
 }: IntegrationStatusProps) {
-  let c = 0;
   const [statuses, setStatuses] = useState<IntegrationStatusMap>(
-    defaultIntegrationStatus()
+    defaultIntegrationStatus(),
   );
   const [integrations, setIntegrations] = useState<Api[]>([]);
 
@@ -44,10 +43,9 @@ export default function IntegrationStatusBar({
 
   function handleSetStatuses(status: IntegrationStatus, api: Api) {
     if (statuses[api].status === status.status) return;
-    c += 1;
-    // console.log("handleSetStatuses", c, status, api);
+    console.log("handleSetStatuses", status, api);
     statuses[api] = status;
-    setStatuses({ ...statuses });
+    setStatuses(statuses);
   }
 
   function handleConnectToIntegration(api: Api, force = false) {

@@ -7,6 +7,7 @@ import {
 import { IntegrationStatus } from "@/types";
 import { TooltipTriggerProps } from "@radix-ui/react-tooltip";
 import React, { useEffect } from "react";
+import CountdownTimer from "../countdown-timer";
 
 export interface LogoProps {
   fill: string;
@@ -32,7 +33,7 @@ export default function IntegrationLogo({
 }: IntegrationProps) {
   const [fill, setFill] = React.useState(secondaryColor);
   const [displayStatus, setDisplayStatus] = React.useState<string>(
-    status.status
+    status.status,
   );
   const [displayText, setDisplayText] = React.useState<string>(status.status);
   useEffect(() => {
@@ -86,7 +87,7 @@ export default function IntegrationLogo({
         }
         break;
       default:
-        displayText = "Click to check status.";
+        displayText = "Click to update status.";
     }
     return displayText;
   }
@@ -100,6 +101,11 @@ export default function IntegrationLogo({
         <TooltipContent className="mt-2 text-s bg-secondary">
           <div>
             {name}: {displayStatus}
+            {status.status == "Connected" && status.api.expires_at ? (
+              <CountdownTimer seconds={status.api.expires_at} preText="Token: "/>
+            ) : (
+              <></>
+            )}
           </div>
           <div>{displayText}</div>
         </TooltipContent>

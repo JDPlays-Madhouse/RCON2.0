@@ -18,6 +18,7 @@ pub use event::{CustomRewardEvent, CustomRewardVariant, IntegrationEvent};
 
 pub mod status;
 pub use status::{integration_status, IntegrationError, IntegrationStatus};
+use twitch_oauth2::TwitchToken;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Api {
@@ -169,9 +170,12 @@ pub async fn connect_to_integration(
         Twitch => {
             let mut twitch = twitch_integration.lock().await;
             match twitch.check_token().await {
-                Ok(_t) => {
+                Ok(t) => {
                     twitch.run(config, force).await;
-                    Ok(IntegrationStatus::Connected(Api::Twitch))
+                    Ok(IntegrationStatus::Connected {
+                        api: Api::Twitch,
+                        expires_at: dbg!(Some(IntegrationStatus::seconds_to(t.expires_in()))),
+                    })
                 }
                 Err(e) => {
                     error!("{:?}", e);
