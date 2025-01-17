@@ -19,6 +19,7 @@ export default function IntegrationStatusBar({
   const [statuses, setStatuses] = useState<IntegrationStatusMap>(
     defaultIntegrationStatus(),
   );
+  const [forceUpdate, setForceUpdate] = useState(0);
   const [integrations, setIntegrations] = useState<Api[]>([]);
 
   useEffect(() => {
@@ -43,13 +44,13 @@ export default function IntegrationStatusBar({
 
   function handleSetStatuses(status: IntegrationStatus, api: Api) {
     if (statuses[api].status === status.status) return;
-    console.log("handleSetStatuses", status, api);
+    setForceUpdate((i) => i+1)
     statuses[api] = status;
     setStatuses(statuses);
   }
 
   function handleConnectToIntegration(api: Api, force = false) {
-    // handleSetStatuses({ status: "Connecting", api }, api);
+    handleSetStatuses({ status: "Connecting", api }, api);
     invoke<IntegrationStatus>("connect_to_integration", { api, force })
       .then((status) => {
         handleSetStatuses(status, api);
@@ -83,12 +84,10 @@ export default function IntegrationStatusBar({
       case "Unknown":
       case "Error":
       case "Disconnected":
-        // console.log(api);
         if (
           statuses[api].status === "Error" &&
           statuses[api].api.error.error === "NotImplemented"
         ) {
-          // console.log("NotImplemented");
           return;
         }
         statuses[api] = { status: "Connecting", api };
@@ -97,7 +96,6 @@ export default function IntegrationStatusBar({
         break;
     }
   }
-
   return (
     <div
       className={cn("flex flex-row gap-2 content-center", className)}

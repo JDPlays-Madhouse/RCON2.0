@@ -31,6 +31,7 @@ export default function IntegrationLogo({
   secondaryColor = "#1e293b",
   ...props
 }: IntegrationProps) {
+  console.log(status)
   const [fill, setFill] = React.useState(secondaryColor);
   const [displayStatus, setDisplayStatus] = React.useState<string>(
     status.status,
@@ -40,7 +41,7 @@ export default function IntegrationLogo({
     setFill(fillColor());
     setDisplayStatus(handleDisplayStatus());
     setDisplayText(handleDisplayText());
-  }, [status.status]);
+  }, [status]);
 
   const fillColor = () => {
     return status.status === "Connected" ? primaryColor : secondaryColor;
@@ -98,7 +99,7 @@ export default function IntegrationLogo({
         <TooltipTrigger {...props}>
           <Logo fill={fill} className={className} />
         </TooltipTrigger>
-        <TooltipContent className="mt-2 text-s bg-secondary">
+        <TooltipContent className="mt-2 text-s bg-secondary" key={name + status.status}>
           <div>
             {name}: {displayStatus}
             {status.status == "Connected" && status.api.expires_at ? (
