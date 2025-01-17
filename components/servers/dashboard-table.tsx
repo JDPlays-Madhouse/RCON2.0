@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/tooltip";
 import { DataTablePagination } from "../datatables/pagination";
 import { cn } from "@/lib/utils";
+import { invoke } from "@tauri-apps/api/core";
 
 export type CommandTrigger = {
   serverTrigger: GameServerTrigger;
@@ -66,14 +67,19 @@ export const column: ColumnDef<CommandTrigger>[] = [
         </Button>
       );
     },
-    cell: ({ row, cell }) => {
-      // console.log({ row, cell });
+    cell: ({ row, cell, table }) => {
       return (
         <Checkbox
           checked={cell.getValue() as boolean}
           onCheckedChange={(value) => {
-            row.original.serverTrigger.enabled = !cell.getValue() as boolean;
-            // console.log(row.original);
+            console.log({ value });
+            invoke("enable_server_trigger", { enable: value, serverTrigger: row.original.serverTrigger, id: row.original.command?.name }).then((value) => {console.log(value)});
+            table.setOptions((options) => {
+              options.data[Number.parseInt(row.id)].serverTrigger.enabled = value as boolean;
+              return options;
+
+            });
+
           }}
           aria-label="Enable command."
         />
@@ -177,9 +183,6 @@ export const column: ColumnDef<CommandTrigger>[] = [
             >
               Copy Command Name
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

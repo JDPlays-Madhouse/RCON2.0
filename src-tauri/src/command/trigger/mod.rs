@@ -326,7 +326,7 @@ impl From<Trigger> for Value {
                 map.insert("pattern".to_string(), ValueKind::from(pattern));
             }
             Trigger::ChannelPointRewardRedeemed {
-                title: name,
+                title,
                 id,
                 variant,
             } => {
@@ -334,7 +334,7 @@ impl From<Trigger> for Value {
                     "trigger_type".to_string(),
                     ValueKind::from(stringify!(ChannelPointRewardRedeemed)),
                 );
-                map.insert("name".to_string(), ValueKind::from(name));
+                map.insert("title".to_string(), ValueKind::from(title));
                 map.insert("id".to_string(), ValueKind::from(id));
                 map.insert("variant".to_string(), ValueKind::from(variant));
             }

@@ -244,6 +244,7 @@ pub async fn run() {
         .invoke_handler(tauri::generate_handler![
             command::create_command,
             command::server_trigger_commands,
+            command::enable_server_trigger,
             logging::fetch_all_logs,
             logging::log,
             logging::log_to_channel,

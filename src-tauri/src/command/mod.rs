@@ -144,11 +144,17 @@ impl Command {
         None
     }
 
+    pub fn update_config(&self) {
+        let mut settings = ScriptSettings::new();
+        settings.set_command(self.clone());
+    }
+
     pub fn remove_server_trigger(
         &self,
         _server: GameServer,
         _trigger: Trigger,
     ) -> Option<GameServerTrigger> {
+        todo!("remove server trigger");
         None
     }
 }
@@ -280,6 +286,28 @@ pub fn create_command(name: String, rcon_lua: RconCommand) -> Result<Command, St
 pub fn get_command(name: String) -> Result<Option<Command>, String> {
     trace!("Get Command");
     Ok(Command::get(&name))
+}
+
+#[tauri::command]
+pub async fn enable_server_trigger(
+    id: String,
+    enable: bool,
+    server_trigger: GameServerTrigger,
+) -> Result<Command, String> {
+    info!("enable_server_trigger");
+    let commands = ScriptSettings::get_commands();
+    if let Some(command) = commands.iter().find(|c| c.id() == id) {
+        command.clone().server_triggers.iter_mut().for_each(|st| {
+            if *st == server_trigger {
+                st.set_enabled(enable);
+            }
+        });
+        command.update_config();
+        Ok(command.clone())
+    } else {
+        info!("enable_server_trigger: Command not found.");
+        Err("enable_server_trigger: Command not found.".to_string())
+    }
 }
 
 #[tauri::command]
