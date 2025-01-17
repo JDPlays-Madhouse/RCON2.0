@@ -10,8 +10,6 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/utils";
-import NextLink from "next/link";
-import { DarkModeToggle } from "./dark-mode-button";
 import React from "react";
 
 interface MainNavProps {
@@ -96,7 +94,6 @@ export default function MainNav({
         <NavigationMenuIndicator />
         {/* TODO: Work out indicator or remove it */}
       </NavigationMenuList>
-      <DarkModeToggle />
     </NavigationMenu>
   );
 }
