@@ -1,6 +1,6 @@
 "use client";
 
-import { Command, Game, GameServerTrigger, Trigger } from "@/types";
+import { Command, Game, GameServerTrigger, Server, Trigger } from "@/types";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/table";
 import { ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Tooltip,
   TooltipContent,
@@ -42,14 +41,16 @@ import {
 } from "@/components/ui/tooltip";
 import { DataTablePagination } from "../datatables/pagination";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import EditableCheckBox from "../datatables/EditableCheckBox";
 
 export type CommandTrigger = {
   serverTrigger: GameServerTrigger;
   command?: Command;
 };
 
-export const column: ColumnDef<CommandTrigger>[] = [
+export const columns: ColumnDef<CommandTrigger>[] = [
   {
     id: "enabled",
     accessorKey: "serverTrigger.enabled",
@@ -58,7 +59,6 @@ export const column: ColumnDef<CommandTrigger>[] = [
         <Button
           variant="ghost"
           onClick={() => {
-            // console.log(column.getIsSorted());
             column.toggleSorting(column.getIsSorted() === "asc");
           }}
         >
@@ -67,24 +67,7 @@ export const column: ColumnDef<CommandTrigger>[] = [
         </Button>
       );
     },
-    cell: ({ row, cell, table }) => {
-      return (
-        <Checkbox
-          checked={cell.getValue() as boolean}
-          onCheckedChange={(value) => {
-            console.log({ value });
-            invoke("enable_server_trigger", { enable: value, serverTrigger: row.original.serverTrigger, id: row.original.command?.name }).then((value) => {console.log(value)});
-            table.setOptions((options) => {
-              options.data[Number.parseInt(row.id)].serverTrigger.enabled = value as boolean;
-              return options;
-
-            });
-
-          }}
-          aria-label="Enable command."
-        />
-      );
-    },
+    cell: EditableCheckBox,
   },
   {
     id: "triggerType",
@@ -106,7 +89,6 @@ export const column: ColumnDef<CommandTrigger>[] = [
     header: "Trigger",
     cell: ({ cell }) => {
       const trigger: Trigger = cell.getValue() as Trigger;
-      // console.log("Trigger: ", trigger);
       switch (trigger.trigger) {
         case "Chat":
           return (
@@ -190,17 +172,54 @@ export const column: ColumnDef<CommandTrigger>[] = [
   },
 ];
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
+interface DataTableProps {
+  selectedServer?: Server;
 }
-export default function DashboardTable<TData, TValue>({
-  columns,
-  data,
-}: DataTableProps<TData, TValue>) {
+type TriggerCommand = [GameServerTrigger, Command];
+
+export default function DashboardTable({ selectedServer }: DataTableProps) {
+  const [data, setData] = useState<CommandTrigger[]>([]);
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    handleUpdateData()
+  }, [selectedServer]);
+
+  const handleUpdateData = () => {
+    setCount((c) => c + 1);
+    if (selectedServer) {
+      invoke<TriggerCommand[]>("server_trigger_commands", {
+        server: selectedServer,
+      }).then((commandtriggers) => {
+        const ret_vec: CommandTrigger[] = [];
+        for (const [trig, comm] of commandtriggers) {
+          ret_vec.push({ serverTrigger: trig, command: comm });
+        }
+        setData(ret_vec);
+      });
+    }
+  };
+
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
   );
+  function updateNestedValue<tValue, tObj>(
+    keyArr: string[],
+    value: tValue,
+    obj: { [index: string]: tObj | tValue }
+  ): { [index: string]: tObj | tValue } {
+    const key = keyArr.shift();
+    if (!key) {
+      return {}
+    }
+    else if (keyArr.length === 0 && key) {
+      obj[key] = value;
+      return obj;
+    } else {
+      obj[key] = updateNestedValue(keyArr, value, obj[key])
+      return obj
+    }
+  };
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const table = useReactTable({
     data,
@@ -215,7 +234,35 @@ export default function DashboardTable<TData, TValue>({
       sorting,
       columnFilters,
     },
+    meta: {
+      updateData: function f<coloumType>(
+        rowIndex: number,
+        columnId: string,
+        value: coloumType,
+        commandName: string
+      ) {
+        const newData = data.map((row, index) => {
+          if (index === rowIndex) {
+            return updateNestedValue(columnId.split("."), value, data[rowIndex]);
+          }
+          else { return row; }
+        });
+
+        const serverTriggers: GameServerTrigger[] = [];
+        newData.forEach((v) => {
+          if (v.command?.name === commandName) {
+            serverTriggers.push(v.serverTrigger)
+          }
+        });
+
+        invoke("update_server_trigger", { commandName, serverTriggers })
+        setData(newData);
+      },
+    },
   });
+
+  console.log({ count, data });
+
   return (
     <div className="w-full">
       <div className="flex items-center py-4">

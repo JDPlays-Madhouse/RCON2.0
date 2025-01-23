@@ -311,6 +311,17 @@ pub async fn enable_server_trigger(
 }
 
 #[tauri::command]
+pub async fn update_server_trigger(
+    command_name: String,
+    server_triggers: Vec<GameServerTrigger>,
+) -> Result<(), String> {
+    info!("update_server_triggers");
+    dbg!(&command_name, &server_triggers);
+
+    Ok(())
+}
+
+#[tauri::command]
 #[instrument(level = "trace")]
 pub async fn server_trigger_commands(
     server: GameServer,

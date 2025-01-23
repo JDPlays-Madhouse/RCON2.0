@@ -221,6 +221,18 @@ pub async fn run() {
                     std::process::exit(1);
                 }
             }
+            let window = app.get_webview_window("main").unwrap();
+            #[cfg(debug_assertions)] // only include this code on debug builds
+            {
+                window.open_devtools();
+            }
+            let title = format!(
+                "{} v{}",
+                window.title().unwrap(),
+                app.package_info().version.clone(),
+            );
+
+            let _ = window.set_title(&title);
             let default_server = servers::default_server_from_settings(config_clone.clone());
 
             app.manage(Arc::new(futures::lock::Mutex::new(config_clone.clone())));
@@ -245,6 +257,7 @@ pub async fn run() {
             command::create_command,
             command::server_trigger_commands,
             command::enable_server_trigger,
+            command::update_server_trigger,
             logging::fetch_all_logs,
             logging::log,
             logging::log_to_channel,
