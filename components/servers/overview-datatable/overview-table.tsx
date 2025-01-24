@@ -12,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Plus } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,11 +39,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DataTablePagination } from "../datatables/pagination";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import EditableCheckBox from "../datatables/EditableCheckBox";
+import { DataTablePagination } from "@/components/datatables/pagination";
+import EditableCheckBox from "@/components/datatables/EditableCheckBox";
 
 export type CommandTrigger = {
   serverTrigger: GameServerTrigger;
@@ -180,7 +180,8 @@ type TriggerCommand = [GameServerTrigger, Command];
 export default function DashboardTable({ selectedServer }: DataTableProps) {
   const [data, setData] = useState<CommandTrigger[]>([]);
   const [count, setCount] = useState(0);
-
+  const [commandFormOpen, setCommandFormOpen] = useState(true);
+  const [triggerFormOpen, setTriggerFormOpen] = useState(true);
   useEffect(() => {
     handleUpdateData()
   }, [selectedServer]);
@@ -261,11 +262,10 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
     },
   });
 
-  console.log({ count, data });
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex items-center py-4 justify-between flex-row w-full">
         <Input
           placeholder="Filter Command..."
           value={
@@ -276,6 +276,24 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
           }
           className="max-w-sm"
         />
+        <div className="flex flex-row gap-2">
+          <Button
+            variant="secondary"
+            className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"
+            onClick={() => setTriggerFormOpen((f) => !f && !commandFormOpen)}
+          >
+            <Plus />
+            <span className="pt-1">Trigger</span>
+          </Button>
+          <Button
+            variant="secondary"
+            className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"
+            onClick={() => setCommandFormOpen((f) => !f&& !triggerFormOpen)}
+          >
+            <Plus />
+            <span className="pt-1">Command</span>
+          </Button>
+        </div>
       </div>
       <div className="rounded-md border w-full">
         <Table>

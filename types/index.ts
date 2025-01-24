@@ -54,9 +54,24 @@ export type RconCommandPrefix =
   | { prefix: "MC" }
   | { prefix: "C" };
 
+export enum CommandPrefixType {
+  Custom = "Custom",
+  SC = "SC",
+  MC = "MC",
+  C = "C",
+}
+
 export type RconLuaCommand =
-  | { commandType: "File"; command: { path: string; command?: string } }
+  | {
+    commandType: "File";
+    command: { relative_path: string; command?: string };
+  }
   | { commandType: "Inline"; command: string };
+
+export enum LuaCommandType {
+  File = "File",
+  Inline = "Inline",
+}
 
 export type RconCommand = {
   prefix: RconCommandPrefix;

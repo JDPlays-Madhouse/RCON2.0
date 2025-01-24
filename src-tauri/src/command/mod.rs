@@ -7,7 +7,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, LazyLock, Mutex},
 };
-use tracing::{error, info, instrument, trace};
+use tracing::{debug, error, info, instrument, trace, warn};
 
 mod runner;
 pub mod settings;
@@ -142,6 +142,16 @@ impl Command {
         }
         self.server_triggers.push(server_trigger);
         None
+    }
+
+    pub fn set_server_triggers(
+        &mut self,
+        server_triggers: Vec<GameServerTrigger>,
+    ) -> Vec<GameServerTrigger> {
+        let old_server_triggers = self.server_triggers.clone();
+        self.server_triggers = server_triggers;
+        self.update_config();
+        old_server_triggers
     }
 
     pub fn update_config(&self) {
@@ -294,7 +304,7 @@ pub async fn enable_server_trigger(
     enable: bool,
     server_trigger: GameServerTrigger,
 ) -> Result<Command, String> {
-    info!("enable_server_trigger");
+    debug!("enable_server_trigger");
     let commands = ScriptSettings::get_commands();
     if let Some(command) = commands.iter().find(|c| c.id() == id) {
         command.clone().server_triggers.iter_mut().for_each(|st| {
@@ -305,7 +315,7 @@ pub async fn enable_server_trigger(
         command.update_config();
         Ok(command.clone())
     } else {
-        info!("enable_server_trigger: Command not found.");
+        warn!("enable_server_trigger: Command not found.");
         Err("enable_server_trigger: Command not found.".to_string())
     }
 }
@@ -315,8 +325,15 @@ pub async fn update_server_trigger(
     command_name: String,
     server_triggers: Vec<GameServerTrigger>,
 ) -> Result<(), String> {
-    info!("update_server_triggers");
-    dbg!(&command_name, &server_triggers);
+    debug!("update_server_triggers");
+    // Get command
+    let mut command = match Command::get(&command_name) {
+        Some(c) => c,
+        None => return Err("Command not found.".to_string()),
+    };
+
+    // Update command
+    command.set_server_triggers(server_triggers);
 
     Ok(())
 }
@@ -346,4 +363,10 @@ pub async fn server_trigger_commands(
         }
     }
     Ok(ret_vec)
+}
+
+#[tauri::command]
+#[instrument(level = "trace")]
+pub async fn commands() -> Result<Vec<Command>, String> {
+    Ok(ScriptSettings::get_commands())
 }

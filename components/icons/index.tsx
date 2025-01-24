@@ -31,7 +31,6 @@ export default function IntegrationLogo({
   secondaryColor = "#1e293b",
   ...props
 }: IntegrationProps) {
-  console.log(status)
   const [fill, setFill] = React.useState(secondaryColor);
   const [displayStatus, setDisplayStatus] = React.useState<string>(
     status.status,

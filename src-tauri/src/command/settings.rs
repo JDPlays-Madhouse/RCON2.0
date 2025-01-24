@@ -223,7 +223,6 @@ impl ScriptSettings {
         let toml_out = toml::to_string_pretty(&serializable)
             .context("Convert to Toml")
             .unwrap();
-        dbg!(&toml_out);
         std::fs::write(self.config_filepath(), toml_out)
     }
 }

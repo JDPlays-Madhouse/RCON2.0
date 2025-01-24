@@ -258,6 +258,7 @@ pub async fn run() {
             command::server_trigger_commands,
             command::enable_server_trigger,
             command::update_server_trigger,
+            command::commands,
             logging::fetch_all_logs,
             logging::log,
             logging::log_to_channel,

@@ -19,7 +19,7 @@ pub use comparison_operator::ComparisonOperator;
 pub enum Trigger {
     /// Trigger for chat messages not using regular expression.
     Chat {
-        /// continuous text, case insensitive. not regex.
+        /// Continuous text, not regex.
         pattern: String,
         case_sensitive: bool,
     },
