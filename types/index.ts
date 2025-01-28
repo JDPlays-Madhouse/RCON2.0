@@ -78,14 +78,34 @@ export type RconCommand = {
   lua_command: RconLuaCommand;
 };
 
+export enum ComparisonOperator {
+  Lt = "<",
+  Le = "<=",
+  Eq = "==",
+  Gt = ">",
+  Ge = ">=",
+  Ne = "!=",
+  Any = "Any",
+}
+
+export enum TriggerType {
+  Chat = "Chat",
+  ChatRegex = "Chat Regex",
+  ChannelPointRewardRedeemed = "Channel Point Reward Redeemed",
+  Subscription = "Subscription",
+}
+
 export type Trigger =
-  | { trigger: "Chat"; data: { pattern: string } }
-  | { trigger: "ChatRegex"; data: { pattern: string } }
+  | { trigger: TriggerType.Chat; data: { pattern: string } }
+  | { trigger: TriggerType.ChatRegex; data: { pattern: string } }
   | {
-    trigger: "ChannelPointRewardRedeemed";
+    trigger: TriggerType.ChannelPointRewardRedeemed;
     data: { title: string; id: string };
   }
-  | { trigger: "Subscription" };
+  | {
+    trigger: TriggerType.Subscription;
+    data: { tier: string; comaparison_operator: ComparisonOperator };
+  };
 
 export type GameServerTrigger = {
   server: Server;

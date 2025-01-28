@@ -44,6 +44,8 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { DataTablePagination } from "@/components/datatables/pagination";
 import EditableCheckBox from "@/components/datatables/EditableCheckBox";
+import ServerFormDialog from "../server-form-dialog";
+import { TriggerForm } from "@/components/forms/trigger-form";
 
 export type CommandTrigger = {
   serverTrigger: GameServerTrigger;
@@ -177,14 +179,20 @@ interface DataTableProps {
 }
 type TriggerCommand = [GameServerTrigger, Command];
 
+export enum FormOpen{
+  None,
+  Trigger,
+  Command
+}
+
 export default function DashboardTable({ selectedServer }: DataTableProps) {
   const [data, setData] = useState<CommandTrigger[]>([]);
   const [count, setCount] = useState(0);
-  const [commandFormOpen, setCommandFormOpen] = useState(true);
-  const [triggerFormOpen, setTriggerFormOpen] = useState(true);
+  const [formOpen, setFormOpen] = useState(FormOpen.None);
   useEffect(() => {
     handleUpdateData()
   }, [selectedServer]);
+  
 
   const handleUpdateData = () => {
     setCount((c) => c + 1);
@@ -261,7 +269,7 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
       },
     },
   });
-
+console.log({data})
 
   return (
     <div className="w-full">
@@ -277,18 +285,20 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
           className="max-w-sm"
         />
         <div className="flex flex-row gap-2">
+          <ServerFormDialog formTitle="New Trigger" form={<TriggerForm />}>
           <Button
             variant="secondary"
             className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"
-            onClick={() => setTriggerFormOpen((f) => !f && !commandFormOpen)}
+            onClick={() => setFormOpen((prev) => prev === FormOpen.None? FormOpen.Trigger : FormOpen.None)}
           >
             <Plus />
             <span className="pt-1">Trigger</span>
           </Button>
+          </ServerFormDialog>
           <Button
             variant="secondary"
             className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"
-            onClick={() => setCommandFormOpen((f) => !f&& !triggerFormOpen)}
+            onClick={() => setFormOpen((prev) => prev === FormOpen.None? FormOpen.Command : FormOpen.None)}
           >
             <Plus />
             <span className="pt-1">Command</span>

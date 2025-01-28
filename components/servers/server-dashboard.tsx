@@ -27,7 +27,7 @@ export default function ServerDashboard({
     >
       <div className="font-semibold">Dashboard</div>
       <Tabs
-        defaultValue="commands"
+        defaultValue="overview"
         className="w-full items-center justify-center flex flex-col"
       >
         <TabsList>
