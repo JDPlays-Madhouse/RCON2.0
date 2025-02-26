@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -23,14 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check, ChevronsUpDown, EyeIcon, EyeOffIcon } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
 
 const tierEnum = z.enum(["Tier1", "Tier2", "Tier3", "Prime", "Custom"])
 
@@ -62,11 +56,17 @@ export function TriggerForm({
   const initialData = {
     command: command,
     trigger: trigger?.trigger,
+    // @ts-expect-error using the undefined feature of JS
     pattern: trigger?.data.pattern,
+    // @ts-expect-error using the undefined feature of JS
     title: trigger?.data.title,
+    // @ts-expect-error using the undefined feature of JS
     id: trigger?.data.id,
+    // @ts-expect-error using the undefined feature of JS
     tier: trigger?.data.tier,
+    // @ts-expect-error using the undefined feature of JS
     customTier: trigger?.data.tier,
+    // @ts-expect-error using the undefined feature of JS
     comparisonOperator: trigger?.data.comaparison_operator ? trigger?.data.comaparison_operator : ComparisonOperator.Any,
   };
   const [triggerType, setTriggerType] = useState(initialData.trigger);
@@ -82,6 +82,7 @@ export function TriggerForm({
 
   const form = useForm<z.infer<typeof triggerFormSchema>>({
     resolver: zodResolver(triggerFormSchema),
+    // @ts-expect-error using the undefined feature of JS
     defaultValues: initialData,
     resetOptions: {
       keepDirtyValues: false, // user-interacted input will be retained

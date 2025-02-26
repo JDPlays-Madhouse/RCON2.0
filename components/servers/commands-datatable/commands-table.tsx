@@ -152,6 +152,7 @@ export const columns: ColumnDef<Command>[] = [
     cell: ({ row, table }) => {
       const sendCommand = () => {
         const command: Command = row.original;
+        // @ts-expect-error using custom command
         table.options.meta.sendCommand(command)
       }
       return <Button onClick={() => sendCommand()}>
@@ -227,6 +228,7 @@ export default function CommandsTable({ selectedServer }: DataTableProps) {
       obj[key] = value;
       return obj;
     } else {
+      // @ts-expect-error incorrect type
       obj[key] = updateNestedValue(keyArr, value, obj[key]);
       return obj;
     }

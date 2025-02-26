@@ -103,10 +103,10 @@ export const columns: ColumnDef<CommandTrigger>[] = [
   },
   {
     id: "trigger",
-    accessorKey: "serverTrigger",
+    accessorKey: "serverTrigger.trigger",
     header: "Trigger",
     cell: ({ cell }) => {
-      const trigger: Trigger = cell.getValue().trigger as Trigger;
+      const trigger: Trigger = cell.getValue() as Trigger;
       switch (trigger.trigger) {
         case TriggerType.Chat:
           return (
@@ -205,7 +205,7 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
   const [data, setData] = useState<CommandTrigger[]>([]);
   const [count, setCount] = useState(0);
   const [formOpen, setFormOpen] = useState(FormOpen.None);
-  const [thisServerOnly, setThisServerOnly] = useState(true);
+  const [thisServerOnly, setThisServerOnly] = useState(false);
   useEffect(() => {
     handleUpdateData()
   }, [selectedServer]);
@@ -242,6 +242,7 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
       obj[key] = value;
       return obj;
     } else {
+      // @ts-expect-error incorrect types
       obj[key] = updateNestedValue(keyArr, value, obj[key])
       return obj
     }
@@ -276,12 +277,15 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
 
         const serverTriggers: GameServerTrigger[] = [];
         newData.forEach((v) => {
+          // @ts-expect-error unsure
           if (v.command?.name === commandName) {
+            // @ts-expect-error unsure
             serverTriggers.push(v.serverTrigger)
           }
         });
 
         invoke("update_server_trigger", { commandName, serverTriggers })
+        // @ts-expect-error unsure
         setData(newData);
       },
     },
@@ -305,12 +309,15 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
             }
             className="max-w-sm"
           />
-          <Button className="flex flex-row text-foreground items-center justify-center gap-1" onClick={() => {
-            setThisServerOnly(!thisServerOnly)
-          }}>{thisServerOnly ? <Check className="" /> : <X />} <span>This server only.</span></Button>
+          <Button
+            className="flex flex-row text-foreground items-center justify-center gap-1"
+            variant="secondary"
+            onClick={() => {
+              setThisServerOnly(!thisServerOnly)
+            }}>{thisServerOnly ? <Check className="" /> : <X />} <span>This server only.</span></Button>
         </div>
         <div className="flex flex-1 flex-row gap-2 justify-end">
-          <ServerFormDialog formTitle="New Trigger" form={<TriggerForm />}>
+          <ServerFormDialog formTitle="New Trigger" form={<TriggerForm server={selectedServer as Server} />}>
             <Button
               variant="secondary"
               className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"

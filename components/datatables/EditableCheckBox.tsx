@@ -1,6 +1,9 @@
+import { Cell, Column, Row, Table } from "@tanstack/react-table";
 import { Checkbox } from "../ui/checkbox";
 import { useState } from "react";
 
+
+// @ts-expect-error meta function
 export default function EditableCheckBox({ row, column, table, getValue }) {
   const initialValue = getValue() as boolean;
   const [value, setValue] = useState(initialValue);
