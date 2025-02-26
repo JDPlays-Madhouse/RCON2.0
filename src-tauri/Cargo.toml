@@ -14,7 +14,7 @@ incremental = true # Compile your binary in smaller steps.
 [profile.release]
 codegen-units = 1 # Allows LLVM to perform better optimization.
 lto = true        # Enables link-time-optimizations.
-opt-level = "s"   # Prioritizes small binary size. Use `3` if you prefer speed.
+opt-level = 3   # Prioritizes small binary size. Use `3` if you prefer speed.
 panic = "abort"   # Higher performance by disabling panic handlers.
 strip = true      # Ensures debug symbols are removed.
 
@@ -54,6 +54,8 @@ simple-mermaid = "0.2.0"
 sled = "0.34.7"
 tauri = { version = "2.1.1", features = ["tracing"] }
 tauri-plugin-clipboard-manager = "2.2.0"
+tauri-plugin-http = "2"
+tauri-plugin-localhost = "2"
 tauri-plugin-websocket = "2"
 thiserror = "2.0.3"
 time = { version = "0.3.36", features = [

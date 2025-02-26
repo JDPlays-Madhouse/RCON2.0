@@ -123,7 +123,7 @@ impl WebsocketClient {
     /// Refreshes the token if it exists. Returns the new token if successful.
     pub async fn refresh_token(&mut self) -> Option<UserToken> {
         info!("Refreshing OAuth Token.");
-        
+
         let old_token = self.token.clone();
 
         let reqwest_client = reqwest::Client::builder()
@@ -263,10 +263,8 @@ impl WebsocketClient {
                         }
 
                         if self.token.is_elapsed() {
-                            match self.refresh_token().await{
-                                Some(t) => {
-                                    self.token = t
-                                }
+                            match self.refresh_token().await {
+                                Some(t) => self.token = t,
                                 None => {
                                     return Err(WebsocketError::TokenElapsed);
                                 }
@@ -280,20 +278,28 @@ impl WebsocketClient {
                         payload,
                     } => {
                         match payload {
-                            Event::ChannelChatMessageV1(eventsub::Payload { message, .. }
-                            ) => self.channel_chat_message(message).await,
+                            Event::ChannelChatMessageV1(eventsub::Payload { message, .. }) => {
+                                self.channel_chat_message(message).await
+                            }
 
                             Event::ChannelPointsCustomRewardRedemptionAddV1(
                                 eventsub::Payload { message, .. },
-                            ) => self.channel_points_custom_reward_redemption_add(message).await,
+                            ) => {
+                                self.channel_points_custom_reward_redemption_add(message)
+                                    .await
+                            }
 
                             Event::ChannelPointsCustomRewardRedemptionUpdateV1(
                                 eventsub::Payload { message, .. },
-                            ) => self.channel_points_custom_reward_redemption_update(message).await,
+                            ) => {
+                                self.channel_points_custom_reward_redemption_update(message)
+                                    .await
+                            }
 
-                            Event::ChannelSubscribeV1(eventsub::Payload { message, .. }
-                            ) => self.channel_subscribe(message).await,
-                            
+                            Event::ChannelSubscribeV1(eventsub::Payload { message, .. }) => {
+                                self.channel_subscribe(message).await
+                            }
+
                             Event::ChannelSubscriptionMessageV1(eventsub::Payload {
                                 message,
                                 ..
@@ -347,24 +353,25 @@ impl WebsocketClient {
         }
     }
 
-    async fn channel_subscribe_message(&mut self, message: eventsub::Message<eventsub::channel::ChannelSubscriptionMessageV1>) {
+    async fn channel_subscribe_message(
+        &mut self,
+        message: eventsub::Message<eventsub::channel::ChannelSubscriptionMessageV1>,
+    ) {
         match message.clone() {
             eventsub::Message::Notification(reward_payload) => {
                 let message = format!(
                     "{:?} subscription: {} - {}",
-                    reward_payload.tier,
-                    reward_payload.user_name,
-                    reward_payload.message.text
+                    reward_payload.tier, reward_payload.user_name, reward_payload.message.text
                 );
 
-                info!(target = "rcon2::integration::twitch::websocket::ChannelSubscriptionMessageV1", message);
+                info!(
+                    target = "rcon2::integration::twitch::websocket::ChannelSubscriptionMessageV1",
+                    message
+                );
                 let _ = self
                     .event_tx
                     .send(IntegrationEvent::Subscription {
-                        tier: normalise_tier(
-                            Some(reward_payload.tier.clone()),
-                            None,
-                        ),
+                        tier: normalise_tier(Some(reward_payload.tier.clone()), None),
                         user_name: reward_payload.user_name.to_string(),
                     })
                     .await;
@@ -375,7 +382,10 @@ impl WebsocketClient {
         }
     }
 
-    async fn channel_subscribe(&mut self, message: eventsub::Message<eventsub::channel::ChannelSubscribeV1>) {
+    async fn channel_subscribe(
+        &mut self,
+        message: eventsub::Message<eventsub::channel::ChannelSubscribeV1>,
+    ) {
         match message.clone() {
             eventsub::Message::Notification(reward_payload) => {
                 let message = format!(
@@ -383,14 +393,14 @@ impl WebsocketClient {
                     reward_payload.tier, reward_payload.user_name,
                 );
 
-                info!(target = "rcon2::integration::twitch::websocket::ChannelSubscribe", message);
+                info!(
+                    target = "rcon2::integration::twitch::websocket::ChannelSubscribe",
+                    message
+                );
                 let _ = self
                     .event_tx
                     .send(IntegrationEvent::Subscription {
-                        tier: normalise_tier(
-                            Some(reward_payload.tier.clone()),
-                            None,
-                        ),
+                        tier: normalise_tier(Some(reward_payload.tier.clone()), None),
                         user_name: reward_payload.user_name.to_string(),
                     })
                     .await;
@@ -401,7 +411,10 @@ impl WebsocketClient {
         }
     }
 
-    async fn channel_points_custom_reward_redemption_update(&mut self, message: eventsub::Message<eventsub::channel::ChannelPointsCustomRewardRedemptionUpdateV1>) {
+    async fn channel_points_custom_reward_redemption_update(
+        &mut self,
+        message: eventsub::Message<eventsub::channel::ChannelPointsCustomRewardRedemptionUpdateV1>,
+    ) {
         match message.clone() {
             eventsub::Message::Notification(reward_payload) => {
                 let message = format!(
@@ -430,40 +443,45 @@ impl WebsocketClient {
         }
     }
 
-    async fn channel_points_custom_reward_redemption_add(&mut self, message: eventsub::Message<eventsub::channel::ChannelPointsCustomRewardRedemptionAddV1>) {
+    async fn channel_points_custom_reward_redemption_add(
+        &mut self,
+        message: eventsub::Message<eventsub::channel::ChannelPointsCustomRewardRedemptionAddV1>,
+    ) {
         match message.clone() {
-        eventsub::Message::Notification(reward_payload) => {
-            let message = format!(
-                "New: {}({}) redeemed by {}: {}",
-                reward_payload.reward.title,
-                reward_payload.reward.id,
-                reward_payload.user_name,
-                reward_payload.user_input
-            );
-            info!(target = "rcon2::integration::twitch::websocket::ChannelPointsCustomRewardRedemptionAdd", message);
-            let _ = self
-                .event_tx
-                .send(IntegrationEvent::ChannelPoint(CustomRewardEvent {
-                    event_id: reward_payload.id.to_string(),
-                    id: reward_payload.reward.id.to_string(),
-                    title: reward_payload.reward.title,
-                    user_name: reward_payload.user_name.to_string(),
-                    variant: CustomRewardVariant::New,
-                }))
-                .await;
+            eventsub::Message::Notification(reward_payload) => {
+                let message = format!(
+                    "New: {}({}) redeemed by {}: {}",
+                    reward_payload.reward.title,
+                    reward_payload.reward.id,
+                    reward_payload.user_name,
+                    reward_payload.user_input
+                );
+                info!(target = "rcon2::integration::twitch::websocket::ChannelPointsCustomRewardRedemptionAdd", message);
+                let _ = self
+                    .event_tx
+                    .send(IntegrationEvent::ChannelPoint(CustomRewardEvent {
+                        event_id: reward_payload.id.to_string(),
+                        id: reward_payload.reward.id.to_string(),
+                        title: reward_payload.reward.title,
+                        user_name: reward_payload.user_name.to_string(),
+                        variant: CustomRewardVariant::New,
+                    }))
+                    .await;
+            }
+            _ => {
+                error! {"Unhandled ChannelPointsCustomRewardRedemptionAddV1 Payload: {:?}", message}
+            }
         }
-        _ => {
-            error! {"Unhandled ChannelPointsCustomRewardRedemptionAddV1 Payload: {:?}", message}
-        }
-                                    }
     }
 
-    async fn channel_chat_message(&mut self, message: eventsub::Message<eventsub::channel::ChannelChatMessageV1>) {
+    async fn channel_chat_message(
+        &mut self,
+        message: eventsub::Message<eventsub::channel::ChannelChatMessageV1>,
+    ) {
         match message.clone() {
             eventsub::Message::Notification(chat_payload) => {
-                let message = chat_payload.chatter_user_name.to_string()
-                    + " - "
-                    + &chat_payload.message.text;
+                let message =
+                    chat_payload.chatter_user_name.to_string() + " - " + &chat_payload.message.text;
                 info!(
                     target = "rcon2::integration::twitch::websocket::ChannelChatMessage",
                     message
@@ -494,10 +512,8 @@ impl WebsocketClient {
         }
 
         if self.token.is_elapsed() {
-            match self.refresh_token().await{
-                Some(t) => {
-                    self.token = t
-                }
+            match self.refresh_token().await {
+                Some(t) => self.token = t,
                 None => {
                     return Err(WebsocketError::TokenElapsed);
                 }
@@ -511,7 +527,7 @@ impl WebsocketClient {
         let transport = eventsub::Transport::websocket(data.id.clone());
 
         for subscription in self.subscriptions.clone() {
-            if self.subscribed.contains(&subscription){
+            if self.subscribed.contains(&subscription) {
                 info!("Already subscribed to: {}", &subscription);
                 continue;
             }
@@ -621,7 +637,9 @@ impl WebsocketClient {
     /// TODO: Make return result and compare to current subscribed
     async fn current_subsciptions(&mut self) -> Vec<EventType> {
         let mut subscribed: Vec<EventType> = Vec::new();
-        let _ = self.client.get_eventsub_subscriptions(None, None, None, &self.token)
+        let _ = self
+            .client
+            .get_eventsub_subscriptions(None, None, None, &self.token)
             .map_ok(|r| {
                 let mut subs = r.subscriptions.into_iter().map(|s| s.type_).collect_vec();
                 subscribed.append(&mut subs);
@@ -629,7 +647,10 @@ impl WebsocketClient {
             .try_collect::<Vec<_>>()
             .await;
 
-        subscribed = subscribed.into_iter().unique_by(|s| s.to_str()).collect_vec();
+        subscribed = subscribed
+            .into_iter()
+            .unique_by(|s| s.to_str())
+            .collect_vec();
         subscribed
-    } 
+    }
 }

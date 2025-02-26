@@ -39,7 +39,12 @@
       "description": "RCON2.0 is a interface program between games and streaming platforms.",
       "beforeHelp": "",
       "afterHelp": "",
-      "args": [],
+      "args": [
+        {
+          "name": "devtools",
+          "description": "Open the devtools. Only works when in dev mode."
+        }
+      ],
       "subcommands": {
         "token": {
           "description": "Print valid auth token/s to stdout.",

@@ -147,6 +147,19 @@ export const columns: ColumnDef<Command>[] = [
     },
   },
   {
+    id: "sendCommand",
+    header: "Send Command",
+    cell: ({ row, table }) => {
+      const sendCommand = () => {
+        const command: Command = row.original;
+        table.options.meta.sendCommand(command)
+      }
+      return <Button onClick={() => sendCommand()}>
+        Send Command
+      </Button>
+    }
+  },
+  {
     id: "actions",
     cell: ({ row }) => {
       const command: Command = row.original;
@@ -232,33 +245,15 @@ export default function CommandsTable({ selectedServer }: DataTableProps) {
       sorting,
       columnFilters,
     },
-    // meta: {
-    //   updateData: function f<coloumType>(
-    //     rowIndex: number,
-    //     columnId: string,
-    //     value: coloumType,
-    //     commandName: string
-    //   ) {
-    //     const newData = data.map((row, index) => {
-    //       if (index === rowIndex) {
-    //         return updateNestedValue(columnId.split("."), value, data[rowIndex]);
-    //       }
-    //       else { return row; }
-    //     });
-    //
-    //     const serverTriggers: GameServerTrigger[] = [];
-    //     newData.forEach((v) => {
-    //       if (v.command?.name === commandName) {
-    //         serverTriggers.push(v.serverTrigger)
-    //       }
-    //     });
-    //
-    //     invoke("update_server_trigger", { commandName, serverTriggers })
-    //     setData(newData);
-    //   },
-    // },
+    meta: {
+      sendCommand: function f(command: Command) {
+        invoke("send_command_to_server", { server: selectedServer, command })
+          .then(console.log)
+          .catch(console.warn)
+      },
+    },
   });
-
+  // send_command_to_server
   return (
     <div className="w-full">
       <div className="flex items-center py-4 justify-between flex-row w-full">
@@ -275,6 +270,7 @@ export default function CommandsTable({ selectedServer }: DataTableProps) {
             variant="secondary"
             className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"
             onClick={() => setTriggerFormOpen((f) => !f && !commandFormOpen)}
+            disabled
           >
             <Plus />
             <span className="pt-1">Trigger</span>
@@ -282,7 +278,8 @@ export default function CommandsTable({ selectedServer }: DataTableProps) {
           <Button
             variant="secondary"
             className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"
-            onClick={() => setCommandFormOpen((f) => !f&& !triggerFormOpen)}
+            onClick={() => setCommandFormOpen((f) => !f && !triggerFormOpen)}
+            disabled
           >
             <Plus />
             <span className="pt-1">Command</span>

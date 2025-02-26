@@ -18,7 +18,7 @@ export default function ServerFormDialog({
     form: React.ReactNode;
 }) {
     return (
-        <Dialog defaultOpen={true}>
+        <Dialog defaultOpen={false}>
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent className="z-40 w-[1000px]">
                 <DialogHeader>

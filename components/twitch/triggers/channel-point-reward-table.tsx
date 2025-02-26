@@ -53,7 +53,6 @@ export const column: ColumnDef<CustomChannelPointRewardInfo>[] = [
         <Button
           variant="ghost"
           onClick={() => {
-            console.log(column.getIsSorted());
             column.toggleSorting(column.getIsSorted() === "asc");
           }}
         >

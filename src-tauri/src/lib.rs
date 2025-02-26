@@ -130,6 +130,7 @@ use cli::handle_cli_matches;
 use command::settings::ScriptSettings;
 use integration::TwitchApiConnection;
 use logging::{LogLevel, Logger};
+use serde_json::value;
 use settings::Settings;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_cli::CliExt;
@@ -204,35 +205,54 @@ pub async fn run() {
 
     let config_clone = config.clone();
     let twitch_int_clone = Arc::clone(&twitch_integration);
+    let localhost_port: u16 = match config.get_int("localhost_port").unwrap_or(20080).try_into() {
+        Ok(p) => p,
+        Err(e) => {
+            error!("localhost_port is less than 0 or greater then 65535, setting it to 20080");
+            20080
+        }
+    };
     tauri::Builder::default()
+        // TODO: Add localhost access.
+        // .plugin(tauri_plugin_localhost::Builder::new(localhost_port).build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_cli::init())
         .setup(move |app| {
             match app.cli().matches() {
                 Ok(matches) => {
+                    let mut devtools = false;
+                    dbg!(&matches);
+                    if matches.args.contains_key("devtools")
+                        && matches.args["devtools"].value == value::Value::Bool(true)
+                    {
+                        devtools = true
+                    };
                     futures::executor::block_on(handle_cli_matches(
                         matches,
                         app,
                         Arc::clone(&twitch_int_clone),
                     ));
+                    let window = app.get_webview_window("main").unwrap();
+                    #[cfg(debug_assertions)] // only include this code on debug builds
+                    {
+                        if devtools {
+                            window.open_devtools();
+                        }
+                    }
+                    let title = format!(
+                        "{} v{}",
+                        window.title().unwrap(),
+                        app.package_info().version.clone(),
+                    );
+
+                    let _ = window.set_title(&title);
                 }
                 Err(e) => {
                     println!("{}", e);
                     std::process::exit(1);
                 }
             }
-            let window = app.get_webview_window("main").unwrap();
-            #[cfg(debug_assertions)] // only include this code on debug builds
-            {
-                window.open_devtools();
-            }
-            let title = format!(
-                "{} v{}",
-                window.title().unwrap(),
-                app.package_info().version.clone(),
-            );
 
-            let _ = window.set_title(&title);
             let default_server = servers::default_server_from_settings(config_clone.clone());
 
             app.manage(Arc::new(futures::lock::Mutex::new(config_clone.clone())));
@@ -250,7 +270,6 @@ pub async fn run() {
             info!("Config File: {:?}", &settings.config_filepath());
             info!("Log Folder: {:?}", &settings.log_folder);
             info!("Script Folder: {:?}", &settings.script_folder);
-
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

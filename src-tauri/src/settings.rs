@@ -328,8 +328,8 @@ impl Default for Settings {
         ];
         builder = Settings::default_loop(builder, default_settings_list_str);
 
-        // let default_settings_int: Vec<DefaultValue<u16>> = vec![("servers.example.port", 4312)];
-        // builder = Settings::default_loop(builder, default_settings_int);
+        let default_settings_int: Vec<DefaultValue<u16>> = vec![("localhost_port", 20080)];
+        builder = Settings::default_loop(builder, default_settings_int);
 
         let settings = Self {
             config_builder: builder,

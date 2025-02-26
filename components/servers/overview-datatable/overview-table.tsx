@@ -1,9 +1,10 @@
 "use client";
 
-import { Command, Game, GameServerTrigger, Server, Trigger } from "@/types";
+import { Command, Game, GameServerTrigger, Server, Trigger, TriggerType } from "@/types";
 import {
   ColumnDef,
   ColumnFiltersState,
+  Row,
   SortingState,
   flexRender,
   getCoreRowModel,
@@ -12,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { Check, Cross, MoreHorizontal, Plus, X } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,6 +73,21 @@ export const columns: ColumnDef<CommandTrigger>[] = [
     cell: EditableCheckBox,
   },
   {
+    id: "server",
+    accessorKey: "serverTrigger.server.name",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Server
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+  },
+  {
     id: "triggerType",
     accessorKey: "serverTrigger.trigger.trigger",
     header: ({ column }) => {
@@ -87,12 +103,12 @@ export const columns: ColumnDef<CommandTrigger>[] = [
   },
   {
     id: "trigger",
-    accessorKey: "serverTrigger.trigger",
+    accessorKey: "serverTrigger",
     header: "Trigger",
     cell: ({ cell }) => {
-      const trigger: Trigger = cell.getValue() as Trigger;
+      const trigger: Trigger = cell.getValue().trigger as Trigger;
       switch (trigger.trigger) {
-        case "Chat":
+        case TriggerType.Chat:
           return (
             <CellToolTip
               helper="The pattern that will trigger the command."
@@ -101,7 +117,7 @@ export const columns: ColumnDef<CommandTrigger>[] = [
               {trigger.data.pattern}
             </CellToolTip>
           );
-        case "ChatRegex":
+        case TriggerType.ChatRegex:
           return (
             <CellToolTip
               helper="The pattern that will trigger the command."
@@ -110,7 +126,7 @@ export const columns: ColumnDef<CommandTrigger>[] = [
               {trigger.data.pattern}
             </CellToolTip>
           );
-        case "ChannelPointRewardRedeemed":
+        case TriggerType.ChannelPointRewardRedeemed:
           return (
             <CellToolTip
               helper="{Channel Points Reward Name} - {Twitch ID for reward}"
@@ -119,7 +135,7 @@ export const columns: ColumnDef<CommandTrigger>[] = [
               {`${trigger.data.title} - ${trigger.data.id}`}
             </CellToolTip>
           );
-        case "Subscription":
+        case TriggerType.Subscription:
           return (
             <CellToolTip helper="When a user subscribes to your channel">
               Subscription
@@ -179,7 +195,7 @@ interface DataTableProps {
 }
 type TriggerCommand = [GameServerTrigger, Command];
 
-export enum FormOpen{
+export enum FormOpen {
   None,
   Trigger,
   Command
@@ -189,10 +205,11 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
   const [data, setData] = useState<CommandTrigger[]>([]);
   const [count, setCount] = useState(0);
   const [formOpen, setFormOpen] = useState(FormOpen.None);
+  const [thisServerOnly, setThisServerOnly] = useState(true);
   useEffect(() => {
     handleUpdateData()
   }, [selectedServer]);
-  
+
 
   const handleUpdateData = () => {
     setCount((c) => c + 1);
@@ -269,36 +286,46 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
       },
     },
   });
-console.log({data})
+
+  useEffect(() => {
+    table.getColumn("server")?.setFilterValue(thisServerOnly ? selectedServer?.name : undefined)
+  }, [thisServerOnly])
 
   return (
     <div className="w-full">
       <div className="flex items-center py-4 justify-between flex-row w-full">
-        <Input
-          placeholder="Filter Command..."
-          value={
-            (table.getColumn("commandName")?.getFilterValue() as string) ?? ""
-          }
-          onChange={(event) =>
-            table.getColumn("commandName")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
-        <div className="flex flex-row gap-2">
+        <div className="flex flex-1 flex-row gap-2">
+          <Input
+            placeholder="Filter Command..."
+            value={
+              (table.getColumn("commandName")?.getFilterValue() as string) ?? ""
+            }
+            onChange={(event) =>
+              table.getColumn("commandName")?.setFilterValue(event.target.value)
+            }
+            className="max-w-sm"
+          />
+          <Button className="flex flex-row text-foreground items-center justify-center gap-1" onClick={() => {
+            setThisServerOnly(!thisServerOnly)
+          }}>{thisServerOnly ? <Check className="" /> : <X />} <span>This server only.</span></Button>
+        </div>
+        <div className="flex flex-1 flex-row gap-2 justify-end">
           <ServerFormDialog formTitle="New Trigger" form={<TriggerForm />}>
-          <Button
-            variant="secondary"
-            className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"
-            onClick={() => setFormOpen((prev) => prev === FormOpen.None? FormOpen.Trigger : FormOpen.None)}
-          >
-            <Plus />
-            <span className="pt-1">Trigger</span>
-          </Button>
+            <Button
+              variant="secondary"
+              className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"
+              onClick={() => setFormOpen((prev) => prev === FormOpen.None ? FormOpen.Trigger : FormOpen.None)}
+              disabled
+            >
+              <Plus />
+              <span className="pt-1">Trigger</span>
+            </Button>
           </ServerFormDialog>
           <Button
             variant="secondary"
             className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"
-            onClick={() => setFormOpen((prev) => prev === FormOpen.None? FormOpen.Command : FormOpen.None)}
+            onClick={() => setFormOpen((prev) => prev === FormOpen.None ? FormOpen.Command : FormOpen.None)}
+            disabled
           >
             <Plus />
             <span className="pt-1">Command</span>
@@ -307,12 +334,12 @@ console.log({data})
       </div>
       <div className="rounded-md border w-full">
         <Table>
-          <TableHeader className="text-center justify-center">
+          <TableHeader className="text-center justify-center" >
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="text-center">
+                    <TableHead key={header.id} className="text-center" colSpan={header.colSpan}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(

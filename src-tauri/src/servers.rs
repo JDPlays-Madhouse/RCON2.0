@@ -443,7 +443,7 @@ pub async fn connect_to_server(
 }
 
 #[tauri::command]
-#[instrument(level = "trace")]
+#[instrument(level = "debug")]
 pub async fn send_command_to_server(
     server: GameServer,
     mut command: Command,

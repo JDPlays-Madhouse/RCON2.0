@@ -1,6 +1,6 @@
 "use client";
 
-import { ComparisonOperator, Trigger, TriggerType } from "@/types";
+import { Command, ComparisonOperator, Server, Trigger, TriggerType } from "@/types";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -23,14 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Check, ChevronsUpDown, EyeIcon, EyeOffIcon } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
@@ -40,14 +32,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-const tierEnum = z.enum(["Tier1","Tier2","Tier3","Prime","Custom"])
+const tierEnum = z.enum(["Tier1", "Tier2", "Tier3", "Prime", "Custom"])
 
 const triggerFormSchema = z.object({
-  trigger: z.string().min(2).max(50).toLowerCase(),
+  command: z.string().max(255),
+  trigger: z.string().toLowerCase(),
   pattern: z.string().max(255).optional(),
   title: z.string().min(1).optional(),
   id: z.string().min(1).optional(),
-  tier: tierEnum,
+  tier: tierEnum.optional(),
   customTier: z.string().min(1).optional(),
   comparisonOperator: z.nativeEnum(ComparisonOperator).optional(),
 });
@@ -57,13 +50,17 @@ export function TriggerForm({
   trigger,
   onClickSubmit = () => { },
   onClickReset = () => { },
+  command,
 }: {
   className?: string;
   trigger?: Trigger;
+  command?: Command;
+  server: Server;
   onClickSubmit?: () => void;
   onClickReset?: () => void;
 }) {
   const initialData = {
+    command: command,
     trigger: trigger?.trigger,
     pattern: trigger?.data.pattern,
     title: trigger?.data.title,
@@ -73,6 +70,15 @@ export function TriggerForm({
     comparisonOperator: trigger?.data.comaparison_operator ? trigger?.data.comaparison_operator : ComparisonOperator.Any,
   };
   const [triggerType, setTriggerType] = useState(initialData.trigger);
+  const [commands, setCommands] = useState<{ [key: string]: Command }>({});
+
+  useEffect(() => {
+    invoke<Command[]>("commands").then((c) => {
+      console.log(c);
+      c.forEach(comm => commands[comm.name] = comm)
+      setCommands(commands);
+    })
+  }, [])
 
   const form = useForm<z.infer<typeof triggerFormSchema>>({
     resolver: zodResolver(triggerFormSchema),
@@ -86,8 +92,12 @@ export function TriggerForm({
 
   function onSubmit(values: z.infer<typeof triggerFormSchema>) {
     onClickSubmit();
+    console.log(values)
+
+
+    // invoke("")
+
   }
-  console.log({ triggerType });
 
   return (
     <Form {...form}>
@@ -95,6 +105,41 @@ export function TriggerForm({
         onSubmit={form.handleSubmit(onSubmit)}
         className={cn("space-y-3 w-full", className)}
       >
+        <FormField
+          control={form.control}
+          name="command"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Command</FormLabel>
+              <Select
+                onValueChange={(value) => {
+                  field.onChange(value);
+                }}
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select the command." />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {Object.keys(commands).map((c) => {
+                    return (
+                      <SelectItem
+                        key={c}
+                        value={c}
+                      >
+                        {c}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="trigger"
@@ -176,61 +221,61 @@ export function TriggerForm({
             )
           }
         />
-        
+
         <FormField
           control={form.control}
           name="comparisonOperator"
           render={({ field }) => (
-            triggerType === TriggerType.Subscription ? 
-            <FormItem>
-              <FormLabel>Comparison Operator</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a comparison operator." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {Object.values(ComparisonOperator).map((op) => {
-                    return (
-                      <SelectItem key={op} value={op}>
-                        {op}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-            : <></>
+            triggerType === TriggerType.Subscription ?
+              <FormItem>
+                <FormLabel>Comparison Operator</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a comparison operator." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.values(ComparisonOperator).map((op) => {
+                      return (
+                        <SelectItem key={op} value={op}>
+                          {op}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+              : <></>
           )}
         />
         <FormField
           control={form.control}
           name="tier"
-          render={({ field }) => (
-            triggerType === TriggerType.Subscription ? 
-            <FormItem>
-              <FormLabel>Subscription Tier</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a subscription tier" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {tierEnum.options.map((tier) => {
-                    return (
-                      <SelectItem key={tier} value={tier}>
-                        {tier}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-            : <></>
+          render={({ field, }) => (
+            triggerType === TriggerType.Subscription && form.getValues().comparisonOperator != ComparisonOperator.Any ?
+              <FormItem>
+                <FormLabel>Subscription Tier</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a subscription tier" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {tierEnum.options.map((tier) => {
+                      return (
+                        <SelectItem key={tier} value={tier}>
+                          {tier}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+              : <></>
           )}
         />
 
