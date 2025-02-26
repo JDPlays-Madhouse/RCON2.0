@@ -98,7 +98,7 @@ jobs:
 
       - name: Cache APT Packages
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.2
+        uses: awalsh128/cache-apt-pkgs-action@v1
         with:
           packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
