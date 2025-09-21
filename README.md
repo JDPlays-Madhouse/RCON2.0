@@ -29,7 +29,6 @@
       as any other games.
 - [x] Rcon interface needs to take configurations for any rcon server.
 - [ ] Ensure that the amount of data is below the max per tick amount.
-
   - No obvious method for determining this.
 
 - [ ] Provide visiual feedback through an OBS overlay (website) to give feedback
@@ -316,14 +315,14 @@ Required websocket subscription in main config file.
 
 ## Known Bugs
 
-- [ ] Cli doesn't work for windows - possible solution [github.com](https://github.com/tauri-apps/tauri/issues/8305#issuecomment-1826871949)
-- [ ] On the main page of UI, unable to highlight trigger text in table.
-- [ ] Warning log saying, please ignore for now:
+- [ ] [Issue #2](https://github.com/JDPlays-Madhouse/RCON2.0/issues/2) Cli doesn't work for windows - possible solution [github.com](https://github.com/tauri-apps/tauri/issues/8305#issuecomment-1826871949)
+- [ ] [Issue #3](https://github.com/JDPlays-Madhouse/RCON2.0/issues/3) On the main page of UI, unable to highlight trigger text in table.
+- [ ] [Issue #4](https://github.com/JDPlays-Madhouse/RCON2.0/issues/4) Warning log saying, please ignore for now:
 
   ```text
   3:40:34 pm - WARNING - log - NewEvents emitted without explicit RedrawEventsCleared
   3:40:34 pm - WARNING - log - RedrawEventsCleared emitted without explicit MainEventsCleared
   ```
 
-- [ ] Writing to script file removes any `ChannelPointRewardRedeemed` trigger,
+- [ ] [Issue #5](https://github.com/JDPlays-Madhouse/RCON2.0/issues/5) Writing to script file removes any `ChannelPointRewardRedeemed` trigger,
       therefore writing is disabled until solved.
