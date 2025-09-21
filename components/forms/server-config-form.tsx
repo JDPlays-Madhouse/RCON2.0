@@ -1,7 +1,7 @@
 "use client";
 
 import { Game, games, GameString, Server } from "@/types";
-import { z } from "zod";
+import { number, z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -27,12 +27,17 @@ import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
 
-const gamesEnum = z.nativeEnum(Game);
+const gamesEnum = z.enum(Game);
 
 const serverConfigFormSchema = z.object({
   name: z.string().min(2).max(50).toLowerCase(),
   address: z.string().min(2).max(256),
-  port: z.number({ coerce: true }).int().lte(65535).gt(0),
+  port: z.preprocess<number, z.ZodInt, number>((val) => {
+    if (typeof val === "string") {
+      return Number.parseInt(val, 10);
+    }
+    return val;
+  }, z.int().lte(65535).gt(0)),
   password: z.string().min(0).max(256),
   game: gamesEnum,
 });

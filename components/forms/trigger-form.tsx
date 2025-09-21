@@ -1,6 +1,12 @@
 "use client";
 
-import { Command, ComparisonOperator, Server, Trigger, TriggerType } from "@/types";
+import {
+  Command,
+  ComparisonOperator,
+  Server,
+  Trigger,
+  TriggerType,
+} from "@/types";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -25,8 +31,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
 
-
-const tierEnum = z.enum(["Tier1", "Tier2", "Tier3", "Prime", "Custom"])
+const tierEnum = z.enum(["Tier1", "Tier2", "Tier3", "Prime", "Custom"]);
 
 const triggerFormSchema = z.object({
   command: z.string().max(255),
@@ -36,14 +41,14 @@ const triggerFormSchema = z.object({
   id: z.string().min(1).optional(),
   tier: tierEnum.optional(),
   customTier: z.string().min(1).optional(),
-  comparisonOperator: z.nativeEnum(ComparisonOperator).optional(),
+  comparisonOperator: z.enum(ComparisonOperator).optional(),
 });
 
 export function TriggerForm({
   className,
   trigger,
-  onClickSubmit = () => { },
-  onClickReset = () => { },
+  onClickSubmit = () => {},
+  onClickReset = () => {},
   command,
 }: {
   className?: string;
@@ -67,7 +72,10 @@ export function TriggerForm({
     // @ts-expect-error using the undefined feature of JS
     customTier: trigger?.data.tier,
     // @ts-expect-error using the undefined feature of JS
-    comparisonOperator: trigger?.data.comaparison_operator ? trigger?.data.comaparison_operator : ComparisonOperator.Any,
+    comparisonOperator: trigger?.data.comaparison_operator
+      ? // @ts-expect-error using the undefined feature of JS
+        trigger?.data.comaparison_operator
+      : ComparisonOperator.Any,
   };
   const [triggerType, setTriggerType] = useState(initialData.trigger);
   const [commands, setCommands] = useState<{ [key: string]: Command }>({});
@@ -75,10 +83,10 @@ export function TriggerForm({
   useEffect(() => {
     invoke<Command[]>("commands").then((c) => {
       console.log(c);
-      c.forEach(comm => commands[comm.name] = comm)
+      c.forEach((comm) => (commands[comm.name] = comm));
       setCommands(commands);
-    })
-  }, [])
+    });
+  }, []);
 
   const form = useForm<z.infer<typeof triggerFormSchema>>({
     resolver: zodResolver(triggerFormSchema),
@@ -93,20 +101,22 @@ export function TriggerForm({
 
   function onSubmit(values: z.infer<typeof triggerFormSchema>) {
     onClickSubmit();
-    console.log(values)
-
+    console.log(values);
 
     // invoke("")
-
   }
 
   return (
     <Form {...form}>
       <form
+        // @ts-expect-error unknown cause
+        // BUG: #6 Unknown type error.
         onSubmit={form.handleSubmit(onSubmit)}
         className={cn("space-y-3 w-full", className)}
       >
         <FormField
+          // @ts-expect-error unknown cause
+          // BUG: #6 Unknown type error.
           control={form.control}
           name="command"
           render={({ field }) => (
@@ -126,10 +136,7 @@ export function TriggerForm({
                 <SelectContent>
                   {Object.keys(commands).map((c) => {
                     return (
-                      <SelectItem
-                        key={c}
-                        value={c}
-                      >
+                      <SelectItem key={c} value={c}>
                         {c}
                       </SelectItem>
                     );
@@ -142,6 +149,8 @@ export function TriggerForm({
         />
 
         <FormField
+          // @ts-expect-error unknown cause
+          // BUG: #6 Unknown type error.
           control={form.control}
           name="trigger"
           render={({ field }) => (
@@ -151,7 +160,7 @@ export function TriggerForm({
                 onValueChange={(value) => {
                   field.onChange(value);
                   setTriggerType(
-                    TriggerType[value as keyof typeof TriggerType],
+                    TriggerType[value as keyof typeof TriggerType]
                   );
                 }}
                 defaultValue={field.value}
@@ -169,9 +178,7 @@ export function TriggerForm({
                         value={triggertype}
                         onSelect={() => {
                           setTriggerType(
-                            TriggerType[
-                            triggertype as keyof typeof TriggerType
-                            ],
+                            TriggerType[triggertype as keyof typeof TriggerType]
                           );
                         }}
                       >
@@ -186,15 +193,15 @@ export function TriggerForm({
           )}
         />
         <FormField
+          // @ts-expect-error unknown cause
+          // BUG: #6 Unknown type error.
           control={form.control}
           name="pattern"
           render={({ field }) =>
             triggerType === TriggerType.Chat ||
-              triggerType === TriggerType.ChatRegex ? (
+            triggerType === TriggerType.ChatRegex ? (
               <FormItem>
-                <FormLabel>
-                  Pattern for {triggerType}
-                </FormLabel>
+                <FormLabel>Pattern for {triggerType}</FormLabel>
                 <FormControl>
                   <Input placeholder="Pattern" {...field} />
                 </FormControl>
@@ -206,6 +213,8 @@ export function TriggerForm({
           }
         />
         <FormField
+          // @ts-expect-error unknown cause
+          // BUG: #6 Unknown type error.
           control={form.control}
           name="title"
           render={({ field }) =>
@@ -224,13 +233,18 @@ export function TriggerForm({
         />
 
         <FormField
+          // @ts-expect-error unknown cause
+          // BUG: #6 Unknown type error.
           control={form.control}
           name="comparisonOperator"
-          render={({ field }) => (
-            triggerType === TriggerType.Subscription ?
+          render={({ field }) =>
+            triggerType === TriggerType.Subscription ? (
               <FormItem>
                 <FormLabel>Comparison Operator</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a comparison operator." />
@@ -248,17 +262,25 @@ export function TriggerForm({
                 </Select>
                 <FormMessage />
               </FormItem>
-              : <></>
-          )}
+            ) : (
+              <></>
+            )
+          }
         />
         <FormField
+          // @ts-expect-error unknown cause
+          // BUG: #6 Unknown type error.
           control={form.control}
           name="tier"
-          render={({ field, }) => (
-            triggerType === TriggerType.Subscription && form.getValues().comparisonOperator != ComparisonOperator.Any ?
+          render={({ field }) =>
+            triggerType === TriggerType.Subscription &&
+            form.getValues().comparisonOperator != ComparisonOperator.Any ? (
               <FormItem>
                 <FormLabel>Subscription Tier</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a subscription tier" />
@@ -276,8 +298,10 @@ export function TriggerForm({
                 </Select>
                 <FormMessage />
               </FormItem>
-              : <></>
-          )}
+            ) : (
+              <></>
+            )
+          }
         />
 
         <div>

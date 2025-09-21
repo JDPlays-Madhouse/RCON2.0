@@ -15,6 +15,7 @@ options:
         - debug
         - docs
         - dev
+        - chore
   commit_groups:
     title_maps:
       feat: Features
@@ -25,6 +26,7 @@ options:
       debug: Debugging Measure
       docs: Documentation
       dev: Development
+      chore: Chores
   header:
     pattern: "^(\\w*)(?:\\(([\\w\\$\\.\\-\\*\\s]*)\\))?\\:\\s(.*)$"
     pattern_maps:

@@ -37,9 +37,9 @@ import { cn } from "@/lib/utils";
 
 const commandFormSchema = z.object({
   name: z.string().min(2).max(50).toLowerCase(),
-  prefixType: z.nativeEnum(CommandPrefixType),
+  prefixType: z.enum(CommandPrefixType),
   customPrefix: z.string().optional(),
-  luaCommandType: z.nativeEnum(LuaCommandType),
+  luaCommandType: z.enum(LuaCommandType),
   command: z.string().optional(),
   commandPath: z.string().optional(),
 });
