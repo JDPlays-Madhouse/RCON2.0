@@ -222,6 +222,7 @@ pub async fn run() {
                 Ok(matches) => {
                     let mut devtools = false;
                     dbg!(&matches);
+                    #[allow(unused_assignments)]
                     if matches.args.contains_key("devtools")
                         && matches.args["devtools"].value == value::Value::Bool(true)
                     {

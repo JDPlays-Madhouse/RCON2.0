@@ -1,6 +1,30 @@
-<a name="unreleased"></a>
-## [Unreleased]
+<a name="0.1.12"></a>
+## [0.1.12](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.11...0.1.12) (2025-09-21)
 
+### Bug Fixes
+
+1. Eslint causing build to fail. - [0626fb4](https://github.com/JDPlays-Madhouse/RCON2.0/commit/0626fb49fc06bcfb9c243053e469e7912fe7d3d6?w=1&diff=split)
+1. api changes with next and zod. - [65a63bf](https://github.com/JDPlays-Madhouse/RCON2.0/commit/65a63bfb6e860b119f26ea98fee44e3faf769971?w=1&diff=split)
+
+### Chores
+
+1. Updated to Tailwind v4 - [43f169a](https://github.com/JDPlays-Madhouse/RCON2.0/commit/43f169a838dfc45d732f61107f1f709db6beb313?w=1&diff=split)
+1. Updated versions and added twitch event types - [9d7162c](https://github.com/JDPlays-Madhouse/RCON2.0/commit/9d7162cbe3778a65f152c9cf5746fb685690a9e0?w=1&diff=split)
+
+<a name="0.1.11"></a>
+## [0.1.11](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.10...0.1.11) (2025-02-26)
+
+### Bug Fixes
+
+1. **UI:** Moved dark mode selector to settings page. - [1c4f745](https://github.com/JDPlays-Madhouse/RCON2.0/commit/1c4f7452be7858d45a827267466425b177854ec8?w=1&diff=split)
+1. **UI:** Added a force re-render for integration status. - [c4342c6](https://github.com/JDPlays-Madhouse/RCON2.0/commit/c4342c62d2cc0a0a8fe1a9717e039efe19680618?w=1&diff=split)
+1. **cicd:** Removed rust-cache - [363991d](https://github.com/JDPlays-Madhouse/RCON2.0/commit/363991db7f88e32b14325385633e0c0175facd49?w=1&diff=split)
+
+### Features
+
+1. **Commands:** Send command button added to datatables. - [9d308f7](https://github.com/JDPlays-Madhouse/RCON2.0/commit/9d308f7d5ba603ef7b55988faf7a478d2d5896db?w=1&diff=split)
+1. **UI:** Added a countdown timer to token expiring. - [73b3929](https://github.com/JDPlays-Madhouse/RCON2.0/commit/73b3929e95436fafc4753577f67c8dcd20b089fb?w=1&diff=split)
+1. **commands:** Added commands datatable to overview with tabs. - [bcfd413](https://github.com/JDPlays-Madhouse/RCON2.0/commit/bcfd413a4d51fd56b3b6ce8d1c47320534211f1b?w=1&diff=split)
 
 <a name="0.1.10"></a>
 ## [0.1.10](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.9...0.1.10) (2025-01-07)
@@ -15,7 +39,6 @@
 
 1. **Twitch Trigger:** Case sensitive can be set for chat trigger. - [9a93e9e](https://github.com/JDPlays-Madhouse/RCON2.0/commit/9a93e9eea42f1cfd0b8b39bbae410ae4567d7a10?w=1&diff=split)
 1. **Twitch Trigger:** Added subscription tier comparison for trigger. - [5ae49a3](https://github.com/JDPlays-Madhouse/RCON2.0/commit/5ae49a3529f8f0ab1892525ec234eac4e7a8a784?w=1&diff=split)
-
 
 <a name="0.1.9"></a>
 ## [0.1.9](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.8...0.1.9) (2024-12-19)
@@ -42,7 +65,6 @@
 
 1. **UI:** Added refresh Twitch Websocket button to UI. - [afb1b05](https://github.com/JDPlays-Madhouse/RCON2.0/commit/afb1b05e3688ce4e7c0bca8faeacd9c9ff3370ce?w=1&diff=split)
 
-
 <a name="0.1.8"></a>
 ## [0.1.8](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.7...0.1.8) (2024-12-18)
 
@@ -54,7 +76,6 @@
 ### Features
 
 1. **UI:** Changed over to component based routing. - [1e1fb57](https://github.com/JDPlays-Madhouse/RCON2.0/commit/1e1fb57b2db8e36faa51c8c866c420dc56206b63?w=1&diff=split)
-
 
 <a name="0.1.7"></a>
 ## [0.1.7](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.6...0.1.7) (2024-12-17)
@@ -85,7 +106,6 @@
 1. **UI:** Page Channel Point Rewards added with ability to copy required text for config. - [6119a1a](https://github.com/JDPlays-Madhouse/RCON2.0/commit/6119a1ada3edd6b7489c21386595621136a0d39e?w=1&diff=split)
 1. **Websocket Event:** Handling both new and updated triggers. - [f9fbd71](https://github.com/JDPlays-Madhouse/RCON2.0/commit/f9fbd71bf570ed80885a522e98a38d311af74d92?w=1&diff=split)
 
-
 <a name="0.1.6"></a>
 ## [0.1.6](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.5...0.1.6) (2024-12-13)
 
@@ -103,7 +123,6 @@
 
 1. Added documentation for scripts. - [412e016](https://github.com/JDPlays-Madhouse/RCON2.0/commit/412e01606d945ab57c6f8fa77b94f4d3701f65f8?w=1&diff=split)
 
-
 <a name="0.1.5"></a>
 ## [0.1.5](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.4...0.1.5) (2024-12-12)
 
@@ -119,7 +138,6 @@
 
 1. Merge pull request [#1](https://github.com/JDPlays-Madhouse/RCON2.0/issues/1) from JDPlays-Madhouse/dependabot/npm_and_yarn/cross-spawn-7.0.6
 
-
 <a name="0.1.4"></a>
 ## [0.1.4](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.3...0.1.4) (2024-11-13)
 
@@ -127,14 +145,12 @@
 
 1. **twitch:** Added detection for websocket timeout. - [573dd92](https://github.com/JDPlays-Madhouse/RCON2.0/commit/573dd92006d005e3ecc7270ce7bc8c9b466822b5?w=1&diff=split)
 
-
 <a name="0.1.3"></a>
 ## [0.1.3](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.2...0.1.3) (2024-11-08)
 
 ### Bug Fixes
 
 1. **twitch:** removed the thread spawn. - [1d3a56c](https://github.com/JDPlays-Madhouse/RCON2.0/commit/1d3a56c39ff86ea1caa1fc0e3bdc96a3fa2bf9ab?w=1&diff=split)
-
 
 <a name="0.1.2"></a>
 ## [0.1.2](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.1...0.1.2) (2024-11-08)
@@ -144,7 +160,6 @@
 1. **cicd:** fixing caching - [7990a97](https://github.com/JDPlays-Madhouse/RCON2.0/commit/7990a972183675752886474531058ed52e40cbe9?w=1&diff=split)
 1. **cicd:** caching added - [3ec933f](https://github.com/JDPlays-Madhouse/RCON2.0/commit/3ec933ff5c6ebec479c52c025cd948a463d0bedd?w=1&diff=split)
 1. **cicd:** forced build to be tested first. - [9c97d24](https://github.com/JDPlays-Madhouse/RCON2.0/commit/9c97d2495707960ac8fa16484a3915e443150939?w=1&diff=split)
-
 
 <a name="0.1.1"></a>
 ## [0.1.1](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.0...0.1.1) (2024-11-06)
@@ -158,7 +173,6 @@
 1. **cicd:** fix to env variables - [c2706e2](https://github.com/JDPlays-Madhouse/RCON2.0/commit/c2706e2d6e57416f1439f5685cfe9ff536cf9ef9?w=1&diff=split)
 1. **cicd:** manual_dispatch to workflow_dispatch - [e770482](https://github.com/JDPlays-Madhouse/RCON2.0/commit/e77048274f4eef64d1d301724e287b468aeb9de9?w=1&diff=split)
 1. **lib:** bug in tauri thread spawn, changed to tokio. - [3155bed](https://github.com/JDPlays-Madhouse/RCON2.0/commit/3155bed7142102b669133e4ff2af0fcaa48e97ee?w=1&diff=split)
-
 
 <a name="0.1.0"></a>
 ## 0.1.0 (2024-11-05)

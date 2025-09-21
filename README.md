@@ -1,5 +1,21 @@
 # RCON2.0
 
+[![Build Rust Binary](https://github.com/JDPlays-Madhouse/RCON2.0/actions/workflows/build-rust-binary.yaml/badge.svg)](https://github.com/JDPlays-Madhouse/RCON2.0/actions/workflows/build-rust-binary.yaml)
+
+## Known Bugs
+
+- [ ] [Issue #2](https://github.com/JDPlays-Madhouse/RCON2.0/issues/2) Cli doesn't work for windows - possible solution [github.com](https://github.com/tauri-apps/tauri/issues/8305#issuecomment-1826871949)
+- [ ] [Issue #3](https://github.com/JDPlays-Madhouse/RCON2.0/issues/3) On the main page of UI, unable to highlight trigger text in table.
+- [ ] [Issue #4](https://github.com/JDPlays-Madhouse/RCON2.0/issues/4) Warning log saying, please ignore for now:
+
+  ```text
+  3:40:34 pm - WARNING - log - NewEvents emitted without explicit RedrawEventsCleared
+  3:40:34 pm - WARNING - log - RedrawEventsCleared emitted without explicit MainEventsCleared
+  ```
+
+- [ ] [Issue #5](https://github.com/JDPlays-Madhouse/RCON2.0/issues/5) Writing to script file removes any `ChannelPointRewardRedeemed` trigger,
+      therefore writing is disabled until solved.
+
 ## Minimum Viable Product [v0.1.5](https://github.com/JDPlays-Madhouse/RCON2.0/releases/tag/0.1.5)
 
 - [x] Authenticate with twitch.
@@ -312,17 +328,3 @@ Required websocket subscription in main config file.
 
 > [!NOTE]
 > If you want additional options let me know. Tier or sub length etc.
-
-## Known Bugs
-
-- [ ] [Issue #2](https://github.com/JDPlays-Madhouse/RCON2.0/issues/2) Cli doesn't work for windows - possible solution [github.com](https://github.com/tauri-apps/tauri/issues/8305#issuecomment-1826871949)
-- [ ] [Issue #3](https://github.com/JDPlays-Madhouse/RCON2.0/issues/3) On the main page of UI, unable to highlight trigger text in table.
-- [ ] [Issue #4](https://github.com/JDPlays-Madhouse/RCON2.0/issues/4) Warning log saying, please ignore for now:
-
-  ```text
-  3:40:34 pm - WARNING - log - NewEvents emitted without explicit RedrawEventsCleared
-  3:40:34 pm - WARNING - log - RedrawEventsCleared emitted without explicit MainEventsCleared
-  ```
-
-- [ ] [Issue #5](https://github.com/JDPlays-Madhouse/RCON2.0/issues/5) Writing to script file removes any `ChannelPointRewardRedeemed` trigger,
-      therefore writing is disabled until solved.
