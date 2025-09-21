@@ -14,7 +14,7 @@ export default function Settings() {
   };
   return (
     <div className="flex flex-col w-full h-full justify-center align-center gap-5">
-      <DarkModeToggle className="mx-auto text-4xl h-[4.5rem] w-[4.5rem] p-4 b-10" />
+      <DarkModeToggle className="mx-auto text-4xl h-18 w-18 p-4 b-10" />
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
