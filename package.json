@@ -1,6 +1,6 @@
 {
-  "name": "RCON2.0",
-  "version": "0.1.11",
+  "name": "rcon2.0",
+  "version": "0.1.12",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,7 +11,7 @@
     "docs": "cd src-tauri && cargo tree --depth 1  -e normal --prefix none | cut -d' ' -f1,2 | sed 's/ v/@/g'|  xargs printf -- ' -p %s\n' | xargs cargo +nightly doc -Z rustdoc-map --no-deps --lib"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.9.1",
+    "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-avatar": "^1.1.1",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-collapsible": "^1.1.1",
@@ -27,6 +27,7 @@
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-tabs": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.4",
+    "@tailwindcss/postcss": "^4.1.13",
     "@tanstack/react-table": "^8.20.5",
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/plugin-cli": "^2.0.0",
@@ -36,28 +37,28 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
-    "lucide-react": "^0.454.0",
+    "lucide-react": "^0.544.0",
     "next": "^15.0.2",
     "next-themes": "^0.4.3",
-    "react": "^18",
-    "react-dom": "^18.3",
+    "react": "^19",
+    "react-dom": "^19.1",
     "react-hook-form": "^7.53.2",
-    "react-resizable-panels": "^2.1.6",
-    "tailwind-merge": "^2.5.4",
+    "react-resizable-panels": "^3.0.6",
+    "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.23.8"
+    "zod": "^4.1.11"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
     "@eslint/js": "^9.14.0",
     "@tauri-apps/cli": "^2.1.0",
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.0.2",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.14",
+    "eslint-config-next": "15.5.3",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.13",
     "typescript": "^5"
   }
 }
