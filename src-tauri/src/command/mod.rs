@@ -165,7 +165,7 @@ impl Command {
         _trigger: Trigger,
     ) -> Option<GameServerTrigger> {
         todo!("remove server trigger");
-        None
+        // None
     }
 }
 
