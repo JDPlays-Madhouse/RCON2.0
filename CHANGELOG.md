@@ -1,3 +1,5 @@
+# Changelog
+
 <a name="0.1.12"></a>
 ## [0.1.12](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.11...0.1.12) (2025-09-21)
 

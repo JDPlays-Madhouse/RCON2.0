@@ -408,15 +408,15 @@ mod tests {
     }
 
     #[rstest]
-    #[case("Testing", "1", CustomRewardVariant::New , IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "1".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::New }))]
-    #[case("Testing", "1", CustomRewardVariant::Update , IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "1".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::Update }))]
+    #[case("Testing", "1", CustomRewardVariant::New , IntegrationEvent::ChannelPoint(CustomRewardEvent {event_id:"1".to_string(),id:"1".to_string(),title:"Testing".to_string(),user_name:"Testing_User".to_string(),variant:CustomRewardVariant::New, message: "test message".to_string() }))]
+    #[case("Testing", "1", CustomRewardVariant::Update , IntegrationEvent::ChannelPoint(CustomRewardEvent {event_id:"1".to_string(),id:"1".to_string(),title:"Testing".to_string(),user_name:"Testing_User".to_string(),variant:CustomRewardVariant::Update, message: "test message".to_string() }))]
     #[case(
         "ting", 
         "1", 
         CustomRewardVariant::New, 
-        IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "1".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::New })
+        IntegrationEvent::ChannelPoint(CustomRewardEvent {event_id:"1".to_string(),id:"1".to_string(),title:"Testing".to_string(),user_name:"Testing_User".to_string(),variant:CustomRewardVariant::New, message: "test message".to_string() })
     )]
-    #[case("Testing", "2", CustomRewardVariant::Update , IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "2".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::Update }))]
+    #[case("Testing", "2", CustomRewardVariant::Update , IntegrationEvent::ChannelPoint(CustomRewardEvent {event_id:"1".to_string(),id:"2".to_string(),title:"Testing".to_string(),user_name:"Testing_User".to_string(),variant:CustomRewardVariant::Update, message: "test message".to_string() }))]
     fn channel_point_rewards_triggered(
         #[case] title: &str,
         #[case] id: &str,
@@ -438,13 +438,13 @@ mod tests {
         "Testing", 
         "1", 
         CustomRewardVariant::Update, 
-        IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "1".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::New })
+        IntegrationEvent::ChannelPoint(CustomRewardEvent {event_id:"1".to_string(),id:"1".to_string(),title:"Testing".to_string(),user_name:"Testing_User".to_string(),variant:CustomRewardVariant::New, message: "test message".to_string() })
     )]
     #[case(
         "Testing", 
         "2", 
         CustomRewardVariant::New, 
-        IntegrationEvent::ChannelPoint(CustomRewardEvent { event_id: "1".to_string(), id: "1".to_string(), title: "Testing".to_string(), user_name: "Testing_User".to_string(), variant: CustomRewardVariant::New })
+        IntegrationEvent::ChannelPoint(CustomRewardEvent {event_id:"1".to_string(),id:"1".to_string(),title:"Testing".to_string(),user_name:"Testing_User".to_string(),variant:CustomRewardVariant::New, message: "test message".to_string() })
     )]
     fn channel_point_rewards_not_triggered(
         #[case] title: &str,

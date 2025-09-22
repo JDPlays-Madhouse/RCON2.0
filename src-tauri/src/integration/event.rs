@@ -125,6 +125,7 @@ impl From<CustomRewardVariant> for ValueKind {
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Hash)]
 pub struct CustomRewardEvent {
+    pub variant: CustomRewardVariant,
     /// Occurrence ID
     pub event_id: String,
     /// Reward ID
@@ -132,5 +133,5 @@ pub struct CustomRewardEvent {
     /// Reward Title
     pub title: String,
     pub user_name: String,
-    pub variant: CustomRewardVariant,
+    pub message: String,
 }

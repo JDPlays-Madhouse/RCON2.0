@@ -434,6 +434,7 @@ impl WebsocketClient {
                         title: reward_payload.reward.title,
                         user_name: reward_payload.user_name.to_string(),
                         variant: CustomRewardVariant::Update,
+                        message:reward_payload.user_input.to_string(),
                     }))
                     .await;
             }
@@ -465,6 +466,7 @@ impl WebsocketClient {
                         title: reward_payload.reward.title,
                         user_name: reward_payload.user_name.to_string(),
                         variant: CustomRewardVariant::New,
+                        message:  reward_payload.user_input.to_string()
                     }))
                     .await;
             }
