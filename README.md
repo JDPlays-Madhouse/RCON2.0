@@ -16,15 +16,6 @@
 - [ ] [Issue #5](https://github.com/JDPlays-Madhouse/RCON2.0/issues/5) Writing to script file removes any `ChannelPointRewardRedeemed` trigger,
       therefore writing is disabled until solved.
 
-## Minimum Viable Product [v0.1.5](https://github.com/JDPlays-Madhouse/RCON2.0/releases/tag/0.1.5)
-
-- [x] Authenticate with twitch.
-- [x] Connect to twitch websocket.
-- [x] Handle Chat and Channel Point Reward Events.
-- [x] Connect to an Rcon Server.
-- [x] Send commands to Rcon Server.
-- [x] Configure through TOML commands to send to RCON server with defined triggers.
-
 ## Requirements
 
 - [x] Read twitch events directly i.e. no Streamer.bot etc.

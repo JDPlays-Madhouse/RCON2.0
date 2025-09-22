@@ -1,3 +1,5 @@
+# Changelog
+
 {{ if .Versions -}}
 {{ if .Unreleased.CommitGroups -}}
 <a name="unreleased"></a>

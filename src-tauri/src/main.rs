@@ -4,5 +4,5 @@
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
-    rcon2::run().await;
+    rcon2_lib::run().await;
 }

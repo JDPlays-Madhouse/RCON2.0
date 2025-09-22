@@ -1,20 +1,10 @@
 //! # RCON2
 //!
-//! ## Minimum Viable Product
-//!
-//! - [x] Authenticate with twitch.
-//! - [x] Connect to twitch websocket.
-//! - [x] Handle Chat and Channel Point Reward Events.
-//!     - Only the redeem is handled not the comments.
-//! - [x] Connect to an Rcon Server.
-//! - [x] Send commands to Rcon Server.
-//! - [x] Configure through TOML commands to send to RCON server with defined triggers.
-//! - [x] React to triggers and send events to RCON server.
-//!
 //! ## Todo
-//!
-//! - [x] Write commands to file.
-//! - [x] React to events.
+//! - [x] Print Rcon connected to server.
+//! - [ ] Raid
+//! - [ ] Cheers
+//! - [ ] Gift subs
 //!
 //! ## Classes
 #![doc = simple_mermaid::mermaid!("../../docs/mermaid/classes.mmd")]

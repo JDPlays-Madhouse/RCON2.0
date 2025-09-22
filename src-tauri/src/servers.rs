@@ -95,12 +95,21 @@ impl GameServerConnected {
                 let _ = channel.send(ServerStatus::Connected {
                     server: server.clone(),
                 });
-                let gameserverconnected = Self {
+                let mut gameserverconnected = Self {
                     server: server.clone(),
                     channel,
                     connection,
                 };
                 info!("Connected to server: {}", &server.name);
+
+                if server.game == Game::Factorio {
+                    let _ = gameserverconnected
+                        .send_command(format!(
+                            r#"/sc game.print("RCON v{} Connected")"#,
+                            clap::crate_version!()
+                        ))
+                        .await;
+                }
                 {
                     CONNECTIONS
                         .lock()
@@ -141,7 +150,15 @@ impl GameServerConnected {
     pub async fn disconnect(server: GameServer) -> Result<GameServer, GameServer> {
         info!("Disconnecting from: {}", &server.name);
         match CONNECTIONS.lock().await.remove_entry(&server) {
-            Some((s, c)) => {
+            Some((s, mut c)) => {
+                if server.game == Game::Factorio {
+                    let _ = c
+                        .send_command(format!(
+                            r#"/sc game.print("RCON v{} Disconnecting")"#,
+                            clap::crate_version!()
+                        ))
+                        .await;
+                }
                 let channel = c.channel;
                 let _ = channel.send(ServerStatus::Disconnected {
                     server: Some(s.clone()),
@@ -356,6 +373,7 @@ pub fn new_server(server: GameServer) -> Result<GameServer, String> {
     info! {"adding new rcon server: {:?}", server};
     let ret_server = server.clone();
     let mut settings = crate::settings::Settings::new();
+    // BUG: #7 Non validated input causing program to crash from spaces.
     settings
         .set_config(&format!("servers.{}.address", server.name), server.address)
         .unwrap();
@@ -428,6 +446,7 @@ pub async fn connect_to_server(
         Ok(s) => {
             let status = ServerStatus::Connected { server: s.clone() };
             let _ = channel.send(status.clone());
+
             Ok(status)
         }
         Err(e) => {
