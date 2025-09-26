@@ -1,9 +1,1 @@
-local radius = 25;
-local player = game.get_player(player_name);
-
-if player then;
-  local force = player.force;
-  for k,v in pairs(player.surface.find_entities_filtered{position=player.position, radius=radius}) do;
-    v.order_deconstruction(force);
-  end;
-end;
+local radius = 25;local player = game.get_player(player_name);if player then; local force = player.force;for k,v in pairs(player.surface.find_entities_filtered{position=player.position, radius=radius}) do; v.order_deconstruction(force);end;end;

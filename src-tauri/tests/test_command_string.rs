@@ -18,6 +18,6 @@ fn file_command_print() {
         lua_command,
         variables,
     };
-    let expected = "/silent-command local player_name = \"JD-Plays\";\nlocal radius = 25;\r\nlocal player = game.get_player(player_name);\r\n\r\nif player then;\r\n  local force = player.force;\r\n  for k,v in pairs(player.surface.find_entities_filtered{position=player.position, radius=radius}) do;\r\n    v.order_deconstruction(force);\r\n  end;\r\nend;";
-    assert_eq!(rcon_command.command(None, "test").as_str(), expected);
+    let expected = "/silent-command local player_name = \"JD-Plays\";\nlocal radius = 25;local player = game.get_player(player_name);if player then; local force = player.force;for k,v in pairs(player.surface.find_entities_filtered{position=player.position, radius=radius}) do; v.order_deconstruction(force);end;end;";
+    assert_eq!(rcon_command.command(None, "test").as_str().trim(), expected);
 }
