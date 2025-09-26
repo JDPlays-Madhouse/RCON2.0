@@ -133,6 +133,7 @@ impl GameServerConnected {
     }
 
     pub async fn send_command(&mut self, command_contents: String) -> Result<String> {
+        // dbg!(&command_contents);
         Ok(self.connection.cmd(&command_contents).await?)
     }
 
