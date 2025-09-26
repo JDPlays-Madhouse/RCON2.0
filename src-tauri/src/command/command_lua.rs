@@ -95,14 +95,14 @@ impl LuaFile {
         }
     }
 
-    fn new(path: PathBuf) -> Self {
+    pub fn new(path: PathBuf) -> Self {
         Self {
             relative_path: path,
             contents: None,
         }
     }
 
-    fn full_path(&mut self) -> PathBuf {
+    pub fn full_path(&mut self) -> PathBuf {
         let folder = ScriptSettings::scripts_folder();
         folder.join(&self.relative_path)
     }

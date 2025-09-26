@@ -47,9 +47,9 @@ export type LogLevelColors = {
 // Commands
 export type RconCommandPrefix =
   | {
-    prefix: "Custom";
-    data: string;
-  }
+      prefix: "Custom";
+      data: string;
+    }
   | { prefix: "SC" }
   | { prefix: "MC" }
   | { prefix: "C" };
@@ -63,9 +63,9 @@ export enum CommandPrefixType {
 
 export type RconLuaCommand =
   | {
-    commandType: "File";
-    command: { relative_path: string; command?: string };
-  }
+      commandType: "File";
+      command: { relative_path: string; command?: string };
+    }
   | { commandType: "Inline"; command: string };
 
 export enum LuaCommandType {
@@ -93,19 +93,29 @@ export enum TriggerType {
   ChatRegex = "Chat Regex",
   ChannelPointRewardRedeemed = "Channel Point Reward Redeemed",
   Subscription = "Subscription",
+  GiftSub = "Gift Sub",
 }
 
 export type Trigger =
   | { trigger: TriggerType.Chat; data: { pattern: string } }
   | { trigger: TriggerType.ChatRegex; data: { pattern: string } }
   | {
-    trigger: TriggerType.ChannelPointRewardRedeemed;
-    data: { title: string; id: string };
-  }
+      trigger: TriggerType.ChannelPointRewardRedeemed;
+      data: { title: string; id: string };
+    }
   | {
-    trigger: TriggerType.Subscription;
-    data: { tier: string; comaparison_operator: ComparisonOperator };
-  };
+      trigger: TriggerType.Subscription;
+      data: { tier: string; comaparison_operator: ComparisonOperator };
+    }
+  | {
+      trigger: TriggerType.GiftSub;
+      data: {
+        tier: string;
+        tier_comaparison_operator: ComparisonOperator;
+        count: number;
+        count_comparison_operator: ComparisonOperator;
+      };
+    };
 
 export type GameServerTrigger = {
   server: Server;
@@ -139,16 +149,16 @@ export type TokenError =
 
 export type ServerStatus =
   | {
-    event: "connecting";
-    data: { server: Server };
-  }
+      event: "connecting";
+      data: { server: Server };
+    }
   | { event: "connected"; data: { server: Server } }
   | { event: "checking"; data: { server: Server } }
   | { event: "error"; data: { msg: string; server: Server } }
   | {
-    event: "disconnected";
-    data: { server?: Server };
-  };
+      event: "disconnected";
+      data: { server?: Server };
+    };
 
 export type IntegrationStatusMap = { [Property in Api]: IntegrationStatus };
 

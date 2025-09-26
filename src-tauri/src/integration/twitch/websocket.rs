@@ -304,6 +304,7 @@ impl WebsocketClient {
                                 message,
                                 ..
                             }) => self.channel_subscribe_message(message).await,
+                            Event::ChannelSubscriptionGiftV1(eventsub::Payload{message, ..}) => self.channel_subscription_gift(message).await,
 
                             m => {
                                 let message =
@@ -407,6 +408,37 @@ impl WebsocketClient {
             }
             _ => {
                 error! {"Unhandled ChannelSubscribeV1 Payload: {:?}", message}
+            }
+        }
+    }
+    
+    async fn channel_subscription_gift(
+        &mut self,
+        message: eventsub::Message<eventsub::channel::ChannelSubscriptionGiftV1>,
+    ) {
+        match message.clone() {
+            eventsub::Message::Notification(reward_payload) => {
+                let user_name = reward_payload.user_name.clone().map(|n| n.to_string());
+                let message = format!(
+                    "{} {:?} subscription gift from {}",
+                    reward_payload.total,reward_payload.tier, user_name.as_ref().unwrap_or(&String::from("annonymous")),
+                );
+
+                info!(
+                    target = "rcon2::integration::twitch::websocket::ChannelSubscriptionGift",
+                    message
+                );
+                let _ = self
+                    .event_tx
+                    .send(IntegrationEvent::GiftSub  {
+                        tier: normalise_tier(Some(reward_payload.tier.clone()), None),
+                        user_name: user_name,
+                        count: reward_payload.total as u64,
+                    })
+                    .await;
+            }
+            _ => {
+                error! {"Unhandled ChannelSubscriptionGiftV1 Payload: {:?}", message}
             }
         }
     }

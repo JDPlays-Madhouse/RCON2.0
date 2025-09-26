@@ -1,6 +1,13 @@
 "use client";
 
-import { Command, Game, GameServerTrigger, Server, Trigger, TriggerType } from "@/types";
+import {
+  Command,
+  Game,
+  GameServerTrigger,
+  Server,
+  Trigger,
+  TriggerType,
+} from "@/types";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -106,39 +113,71 @@ export const columns: ColumnDef<CommandTrigger>[] = [
     accessorKey: "serverTrigger.trigger",
     header: "Trigger",
     cell: ({ cell }) => {
+      let display;
       const trigger: Trigger = cell.getValue() as Trigger;
-      switch (trigger.trigger) {
+      // @ts-expect-error Error with TS enum
+      switch (TriggerType[trigger.trigger as TriggerType]) {
         case TriggerType.Chat:
+          // @ts-expect-error invalid TS Type
+          display = trigger.data.pattern;
           return (
             <CellToolTip
               helper="The pattern that will trigger the command."
               className="cursor-text"
             >
-              {trigger.data.pattern}
+              {display}
             </CellToolTip>
           );
         case TriggerType.ChatRegex:
+          // @ts-expect-error invalid TS Type
+          display = trigger.data.pattern;
           return (
             <CellToolTip
               helper="The pattern that will trigger the command."
               className="cursor-text"
             >
-              {trigger.data.pattern}
+              {display}
             </CellToolTip>
           );
         case TriggerType.ChannelPointRewardRedeemed:
+          // @ts-expect-error invalid TS Type
+          display = trigger.data.title;
           return (
             <CellToolTip
               helper="{Channel Points Reward Name} - {Twitch ID for reward}"
               className="cursor-text"
             >
-              {`${trigger.data.title} - ${trigger.data.id}`}
+              {`${display}`}
             </CellToolTip>
           );
         case TriggerType.Subscription:
           return (
             <CellToolTip helper="When a user subscribes to your channel">
               Subscription
+            </CellToolTip>
+          );
+        case TriggerType.GiftSub:
+          display =
+            // @ts-expect-error invalid TS Type
+            (trigger.data.tier_comparison_operator === "Any"
+              ? "Any Tier"
+              : // @ts-expect-error invalid TS Type
+                trigger.data.tier_comparison_operator +
+                " " +
+                // @ts-expect-error invalid TS Type
+                trigger.data.tier) +
+            ", " +
+            // @ts-expect-error invalid TS Type
+            (trigger.data.count_comparison_operator === "Any"
+              ? "Any Count"
+              : // @ts-expect-error invalid TS Type
+                trigger.data.count_comparison_operator +
+                " " +
+                // @ts-expect-error invalid TS Type
+                trigger.data.count);
+          return (
+            <CellToolTip helper="When a user gifts subscriptions">
+              {display}
             </CellToolTip>
           );
       }
@@ -198,7 +237,7 @@ type TriggerCommand = [GameServerTrigger, Command];
 export enum FormOpen {
   None,
   Trigger,
-  Command
+  Command,
 }
 
 export default function DashboardTable({ selectedServer }: DataTableProps) {
@@ -207,9 +246,8 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
   const [formOpen, setFormOpen] = useState(FormOpen.None);
   const [thisServerOnly, setThisServerOnly] = useState(false);
   useEffect(() => {
-    handleUpdateData()
+    handleUpdateData();
   }, [selectedServer]);
-
 
   const handleUpdateData = () => {
     setCount((c) => c + 1);
@@ -227,7 +265,7 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
   };
 
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
+    []
   );
   function updateNestedValue<tValue, tObj>(
     keyArr: string[],
@@ -236,17 +274,16 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
   ): { [index: string]: tObj | tValue } {
     const key = keyArr.shift();
     if (!key) {
-      return {}
-    }
-    else if (keyArr.length === 0 && key) {
+      return {};
+    } else if (keyArr.length === 0 && key) {
       obj[key] = value;
       return obj;
     } else {
       // @ts-expect-error incorrect types
-      obj[key] = updateNestedValue(keyArr, value, obj[key])
-      return obj
+      obj[key] = updateNestedValue(keyArr, value, obj[key]);
+      return obj;
     }
-  };
+  }
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const table = useReactTable({
     data,
@@ -270,9 +307,14 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
       ) {
         const newData = data.map((row, index) => {
           if (index === rowIndex) {
-            return updateNestedValue(columnId.split("."), value, data[rowIndex]);
+            return updateNestedValue(
+              columnId.split("."),
+              value,
+              data[rowIndex]
+            );
+          } else {
+            return row;
           }
-          else { return row; }
         });
 
         const serverTriggers: GameServerTrigger[] = [];
@@ -280,11 +322,11 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
           // @ts-expect-error unsure
           if (v.command?.name === commandName) {
             // @ts-expect-error unsure
-            serverTriggers.push(v.serverTrigger)
+            serverTriggers.push(v.serverTrigger);
           }
         });
 
-        invoke("update_server_trigger", { commandName, serverTriggers })
+        invoke("update_server_trigger", { commandName, serverTriggers });
         // @ts-expect-error unsure
         setData(newData);
       },
@@ -292,8 +334,10 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
   });
 
   useEffect(() => {
-    table.getColumn("server")?.setFilterValue(thisServerOnly ? selectedServer?.name : undefined)
-  }, [thisServerOnly])
+    table
+      .getColumn("server")
+      ?.setFilterValue(thisServerOnly ? selectedServer?.name : undefined);
+  }, [thisServerOnly]);
 
   return (
     <div className="w-full">
@@ -313,15 +357,26 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
             className="flex flex-row text-foreground items-center justify-center gap-1"
             variant="secondary"
             onClick={() => {
-              setThisServerOnly(!thisServerOnly)
-            }}>{thisServerOnly ? <Check className="" /> : <X />} <span>This server only.</span></Button>
+              setThisServerOnly(!thisServerOnly);
+            }}
+          >
+            {thisServerOnly ? <Check className="" /> : <X />}{" "}
+            <span>This server only.</span>
+          </Button>
         </div>
         <div className="flex flex-1 flex-row gap-2 justify-end">
-          <ServerFormDialog formTitle="New Trigger" form={<TriggerForm server={selectedServer as Server} />}>
+          <ServerFormDialog
+            formTitle="New Trigger"
+            form={<TriggerForm server={selectedServer as Server} />}
+          >
             <Button
               variant="secondary"
               className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"
-              onClick={() => setFormOpen((prev) => prev === FormOpen.None ? FormOpen.Trigger : FormOpen.None)}
+              onClick={() =>
+                setFormOpen((prev) =>
+                  prev === FormOpen.None ? FormOpen.Trigger : FormOpen.None
+                )
+              }
               disabled
             >
               <Plus />
@@ -331,7 +386,11 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
           <Button
             variant="secondary"
             className="flex flex-row text-secondary-foreground text-base justify-center gap-1 pl-[11px]"
-            onClick={() => setFormOpen((prev) => prev === FormOpen.None ? FormOpen.Command : FormOpen.None)}
+            onClick={() =>
+              setFormOpen((prev) =>
+                prev === FormOpen.None ? FormOpen.Command : FormOpen.None
+              )
+            }
             disabled
           >
             <Plus />
@@ -341,18 +400,22 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
       </div>
       <div className="rounded-md border w-full">
         <Table>
-          <TableHeader className="text-center justify-center" >
+          <TableHeader className="text-center justify-center">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="text-center" colSpan={header.colSpan}>
+                    <TableHead
+                      key={header.id}
+                      className="text-center"
+                      colSpan={header.colSpan}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   );
                 })}
@@ -370,7 +433,7 @@ export default function DashboardTable({ selectedServer }: DataTableProps) {
                     <TableCell key={cell.id} className="text-center">
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext(),
+                        cell.getContext()
                       )}
                     </TableCell>
                   ))}

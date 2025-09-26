@@ -35,8 +35,8 @@ function onMessageHandler(target, context, msg, self) {
 
   // Allow for toggling integration state
   let pause = msg.match(/(HOLD|RESUME)/);
-  if (pause && target == '#jdplays' && context.username == 'jdplays') {
-    if (pause[1] == 'HOLD') {
+  if (pause && target == "#jdplays" && context.username == "jdplays") {
+    if (pause[1] == "HOLD") {
       client.say("#jdplays", "*** Integration is paused while JD is away. ***");
       running = false;
     } else {
@@ -48,8 +48,17 @@ function onMessageHandler(target, context, msg, self) {
   // if running process integrations
   if (running) {
     // Each message grows a tree
-    if (context.username != 'jdplays' && context.username != 'jdplays' && context.username != 'Nightbot' && context.username != 'streamelements') {
-      game.send(`/muppet_streamer_spawn_around_player {"target":"JD-Plays", "entityName":"tree", "radiusMax":20, "radiusMin":5, "existingEntities":"avoid", "density": ${msg.length/25000}}`);
+    if (
+      context.username != "jdplays" &&
+      context.username != "jdplays" &&
+      context.username != "Nightbot" &&
+      context.username != "streamelements"
+    ) {
+      game.send(
+        `/muppet_streamer_spawn_around_player {"target":"JD-Plays", "entityName":"tree", "radiusMax":20, "radiusMin":5, "existingEntities":"avoid", "density": ${
+          msg.length / 25000
+        }}`
+      );
     }
   }
 
@@ -57,10 +66,10 @@ function onMessageHandler(target, context, msg, self) {
   const customRewardId = context["custom-reward-id"];
   const commandsToRun = commands(context, msg)[customRewardId];
 
-  if (typeof commandsToRun !== 'undefined') {
+  if (typeof commandsToRun !== "undefined") {
     if (commandsToRun.length) {
-      commandsToRun.forEach(cmd => {
-        let command = cmd.replace(/%%USERNAME%%/g, context.username) // MUPPET - Puts the username in to command text. Just delete/comment out this line to disable it.
+      commandsToRun.forEach((cmd) => {
+        let command = cmd.replace(/%%USERNAME%%/g, context.username); // MUPPET - Puts the username in to command text. Just delete/comment out this line to disable it.
         game.send(command); // MUPPET - replace `command` with `cmd` to undo Username insertion attempt.
         console.log(`* Executed command for reward: ${customRewardId}`);
       });
@@ -105,18 +114,20 @@ function commands(userstate, message) {
     "8d9dcabc-2b9c-4e91-873d-6ab2b8b3f6a8": [
       `/sc game.print('It's %%USERNAME%% Fault', {r=1, g=0, b=0, a=1})`,
     ],
-	
+
     // A well timed shot
+    // XXX: No Reward
     "4b5aed7b-997f-4724-97da-1abc46a71d75": [
       `/muppet_streamer_schedule_explosive_delivery {"explosiveCount":1, "explosiveType":"grenade", "target":"JD-Plays", "accuracyRadiusMin":1, "accuracyRadiusMax":2}`,
     ],
 
     // Another well timed shot ? - Same as Run Faster, so should be removed here and the redeem?
+    // XXX: No Reward
     "71ef7616-906e-4d1f-84b3-04ed9202559f": [
       `/sc local grenadeType = "grenade"; if game.get_player("JD-Plays").force.technologies["military-4"].researched then; grenadeType = "clusterGrenade"; end;
       local count = math.max(math.ceil(game.forces["enemy"].evolution_factor * 5),1);
       local maxRadius = count * 3; if grenadeType == "clusterGrenade" then; maxRadius = math.ceil(maxRadius * 1.3); end;
-      remote.call('muppet_streamer', 'run_command', 'muppet_streamer_schedule_explosive_delivery', {explosiveCount=count, explosiveType=grenadeType, target="JD-Plays", accuracyRadiusMin=math.floor(maxRadius/2), accuracyRadiusMax=maxRadius});`
+      remote.call('muppet_streamer', 'run_command', 'muppet_streamer_schedule_explosive_delivery', {explosiveCount=count, explosiveType=grenadeType, target="JD-Plays", accuracyRadiusMin=math.floor(maxRadius/2), accuracyRadiusMax=maxRadius});`,
     ],
 
     // Run Faster - SCALING GRENADE
@@ -172,7 +183,7 @@ end;`,
     // Sticky Trigger Finger - Gives you a Boom Stick, fires off some EXTRA rounds, but lets you keep the origional rounds.
     "d1e4bb1a-396d-44dd-8f4e-fc6ec396d0fa": [
       `/sc remote.call('muppet_streamer', 'run_command', 'muppet_streamer_give_player_weapon_ammo', {delay=0, target="JD-Plays", weaponType="combat-shotgun", forceWeaponToSlot=true, selectWeapon=true, ammoType="piercing-shotgun-shell", ammoCount=15});
-      remote.call('muppet_streamer', 'run_command', 'muppet_streamer_malfunctioning_weapon', {delay=0.1, target="JD-Plays", ammoCount=3, weaponType="combat-shotgun", ammoType="piercing-shotgun-shell"});`
+      remote.call('muppet_streamer', 'run_command', 'muppet_streamer_malfunctioning_weapon', {delay=0.1, target="JD-Plays", ammoCount=3, weaponType="combat-shotgun", ammoType="piercing-shotgun-shell"});`,
     ],
 
     // Firewall
@@ -182,24 +193,26 @@ end;`,
 
     // Portal - only walkable targets: nearest biter nest within 3k tiles, otherwise random within 500-1,000 tiles.
     "6970482e-904e-4202-a4f8-2dd0b1b03861": [
-	  `/muppet_streamer_teleport {"target":"JD-Plays", "destinationType":"biterNest", "maxDistance": 3000, "reachableOnly": true, "backupTeleportSettings": {"target":"JD-Plays", "destinationType":"random", "minDistance": 500, "maxDistance": 1000, "reachableOnly": true} }`,
+      `/muppet_streamer_teleport {"target":"JD-Plays", "destinationType":"biterNest", "maxDistance": 3000, "reachableOnly": true, "backupTeleportSettings": {"target":"JD-Plays", "destinationType":"random", "minDistance": 500, "maxDistance": 1000, "reachableOnly": true} }`,
     ],
 
     // Home
     "cae87f07-4a32-438b-add2-55943cab6545": [
       `/muppet_streamer_teleport {"target":"JD-Plays", "destinationType":"spawn"}`,
     ],
-	
+
     // Battleships - the x and y values are abstracted from the redeem message by this integration automatically.
     "170b115b-6eb5-4b62-b83d-bc08f2b142b8": [
-      `/muppet_streamer_schedule_explosive_delivery {"explosiveCount":45, "explosiveType":"artilleryShell", "target":"JD-Plays", "accuracyRadiusMax":25,"targetOffset": {"x":` + (x == null ? 0 : x) + `, "y":` + (y == null ? 0 : y) + `}}`,
+      `/muppet_streamer_schedule_explosive_delivery {"explosiveCount":45, "explosiveType":"artilleryShell", "target":"JD-Plays", "accuracyRadiusMax":25,"targetOffset": {"x":` +
+        (x == null ? 0 : x) +
+        `, "y":` +
+        (y == null ? 0 : y) +
+        `}}`,
     ],
 
     // MiniNuke - same unsure on value
-    "88a47fbe-0f41-42f0-8fdb-ec1d1f9c552f": [
-      `/jd_goes_boom JD-Plays 2`,
-    ],
-	
+    "88a47fbe-0f41-42f0-8fdb-ec1d1f9c552f": [`/jd_goes_boom JD-Plays 2`],
+
     // Decon
     "b77bb703-b32d-46a9-887b-98f300e0d36d": [
       `/sc local radius = 25;
@@ -212,7 +225,7 @@ end;`,
       end;`,
     ],
 
-    // Mass Decon 
+    // Mass Decon
     "c82628fb-808d-405d-9067-314c29365c08": [
       `/sc local radius = 10;
       for _, player in pairs(game.connected_players) do;
@@ -225,61 +238,61 @@ end;`,
 
     // Poop
     "ffb332b7-34e0-4ce5-b32c-056472de3529": [
-`/muppet_streamer_player_drop_inventory {"target":"JD-Plays", "quantityType":"startingPercentage", "quantityValue":100, "gap":1, "occurrences":1, "markForDeconstruction": true, "includeArmor": false, "includeWeapons": false}`,
+      `/muppet_streamer_player_drop_inventory {"target":"JD-Plays", "quantityType":"startingPercentage", "quantityValue":100, "gap":1, "occurrences":1, "markForDeconstruction": true, "includeArmor": false, "includeWeapons": false}`,
     ],
-	
+
     // Pants on fire
     "5082667b-c85a-49e8-9260-0ed73936addd": [
       `/muppet_streamer_pants_on_fire {"target":"JD-Plays", "flameCount": 250, "duration": 45}`,
     ],
-	
-	// group gastro
+
+    // group gastro
     "9c713aa7-cf45-437d-9f7c-dc44b9136be8": [
       `/sc for i, player in pairs(game.connected_players) do;
         remote.call('muppet_streamer', 'run_command', 'muppet_streamer_player_drop_inventory', {delay = i/4, target=player.name, quantityType="startingPercentage", quantityValue=100, gap=1, occurrences=1, markForDeconstruction=true, includeArmor=false, includeWeapons=false});
       end;`,
     ],
-	
+
     // runs down your leg
     "5bf18721-3ba6-44b6-83b7-7c95efdc9e18": [
       `/muppet_streamer_player_drop_inventory {"target":"JD-Plays", "quantityType":"startingPercentage", "quantityValue":10, "gap":5, "occurrences":10} "dropOnBelts":true`,
     ],
-	
+
     // Mighty Mighty Power Rangers
     "e0489a01-69f9-43be-a4ae-4dd73f1149c0": [
       `/muppet_streamer_call_for_help {"target":"JD-Plays", "whitelistedPlayerNames": "foxhound590,billbo99,muppet9010,Stinson_5,Huff", "arrivalRadius":5, "callSelection": "random", "activePercentage": 100}`,
     ],
-	
+
     // combat
     "5ca58e65-e14e-457b-b1ba-9b961e01791d": [
       `/muppet_streamer_spawn_around_player {"target":"JD-Plays", "entityName":"gunTurretPiercingAmmo", "radiusMax":5, "radiusMin":5, "existingEntities":"avoid", "quantity":6, "ammoCount":10}`,
     ],
-	
+
     // Inventory Shuffle (nice) - excludes armor.
     "38a933d2-8017-4e86-a275-0fa4a366f8d4": [
       `/muppet_streamer_player_inventory_shuffle {"includedPlayers":"[ALL]", "includeArmor":false}`,
     ],
-	
+
     // Inventory Shuffle (bad) - disassembles equipment from armor.
     "a9206e00-ab0d-44be-bab7-4068dc26c3a0": [
       `/muppet_streamer_player_inventory_shuffle {"includedPlayers":"[ALL]", "includeArmor":true, "extractArmorEquipment":true}`,
     ],
-	
+
     // UFOs
     "4b46a792-89e6-443a-ae6d-31c11bee8536": [
       `/muppet_streamer_spawn_around_player {"target":"JD-Plays", "force": "muppet_streamer_enemy", "entityName":"distractorBot", "radiusMax":8, "radiusMin":2, "existingEntities":"overlap", "quantity": 10, "followPlayer": true}`,
     ],
-	
+
     // JD can drive anything
     "f1f6f6a9-780d-4355-bb42-930656c150d4": [
       `/muppet_streamer_aggressive_driver {"target":"JD-Plays", "duration":60, "control": "random", "teleportDistance": 300}`,
     ],
-	
+
     // Call for HELP!!!!!
     "c95f6365-f240-41ab-8319-f0d56570dcc5": [
       `/muppet_streamer_call_for_help {"target":"JD-Plays", "blacklistedPlayerNames": "foxhound590,billbo99,muppet9010,Stinson_5,Huff", "arrivalRadius":10, "callSelection": "nearest", "number": 3}`,
     ],
-	
+
     // AIR Support
     "b526a2f1-cc63-4c2a-ba59-7d7f602e9ba1": [
       `/sc local playerName = "JD-Plays"; local deathSpread = 300;
@@ -290,31 +303,32 @@ end;`,
         bot.time_to_live = ttl + math.random(-deathSpread/2,deathSpread/2);
       end;`,
     ],
-	
+
     // Fortress - Dynamically sized based on evo level and ammo type based on research.
     "ec3aaa03-adbd-49f2-9779-6b52093fc296": [
       `/sc local turretType = "gunTurretRegularAmmo"; if game.get_player("JD-Plays").force.technologies["uranium-ammo"].researched then; turretType = "gunTurretUraniumAmmo"; elseif game.get_player("JD-Plays").force.technologies["military-2"].researched then; turretType = "gunTurretPiercingAmmo"; end;
       local size = math.max(math.ceil(game.forces["enemy"].evolution_factor * 10),1);
       remote.call('muppet_streamer', 'run_command', 'muppet_streamer_spawn_around_player', {target="JD-Plays", entityName=turretType, radiusMin=math.floor(size/3), radiusMax=2+math.ceil(size/3), existingEntities="avoid", quantity=size, ammoCount=size*5});
       remote.call('muppet_streamer', 'run_command', 'muppet_streamer_spawn_around_player', {target="JD-Plays", entityName="wall", radiusMin=math.ceil(size*0.5) + 4, radiusMax=math.ceil(size*0.7) + 4, existingEntities="avoid", quantity=(size*25)+25});
-      game.print("%%USERNAME%% gave JD a fortress with " .. size .. " guns, in a effort to save his ass");`
-	],
-	
+      game.print("%%USERNAME%% gave JD a fortress with " .. size .. " guns, in a effort to save his ass");`,
+    ],
+
     // badfox
     "d041c611-eca9-4f6b-ac88-0317ab83d70a": [
       `/muppet_streamer_call_for_help {"target":"JD-Plays", "whitelistedPlayerNames": "foxhound590", "arrivalRadius":5, "callSelection": "random", "activePercentage": 100}`,
     ],
-	
+
     // Its Dark
+    // XXX: No idea
     "9074bdec-483c-4f30-9764-2400e496bd12": [
       `/muppet_streamer_spawn_around_player {"target":"JD-Plays", "entityName":"custom", "customEntityName": "camp-fire", "force": "muppet_streamer_enemy", "radiusMax":15, "radiusMin":3, "existingEntities":"avoid", "quantity":5}`,
     ],
-	
+
     // Fire Pits
     "dcd7f0df-dcc7-4cf4-918e-c9b8f5f46227": [
       `/muppet_streamer_spawn_around_player {"target":"JD-Plays", "entityName":"custom", "customEntityName": "camp-fire", "force": "muppet_streamer_enemy", "radiusMax":15, "radiusMin":3, "existingEntities":"avoid", "density": 0.2}`,
     ],
-	
+
     // Toasted Marshmellows for all - Everyone gets a camp fire.
     "09fa7cb0-45a5-4788-82b8-1de36d7228ae": [
       `/sc for _, player in pairs(game.connected_players) do;
@@ -329,14 +343,15 @@ end;`,
         remote.call('muppet_streamer', 'run_command', 'muppet_streamer_pants_on_fire', {target=player.name, delay=5, duration=90, flameCount=250, suppressMessages=true});
       end;`,
     ],
-	
+
     // JD Stand Still - just make the stasis effect on JD instantly. Is a small area of affect with 20 second timer (mod default).
     // Disable the stasis weapons in Stasis mod startup settings to stop players crafting them. Duration and affect forces also controlled by mod startup settings.
+    // XXX: Unsure
     "3017801e-3ace-4c62-b322-aa76f08b6e37": [
       `/sc local player = game.get_player("JD-Plays"); local position = player.position;
       player.surface.create_entity({name="stasis-grenade", position=position, force="enemy", target=position, speed=0, max_range=0});`,
     ],
-	
+
     // JD Bullet Time - slowdown capsules instantly affect on JD and the wider area around him.
     "da97e97c-5940-4b78-a6c3-55728708d745": [
       `/sc local player = game.get_player("JD-Plays"); local surface = player.surface; local position = player.position; local spread = 15; local diagonalSpread = spread * 0.7; local thisPosition;
@@ -360,10 +375,10 @@ end;`,
         end;
       end;`,
     ],
-	
-	// God Clearing His Throat - Lots of spit at JD.
+
+    // God Clearing His Throat - Lots of spit at JD.
     "65e161f9-e3e3-479a-896a-2470d2606611": [
-      `/muppet_streamer_schedule_explosive_delivery {"delay":3, "explosiveCount":435, "explosiveType":"largeSpit", "target":"JD-Plays", "accuracyRadiusMin":5, "accuracyRadiusMax":60}`
+      `/muppet_streamer_schedule_explosive_delivery {"delay":3, "explosiveCount":435, "explosiveType":"largeSpit", "target":"JD-Plays", "accuracyRadiusMin":5, "accuracyRadiusMax":60}`,
     ],
 
     // Pet Biter  Takes in %%USERNAME%% from JD integration tool. --
@@ -517,7 +532,7 @@ for _, targetPosition in pairs(targetPositions) do;
   end;
 end;`,
     ],
-	
+
     // Where Did I park My car?
     "58d06f9d-ba2a-4df7-8c74-d99f66de99ca": [
       `/sc 
@@ -554,7 +569,7 @@ else
 	game.print("    Player may be offline or player_name may be misspelled");
 end`,
     ],
-	
+
     //You only NEED 1 HP
     "892c1684-7730-430d-a12f-e25bdc458b3a": [
       `/sc 
@@ -600,39 +615,46 @@ else;
 	game.print("    Player may be offline or player_name may be misspelled");
 end;`,
     ],
-	
+
     // Tanky Spider
+    // XXX: Spider unsure
     "cfcf8e9b-a6ea-4ab4-985c-9f3d16ba2822": [
       `/spider_give_ammo north explosiveCannonShell 20 10%`,
     ],
-	
+
     // Who gave the spider depleted uranium shells?
+    // XXX: Spider unsure
     "1d5df2f7-74df-49bc-87e1-4a6fe91864f4": [
       `/spider_give_ammo north uraniumCannonShell 20 10%`,
     ],
-	
+
     // ARMED to the Teeth, do spiders have teeth?
+    // XXX: Spider unsure
     "1638197d-f81e-4314-b1e4-b742356cd6a1": [
       `/spider_give_ammo north explosiveUraniumCannonShell 20 10%`,
     ],
-	
+
     // Long Range Spider
+    // XXX: Spider unsure
     "62c0742b-4d98-49a1-b6c3-367dd91093f2": [
       `/spider_give_ammo north artilleryShell 10 4`,
     ],
-	
+
     // Move Santa forwards (50 and random +/-50)
-    "xxxxx": [
-	  `/offset-santa-landing-position 1000 ${random(500)}`, `/reintroduce-santa`
-	],
-	
+    // XXX: Spider unsure
+    xxxxx: [
+      `/offset-santa-landing-position 1000 ${random(500)}`,
+      `/reintroduce-santa`,
+    ],
+
     // Move Santa backwards (50 and random +/-50)
-    "xxxx": [
-	  `/offset-santa-landing-position -1000 ${random(500)}`, `/reintroduce-santa`
-	],
+    // XXX: Spider unsure
+    xxxx: [
+      `/offset-santa-landing-position -1000 ${random(500)}`,
+      `/reintroduce-santa`,
+    ],
   };
 }
-
 
 function random(multiplier) {
   let num = Math.floor(Math.random() * multiplier) + 1;

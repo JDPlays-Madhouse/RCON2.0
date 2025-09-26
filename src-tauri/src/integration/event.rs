@@ -22,6 +22,11 @@ pub enum IntegrationEvent {
         tier: trigger::SubscriptionTier,
         user_name: String,
     },
+    GiftSub {
+        tier: trigger::SubscriptionTier,
+        count: u64,
+        user_name: Option<String>,
+    },
     Unknown,
     Stop,
     Pause,
@@ -46,6 +51,42 @@ impl IntegrationEvent {
     pub fn is_channel_point(&self) -> bool {
         matches!(self, Self::ChannelPoint { .. })
     }
+
+    pub fn message(&self) -> Option<&str> {
+        match self {
+            IntegrationEvent::ChannelPoint(custom_reward_event) => {
+                Some(&custom_reward_event.message)
+            }
+            IntegrationEvent::Chat { msg, .. } => Some(&msg),
+            IntegrationEvent::Connected
+            | IntegrationEvent::Disconnected
+            | IntegrationEvent::Subscription { .. }
+            | IntegrationEvent::GiftSub { .. }
+            | IntegrationEvent::Unknown
+            | IntegrationEvent::Stop
+            | IntegrationEvent::Pause
+            | IntegrationEvent::Continue
+            | IntegrationEvent::Update => None,
+        }
+    }
+
+    pub fn username(&self) -> String {
+        match self {
+            IntegrationEvent::ChannelPoint(custom_reward_event) => {
+                custom_reward_event.user_name.clone()
+            }
+            IntegrationEvent::Chat { author, .. } => author.clone(),
+            IntegrationEvent::Subscription { user_name, .. } => user_name.clone(),
+            IntegrationEvent::GiftSub { user_name, .. } => user_name.clone().unwrap_or_default(),
+            IntegrationEvent::Connected
+            | IntegrationEvent::Disconnected
+            | IntegrationEvent::Unknown
+            | IntegrationEvent::Stop
+            | IntegrationEvent::Pause
+            | IntegrationEvent::Continue
+            | IntegrationEvent::Update => "<server>".to_string(),
+        }
+    }
     /// A default implementation of each enum which can be used for being a key.
     pub fn event_type(&self) -> Self {
         use IntegrationEvent::*;
@@ -64,6 +105,11 @@ impl IntegrationEvent {
             Disconnected => Disconnected,
             Subscription { .. } => Subscription {
                 tier: Default::default(),
+                user_name: Default::default(),
+            },
+            GiftSub { .. } => GiftSub {
+                tier: Default::default(),
+                count: Default::default(),
                 user_name: Default::default(),
             },
         }

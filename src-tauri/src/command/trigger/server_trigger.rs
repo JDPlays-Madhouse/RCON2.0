@@ -172,16 +172,17 @@ mod tests {
 
     use super::*;
 
-    #[fixture]
-    fn command() -> Command {
-        Command::new(
-            "test",
-            RconCommand {
-                prefix: Prefix::C,
-                lua_command: RconCommandLua::Inline("print('do not mind me just testing')".into()),
-            },
-        )
-    }
+    // #[fixture]
+    // fn command() -> Command {
+    //     Command::new(
+    //         "test",
+    //         RconCommand {
+    //             prefix: Prefix::C,
+    //             lua_command: RconCommandLua::Inline("print('do not mind me just testing')".into()),
+    //             variables: todo!(),
+    //         },
+    //     )
+    // }
 
     #[fixture]
     fn trigger() -> Trigger {

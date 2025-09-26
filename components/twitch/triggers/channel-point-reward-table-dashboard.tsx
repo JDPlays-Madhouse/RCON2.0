@@ -7,7 +7,7 @@ import ChannelPointRewardsTable, {
   column,
 } from "./channel-point-reward-table";
 
-interface ServerDashBoardProps extends React.ComponentProps<"div"> { }
+interface ServerDashBoardProps extends React.ComponentProps<"div"> {}
 
 export default function ChannelPointRewardsDashboard({
   className = "",

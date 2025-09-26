@@ -120,6 +120,7 @@ use cli::handle_cli_matches;
 use command::settings::ScriptSettings;
 use integration::TwitchApiConnection;
 use logging::{LogLevel, Logger};
+pub use miette::Result;
 use serde_json::value;
 use settings::Settings;
 use tauri::{AppHandle, Manager};
@@ -211,7 +212,7 @@ pub async fn run() {
             match app.cli().matches() {
                 Ok(matches) => {
                     let mut devtools = false;
-                    dbg!(&matches);
+                    // dbg!(&matches);
                     #[allow(unused_assignments)]
                     if matches.args.contains_key("devtools")
                         && matches.args["devtools"].value == value::Value::Bool(true)

@@ -474,7 +474,11 @@ pub async fn send_command_to_server(
         Some(c) => c,
         None => return Err("Server not connected to.".to_string()),
     };
-    match connection.send_command(command.tx_string()).await {
+    // TODO: Add message string from server.
+    match connection
+        .send_command(command.tx_string(None, "<server>"))
+        .await
+    {
         Ok(r) => {
             trace!("CONNECTIONS Unlocked");
             Ok(r)

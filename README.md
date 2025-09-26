@@ -15,6 +15,7 @@
 
 - [ ] [Issue #5](https://github.com/JDPlays-Madhouse/RCON2.0/issues/5) Writing to script file removes any `ChannelPointRewardRedeemed` trigger,
       therefore writing is disabled until solved.
+- [ ] [Issue #8](https://github.com/JDPlays-Madhouse/RCON2.0/issues/8) Server connection status not working.
 
 ## Requirements
 

@@ -4,5 +4,11 @@
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
+    match dotenvy::dotenv() {
+        Ok(_) => (),
+        Err(e) => {
+            eprintln!(".env error: {e}");
+        }
+    };
     rcon2_lib::run().await;
 }

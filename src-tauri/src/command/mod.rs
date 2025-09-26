@@ -19,9 +19,11 @@ mod prefix;
 pub use command_type::CommandType;
 pub use prefix::Prefix;
 mod command_lua;
-pub use command_lua::RconCommandLua;
+pub use command_lua::{LuaFile, RconCommandLua};
 mod rcon;
 pub use rcon::RconCommand;
+mod variable;
+pub use variable::Variable;
 
 use crate::{
     integration::IntegrationEvent,
@@ -99,8 +101,8 @@ impl Command {
     }
 
     /// The full string for transmitting to the rcon server.
-    pub fn tx_string(&mut self) -> String {
-        self.rcon_lua.command()
+    pub fn tx_string(&mut self, message: Option<&str>, username: &str) -> String {
+        self.rcon_lua.command(message, username)
     }
 
     pub async fn handle_event(&mut self, event: &IntegrationEvent) {
@@ -109,7 +111,9 @@ impl Command {
                 info!("Server {} was triggered by {:?}", server.name, event);
                 let mut connection_lock = CONNECTIONS.lock().await;
                 if let Some(connection) = connection_lock.get_mut(&server) {
-                    let _ = connection.send_command(self.tx_string()).await;
+                    let _ = connection
+                        .send_command(self.tx_string(event.message(), &event.username()))
+                        .await;
                     info!("Sent \"{}\" to \"{}\" server.", self.name, &server.name);
                 }
             }
@@ -236,9 +240,12 @@ impl TryFrom<Map<String, Value>> for Command {
             }
         };
 
+        let variables = Variable::from_config_map(command_config_map.clone());
+
         let rconcommand = RconCommand {
             prefix,
             lua_command,
+            variables,
         };
 
         let server_triggers: Vec<GameServerTrigger> =

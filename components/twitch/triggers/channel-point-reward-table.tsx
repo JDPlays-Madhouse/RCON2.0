@@ -46,6 +46,20 @@ export type CustomChannelPointRewardInfo = {
 
 export const column: ColumnDef<CustomChannelPointRewardInfo>[] = [
   {
+    id: "title",
+    accessorKey: "title",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Title <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+  },
+  {
     id: "id",
     accessorKey: "id",
     header: ({ column }) => {
@@ -58,20 +72,6 @@ export const column: ColumnDef<CustomChannelPointRewardInfo>[] = [
         >
           ID
           <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-  },
-  {
-    id: "title",
-    accessorKey: "title",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Title <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
     },
@@ -137,7 +137,7 @@ export const column: ColumnDef<CustomChannelPointRewardInfo>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          In Stock <ArrowUpDown className="ml-2 h-4 w-4" />
+          User Input <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
     },
@@ -208,7 +208,7 @@ export default function ChannelPointRewardsTable<TData, TValue>({
   data,
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
+    []
   );
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "is_enabled", desc: true },
@@ -250,9 +250,9 @@ export default function ChannelPointRewardsTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   );
                 })}
@@ -270,7 +270,7 @@ export default function ChannelPointRewardsTable<TData, TValue>({
                     <TableCell key={cell.id} className="text-center">
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext(),
+                        cell.getContext()
                       )}
                     </TableCell>
                   ))}

@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use config::ValueKind;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -25,6 +27,25 @@ pub enum ComparisonOperator {
     #[default]
     /// Any value
     Any,
+}
+
+impl ComparisonOperator {
+    pub fn compare<O>(&self, left: &O, right: &O) -> bool
+    where
+        O: Ord,
+    {
+        let result: Ordering = left.cmp(right);
+        use ComparisonOperator::*;
+        match self {
+            Lt => result.is_lt(),
+            Le => result.is_le(),
+            Eq => result.is_eq(),
+            Gt => result.is_gt(),
+            Ge => result.is_ge(),
+            Ne => result.is_ne(),
+            Any => true,
+        }
+    }
 }
 
 impl From<config::Value> for ComparisonOperator {
