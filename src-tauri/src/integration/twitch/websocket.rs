@@ -195,8 +195,13 @@ impl WebsocketClient {
                                         .await
                                         ).unwrap(); // BUG: Not handling error.
                                     continue
-                                }
-                                _ => msg.map_err(|_e| WebsocketError::FailedToConnect("When getting message".into()))?,
+                                },
+                                Ok(m) => m,
+                                // BUG: #9 Error occured here
+                                Err(e) => {
+                                    tracing::error!("When getting message: {e}");
+                                    return Err(WebsocketError::FailedToConnect(format!("When getting message: {e}")));
+                                    },
                             };
                             match self.process_message(msg)
                                 .instrument(span)
@@ -217,8 +222,8 @@ impl WebsocketClient {
                         Ok(None) => {
                             error!("Received none");
                         }
-                        Err(_timeout_error) => {
-                            debug!("Twitch websocket has timed out, reestablishing now...");
+                        Err(timeout_error) => {
+                            debug!("Twitch websocket has timed out, reestablishing now: {timeout_error}");
                             s = WebsocketError::FailedToRun("when reestablishing connection after timeout".into()).map_err(self
                                         .connect()
                                         .await

@@ -38,3 +38,4 @@ next-env.d.ts
 /target/
 Cargo.lock
 
+RCON2.0.code-workspace
