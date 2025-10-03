@@ -15,7 +15,7 @@ use std::{
 use tauri::State;
 use tracing::{error, info, instrument};
 
-use crate::PROGRAM;
+use crate::{game, PROGRAM};
 use config::{Config, Environment, File, FileFormat};
 use dirs::config_dir;
 
@@ -45,7 +45,7 @@ impl Settings {
                 mut_self.config_filepath().to_str().unwrap(),
                 mut_self.config_fileformat,
             ))
-            .add_source(Environment::with_prefix(PROGRAM));
+            .add_source(Environment::with_prefix("RCON"));
         mut_self.config_builder = builder.clone();
         let config = mut_self.config();
 
@@ -287,20 +287,27 @@ impl Default for Settings {
 
         // Set Default Settings here.
         let default_settings_str: Vec<DefaultValue<&str>> = vec![
-            ("auth.twitch.username", ""),
-            ("auth.twitch.client_id", ""),
-            ("auth.twitch.client_secret", ""),
-            (
-                "auth.twitch.redirect_url",
-                "http://localhost:27934/twitch/register",
-            ),
-            ("auth.youtube.username", ""),
-            ("auth.youtube.api_token", ""),
-            ("servers.default", ""),
-            ("log_folder", default_log_path.to_str().unwrap()),
-            ("script_folder", default_script_path.to_str().unwrap()),
-            ("max_log_level", "Info"),
-        ];
+            vec![
+                ("auth.twitch.username", ""),
+                ("auth.twitch.client_id", ""),
+                ("auth.twitch.client_secret", ""),
+                (
+                    "auth.twitch.redirect_url",
+                    "http://localhost:27934/twitch/register",
+                ),
+                ("auth.youtube.username", ""),
+                ("auth.youtube.api_token", ""),
+                ("servers.default", ""),
+                ("log_folder", default_log_path.to_str().unwrap()),
+                ("script_folder", default_script_path.to_str().unwrap()),
+                ("max_log_level", "Info"),
+            ],
+            game::settings::GameSettings::default_settings_str(),
+        ]
+        .iter()
+        .flatten()
+        .copied()
+        .collect();
         builder = Settings::default_loop(builder, default_settings_str);
 
         let default_settings_bool: Vec<DefaultValue<bool>> = vec![

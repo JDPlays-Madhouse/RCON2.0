@@ -1,5 +1,7 @@
 use std::{
     collections::HashMap,
+    net::SocketAddr,
+    str::FromStr,
     sync::{Arc, LazyLock, Mutex},
 };
 
@@ -11,7 +13,7 @@ use tauri::{ipc::Channel, State};
 use tokio::net::TcpStream;
 use tracing::{debug, error, info, instrument, trace};
 
-use crate::{command::Command, settings::Settings};
+use crate::{command::Command, servers::commands::ServerCommands, settings::Settings};
 
 pub static SERVERS: LazyLock<Mutex<HashMap<String, GameServer>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -23,7 +25,9 @@ pub static CONNECTIONS: LazyLock<tokio::sync::Mutex<HashMap<GameServer, GameServ
 /// Valid Games
 ///
 /// Dev notes: Update the 2 lower impls (`impl std::fmt::Display for Game`, `impl TryFrom<String> for Game`) to match Factorio.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, Hash, PartialOrd, Ord)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Hash, PartialOrd, Ord,
+)]
 pub enum Game {
     #[default]
     Factorio,
@@ -175,10 +179,28 @@ impl GameServerConnected {
 #[derive(Default, Deserialize, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GameServer {
     pub name: String,
-    pub address: String,
-    pub port: u32,
+    pub rcon_address: String,
+    pub rcon_port: u32,
     pub password: String,
     pub game: Game,
+    pub server_name: Option<String>,
+    pub game_address: Option<SocketAddr>,
+    pub commands: Option<ServerCommands>,
+}
+
+impl std::fmt::Debug for GameServer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GameServer")
+            .field("name", &self.name)
+            .field("rcon_address", &self.rcon_address)
+            .field("rcon_port", &self.rcon_port)
+            .field("password", &"[...]")
+            .field("game", &self.game)
+            .field("server_name", &self.server_name)
+            .field("game_address", &self.game_address)
+            .field("commands", &self.commands)
+            .finish()
+    }
 }
 
 impl Serialize for GameServer {
@@ -190,34 +212,37 @@ impl Serialize for GameServer {
         state.serialize_field("id", &self.id())?;
         state.serialize_field("name", &self.name)?;
         state.serialize_field("game", &self.game)?;
-        state.serialize_field("address", &self.address)?;
-        state.serialize_field("port", &self.port)?;
+        state.serialize_field("rcon_address", &self.rcon_address)?;
+        state.serialize_field("rcon_port", &self.rcon_port)?;
         state.serialize_field("password", &self.password)?;
+        state.serialize_field("server_name", &self.server_name)?;
+        state.serialize_field("game_address", &self.game_address)?;
+        state.serialize_field("commands", &self.commands)?;
         state.end()
-    }
-}
-
-impl std::fmt::Debug for GameServer {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GameServer")
-            .field("name", &self.name)
-            .field("address", &self.address)
-            .field("port", &self.port)
-            .field("password", &"[...]")
-            .field("game", &self.game)
-            .finish()
     }
 }
 
 impl GameServer {
     /// Create a new GameServer, insert it into the SERVERS HashMap and return the id.
-    pub fn new<T: Into<String>>(name: T, address: T, port: u32, password: T, game: Game) -> Self {
+    pub fn new<T: Into<String>, A: Into<SocketAddr>>(
+        name: T,
+        address: T,
+        port: u32,
+        password: T,
+        game: Game,
+        server_name: Option<T>,
+        game_address: Option<A>,
+        commands: Option<ServerCommands>,
+    ) -> Self {
         let game_server = Self {
             name: name.into(),
-            address: address.into(),
-            port,
+            rcon_address: address.into(),
+            rcon_port: port,
             password: password.into(),
             game,
+            server_name: server_name.map(|n| n.into()),
+            game_address: game_address.map(|n| n.into()),
+            commands,
         };
         let mut servers = SERVERS.lock().unwrap();
         let id = game_server.id().clone();
@@ -234,7 +259,7 @@ impl GameServer {
     }
 
     pub fn socket_address(&self) -> String {
-        self.address.clone() + ":" + &self.port.to_string()
+        self.rcon_address.clone() + ":" + &self.rcon_port.to_string()
     }
 
     pub fn try_get(id: &str) -> Option<GameServer> {
@@ -244,11 +269,43 @@ impl GameServer {
         let config = Settings::current_config();
         server_from_settings(config, id)
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn rcon_address(&self) -> &str {
+        &self.rcon_address
+    }
+
+    pub fn rcon_port(&self) -> u32 {
+        self.rcon_port
+    }
+
+    pub fn password(&self) -> &str {
+        &self.password
+    }
+
+    pub fn game(&self) -> Game {
+        self.game
+    }
+
+    pub fn server_name(&self) -> Option<&String> {
+        self.server_name.as_ref()
+    }
+
+    pub fn game_address(&self) -> Option<SocketAddr> {
+        self.game_address
+    }
+
+    pub fn commands(&self) -> Option<&ServerCommands> {
+        self.commands.as_ref()
+    }
 }
 
 impl GameServer {
     fn try_from_config(
-        server_name: String,
+        name: String,
         server_config: Value,
     ) -> std::result::Result<Self, anyhow::Error> {
         let map = match server_config.clone().into_table() {
@@ -263,7 +320,30 @@ impl GameServer {
         let password = map.get("password").unwrap().clone().into_string().unwrap();
         let game = Game::try_from(map.get("game").unwrap().clone().into_string().unwrap()).unwrap();
 
-        Ok(GameServer::new(server_name, address, port, password, game))
+        let server_name: Option<String> = map
+            .get("server_name")
+            .map(|n| n.clone().into_string().unwrap());
+        let game_address: Option<SocketAddr> = map
+            .get("game_address")
+            .map(|n| SocketAddr::from_str(&n.clone().into_string().unwrap()).unwrap());
+        let start = map
+            .get("server_start")
+            .map(|n| n.clone().into_string().unwrap());
+
+        let stop = map
+            .get("server_stop")
+            .map(|n| n.clone().into_string().unwrap());
+        let commands = ServerCommands::optional_new(start, stop);
+        Ok(GameServer::new(
+            name,
+            address,
+            port,
+            password,
+            game,
+            server_name,
+            game_address,
+            commands,
+        ))
     }
 }
 
@@ -376,7 +456,10 @@ pub fn new_server(server: GameServer) -> Result<GameServer, String> {
     let mut settings = crate::settings::Settings::new();
     // BUG: #7 Non validated input causing program to crash from spaces.
     settings
-        .set_config(&format!("servers.{}.address", server.name), server.address)
+        .set_config(
+            &format!("servers.{}.address", server.name),
+            server.rcon_address,
+        )
         .unwrap();
     settings
         .set_config(
@@ -391,8 +474,39 @@ pub fn new_server(server: GameServer) -> Result<GameServer, String> {
         )
         .unwrap();
     settings
-        .set_config(&format!("servers.{}.port", server.name), server.port)
+        .set_config(&format!("servers.{}.port", server.name), server.rcon_port)
         .unwrap();
+    if let Some(server_name) = server.server_name {
+        settings
+            .set_config(&format!("servers.{}.server_name", server.name), server_name)
+            .unwrap();
+    }
+    if let Some(game_address) = server.game_address {
+        settings
+            .set_config(
+                &format!("servers.{}.game_address", server.name),
+                game_address.to_string(),
+            )
+            .unwrap();
+    }
+    if let Some(commands) = server.commands {
+        if let Some(command) = commands.start() {
+            settings
+                .set_config(
+                    &format!("servers.{}.server_start", server.name),
+                    command.as_str(),
+                )
+                .unwrap();
+        }
+        if let Some(command) = commands.stop() {
+            settings
+                .set_config(
+                    &format!("servers.{}.server_stop", server.name),
+                    command.as_str(),
+                )
+                .unwrap();
+        }
+    }
     Ok(ret_server)
 }
 
@@ -408,7 +522,10 @@ pub fn update_server(server: GameServer, old_server_name: String) -> Result<Game
         .set_config("servers.default", server.name.clone())
         .unwrap();
     settings
-        .set_config(&format!("servers.{}.address", server.name), server.address)
+        .set_config(
+            &format!("servers.{}.address", server.name),
+            server.rcon_address,
+        )
         .unwrap();
     settings
         .set_config(
@@ -423,8 +540,39 @@ pub fn update_server(server: GameServer, old_server_name: String) -> Result<Game
         )
         .unwrap();
     settings
-        .set_config(&format!("servers.{}.port", server.name), server.port)
+        .set_config(&format!("servers.{}.port", server.name), server.rcon_port)
         .unwrap();
+    if let Some(server_name) = server.server_name {
+        settings
+            .set_config(&format!("servers.{}.server_name", server.name), server_name)
+            .unwrap();
+    }
+    if let Some(game_address) = server.game_address {
+        settings
+            .set_config(
+                &format!("servers.{}.game_address", server.name),
+                game_address.to_string(),
+            )
+            .unwrap();
+    }
+    if let Some(commands) = server.commands {
+        if let Some(command) = commands.start() {
+            settings
+                .set_config(
+                    &format!("servers.{}.server_start", server.name),
+                    command.as_str(),
+                )
+                .unwrap();
+        }
+        if let Some(command) = commands.stop() {
+            settings
+                .set_config(
+                    &format!("servers.{}.server_stop", server.name),
+                    command.as_str(),
+                )
+                .unwrap();
+        }
+    }
     if server.name != old_server_name {
         let _ = settings.remove_config(&format!("servers.{}", old_server_name));
     }
@@ -475,7 +623,6 @@ pub async fn send_command_to_server(
         Some(c) => c,
         None => return Err("Server not connected to.".to_string()),
     };
-    // TODO: Add message string from server.
     match connection
         .send_command(command.tx_string(None, "<server>"))
         .await

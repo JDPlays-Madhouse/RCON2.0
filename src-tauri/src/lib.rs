@@ -108,10 +108,12 @@
 
 pub mod cli;
 pub mod command;
+pub mod game;
 pub mod integration;
 pub mod logging;
 pub mod servers;
 pub mod settings;
+pub(crate) mod utility;
 
 use std::sync::Arc;
 
@@ -298,6 +300,7 @@ pub async fn run() {
             integration::status::integration_status,
             integration::twitch::get_channel_point_rewards,
             integration::twitch::refresh_twitch_websocket,
+            game::latest_game_server_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,7 +1,7 @@
 "use client";
 
 import { Game, games, GameString, Server } from "@/types";
-import { number, z } from "zod";
+import { ipv4, ipv6, number, preprocess, string, z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -31,8 +31,8 @@ const gamesEnum = z.enum(Game);
 
 const serverConfigFormSchema = z.object({
   name: z.string().min(2).max(50).toLowerCase(),
-  address: z.string().min(2).max(256),
-  port: z.preprocess<number, z.ZodInt, number>((val) => {
+  rcon_address: z.string().min(2).max(256),
+  rcon_port: z.preprocess<number, z.ZodInt, number>((val) => {
     if (typeof val === "string") {
       return Number.parseInt(val, 10);
     }
@@ -40,6 +40,20 @@ const serverConfigFormSchema = z.object({
   }, z.int().lte(65535).gt(0)),
   password: z.string().min(0).max(256),
   game: gamesEnum,
+  server_name: z.optional(string().min(0).max(1024)),
+  game_ip_address: z.optional(ipv4().or(ipv6())),
+  game_port: z.optional(
+    preprocess<number, z.ZodInt, number>((val) => {
+      if (typeof val === "string") {
+        return Number.parseInt(val, 10);
+      }
+      return val;
+    }, z.int().lte(65535).gt(0))
+  ),
+  commands: z.object({
+    start: z.string().optional(),
+    stop: z.string().optional(),
+  }),
 });
 
 export function ServerConfigForm({
@@ -56,14 +70,26 @@ export function ServerConfigForm({
   setSelectedServer: React.Dispatch<React.SetStateAction<Server | undefined>>;
 }) {
   const [showPassword, setShowPassword] = useState(false);
+  let game_ip_address, game_port;
+  if (server?.game_address) {
+    const list = server?.game_address?.split(":");
+    console.log({ list });
+    if (list.length == 2) {
+      game_ip_address = list[0];
+      game_port = Number(list[1]);
+    }
+  }
   const form = useForm<z.infer<typeof serverConfigFormSchema>>({
     resolver: zodResolver(serverConfigFormSchema),
     defaultValues: {
-      name: server ? server.name : "Local",
-      address: server ? server.address : "localhost",
-      port: server ? server.port : 2345,
-      password: server ? server.password : "PleaseChangeMe",
-      game: server ? server.game : Game.Factorio,
+      name: server?.name || "Local",
+      rcon_address: server?.rcon_address || "localhost",
+      rcon_port: server?.rcon_port || 2345,
+      password: server?.password || "PleaseChangeMe",
+      game: server?.game || Game.Factorio,
+      server_name: server?.server_name ? server?.server_name : undefined,
+      game_ip_address: game_ip_address,
+      game_port: game_port,
     },
     resetOptions: {
       keepDirtyValues: false, // user-interacted input will be retained
@@ -74,22 +100,62 @@ export function ServerConfigForm({
 
   useEffect(() => {
     if (server) {
-      form.reset(server);
+      let game_ip_address, game_port;
+      if (server.game_address) {
+        const list = server?.game_address?.split(":");
+        if (list.length == 2) {
+          game_ip_address = list[0];
+          game_port = Number(list[1]);
+        }
+      }
+      form.reset({
+        name: server.name,
+        rcon_address: server.rcon_address,
+        rcon_port: server.rcon_port,
+        password: server.password,
+        game: server.game,
+        server_name: server.server_name,
+        game_ip_address,
+        game_port,
+        commands: server.commands,
+      });
     }
   }, [server]);
 
   function onSubmit(values: z.infer<typeof serverConfigFormSchema>) {
+    const game_address = values.game_ip_address
+      ? values.game_ip_address +
+        ":" +
+        (values.game_port ? values.game_port : 34197)
+      : undefined;
+    console.log({ game_address });
+    const new_server: Server = {
+      id: values.game + ":" + values.name,
+      name: values.name,
+      rcon_address: values.rcon_address,
+      rcon_port: values.rcon_port,
+      password: values.password,
+      game: values.game,
+      server_name: values.server_name,
+      game_address: values.game_ip_address
+        ? values.game_ip_address +
+          ":" +
+          (values.game_port ? values.game_port : 34197)
+        : undefined,
+      commands: values.commands,
+    };
+    console.log({ values });
     if (server) {
       console.log("update");
       invoke<Server>("update_server", {
-        server: values,
+        server: new_server,
         oldServerName: server.name,
       })
         .then((s: Server) => setSelectedServer(s))
         .catch((e) => console.log(e));
     } else {
       console.log("new");
-      invoke<Server>("new_server", { server: values })
+      invoke<Server>("new_server", { server: new_server })
         .then((s: Server) => setSelectedServer(s))
         .catch((e) => console.log(e));
     }
@@ -116,7 +182,7 @@ export function ServerConfigForm({
         />
         <FormField
           control={form.control}
-          name="address"
+          name="rcon_address"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Server Address</FormLabel>
@@ -133,7 +199,7 @@ export function ServerConfigForm({
         />
         <FormField
           control={form.control}
-          name="port"
+          name="rcon_port"
           render={({ field }) => (
             <FormItem>
               <FormLabel>RCON Port</FormLabel>
@@ -211,6 +277,94 @@ export function ServerConfigForm({
             </FormItem>
           )}
         />
+        {form.getValues().game == Game.Factorio ? (
+          <>
+            <FormField
+              control={form.control}
+              name="server_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Server Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="My awesome multiplayer server"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>Server name if appicable.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="game_ip_address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Game Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="127.0.0.1" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Must be an IP address of the server you are connecting to.
+                    Ideally an external address if availble.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="game_port"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Game Port</FormLabel>
+                  <FormControl>
+                    <Input placeholder="34197" type="number" {...field} />
+                  </FormControl>
+                  <FormDescription>The game port number.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="commands.start"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Server Start Command</FormLabel>
+                  <FormControl>
+                    <Input placeholder="echo 'hello world'" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    A command to start the server. Must be able to be run in the
+                    terminal of the computer which this is running.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="commands.stop"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Server Stop Command</FormLabel>
+                  <FormControl>
+                    <Input placeholder="echo 'hello world'" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    A command to stop the server. Must be able to be run in the
+                    terminal of the computer which this is running.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        ) : (
+          ""
+        )}
         <div>
           <Button type="submit" variant="default">
             {server ? "Update Server" : "Create Server"}

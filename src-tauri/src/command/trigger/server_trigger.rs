@@ -163,6 +163,8 @@ impl TryFrom<Value> for GameServerTrigger {
 
 #[cfg(test)]
 mod tests {
+    use std::net::SocketAddr;
+
     use rstest::{fixture, rstest};
 
     use crate::{
@@ -210,7 +212,16 @@ mod tests {
 
     #[fixture]
     fn server() -> GameServer {
-        GameServer::new("test", "localhost", 2871, "secure_password", Game::Factorio)
+        GameServer::new(
+            "test",
+            "localhost",
+            2871,
+            "secure_password",
+            Game::Factorio,
+            None,
+            <Option<SocketAddr>>::None,
+            None,
+        )
     }
 
     #[fixture]

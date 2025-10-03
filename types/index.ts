@@ -5,13 +5,21 @@ export enum Page {
   Settings,
 }
 
+export type ServerCommands = {
+  start?: string;
+  stop?: string;
+};
+
 export type Server = {
   id: string;
   name: string;
-  address: string;
-  port: number;
+  rcon_address: string;
+  rcon_port: number;
   password: string;
   game: Game;
+  server_name?: string;
+  game_address?: string;
+  commands?: ServerCommands;
 };
 
 /// Make sure left side is equal to right.
@@ -173,3 +181,33 @@ export type IntegrationError =
   | { error: "Token"; data: TokenError }
   | { error: "NotImplemented"; data: Api }
   | { error: "Unknown" };
+
+/** nanos_since_epoch are nanoseconds since the second.
+ *
+ * secs_since_epoch are total seconds since epoch.
+ *
+ * To calculate total time since epoch, sum them.
+ */
+export type SystemTime = {
+  /** nanoseconds since the second. */
+  nanos_since_epoch: number;
+  /** total seconds since epoch */
+  secs_since_epoch: number;
+};
+
+export type Duration = {
+  nanos: number;
+  secs: number;
+};
+
+export type GameServerStatus = {
+  game: "Factorio";
+  status: {
+    name: string;
+    gameId: number;
+    hostAddress: string;
+    lastHeartbeat: SystemTime;
+    now: SystemTime;
+    durationSinceLastHeartbeat: Duration;
+  };
+};
