@@ -1,12 +1,13 @@
 [package]
 name = "RCON2"
-version = "0.2.1"
+version = "0.2.2"
 description = "Rcon integration"
 authors = ["Ozy_Viking<admin@hankin.io>"]
 license = ""
 repository = "https://github.com/JDPlays-Madhouse/RCON2.0"
 edition = "2021"
 resolver = "2"
+default-run = "RCON2"
 
 [profile.dev]
 incremental = true # Compile your binary in smaller steps.
