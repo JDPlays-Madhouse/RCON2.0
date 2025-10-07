@@ -108,7 +108,7 @@ export default function IntegrationStatusBar({
   }
 
   useEffect(() => {
-    const intervalId = setInterval(handleStatusChecks, 500);
+    const intervalId = setInterval(handleStatusChecks, 2000);
 
     return () => {
       clearInterval(intervalId);

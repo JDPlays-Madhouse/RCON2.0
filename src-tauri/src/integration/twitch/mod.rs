@@ -16,10 +16,7 @@ use tracing::{debug, error, info, instrument};
 
 use crate::{
     command::Runner,
-    integration::{
-        websocket::{WebsocketController, WebsocketState},
-        WEBSOCKET_STATE_TIMEOUT,
-    },
+    integration::websocket::{WebsocketController, WebsocketState},
 };
 
 use super::{
