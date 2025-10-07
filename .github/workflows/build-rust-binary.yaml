@@ -12,7 +12,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -24,10 +24,10 @@ jobs:
       # - name: Install APT Packages
       #   run: apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       #
-      - name: Cache APT Packages
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      # - name: Cache APT Packages
+      #   uses: awalsh128/cache-apt-pkgs-action@v1
+      #   with:
+      #     packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - uses: actions/cache@v4
         id: npm-cache

@@ -24,10 +24,10 @@ pub enum IntegrationStatus {
     },
     #[default]
     Unknown,
+    NotStarted,
 }
 impl IntegrationStatus {
     pub fn seconds_to(duration: Duration) -> i64 {
-        dbg!(&duration);
         let expires_at = SystemTime::now() + duration;
         match expires_at.duration_since(UNIX_EPOCH) {
             Ok(exp) => exp.as_secs() as i64,
@@ -43,6 +43,7 @@ pub enum IntegrationError {
     NotImplemented(Api),
     #[default]
     Unknown,
+    WsError,
 }
 
 /// TODO: Add clearer UI indication of check.
@@ -55,7 +56,19 @@ pub async fn integration_status(
     match api {
         Api::Twitch => {
             let mut twitch_integration_locked = twitch_integration.lock().await;
-            twitch_integration_locked.check_status().await
+
+            match async_std::future::timeout(
+                Duration::from_secs(5),
+                twitch_integration_locked.check_status(),
+            )
+            .await
+            {
+                Ok(status) => status,
+                Err(_e) => {
+                    tracing::error!("{api:?} status check timeout");
+                    Err(IntegrationError::WsError)
+                }
+            }
         }
         _ => Err(IntegrationError::NotImplemented(api)),
     }

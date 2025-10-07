@@ -175,7 +175,8 @@ export type IntegrationStatus =
   | { status: "Disconnected"; api: Api }
   | { status: "Connecting"; api: Api }
   | { status: "Error"; api: { api: Api; error: IntegrationError } }
-  | { status: "Unknown" };
+  | { status: "Unknown" }
+  | { status: "NotStarted" };
 
 export type IntegrationError =
   | { error: "Token"; data: TokenError }

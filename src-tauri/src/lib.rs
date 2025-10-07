@@ -105,6 +105,25 @@
 //!     ```sh
 //!     twitch event trigger channel.channel_points_custom_reward_redemption.add --transport=websocket -i 1
 //!     ```
+//!
+//! ### Test websocker
+//!
+//! - Simulate closing errors
+//!     
+//!     | **Code** | **Reason**                   | **Notes**                                                                                                                                            |
+//!     |:--------:|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+//!     | **4000** | Internal server error        | Indicates a problem with the server (similar to an HTTP 500 status code).                                                                            |
+//!     | **4001** | Client sent inbound traffic  | Sending outgoing messages to the server is prohibited with the exception of pong messages.                                                           |
+//!     | **4002** | Client failed ping-pong      | You must respond to ping messages with a pong message. See Ping message.                                                                             |
+//!     | **4003** | Connection unused            | When you connect to the server, you must create a subscription  within 10 seconds or the connection is closed. The time limit is  subject to change. |
+//!     | **4004** | Reconnect grace time expired | When you receive a session_reconnect message, you have 30 seconds to reconnect to the server and close the old connection. See Reconnect message.    |
+//!     | **4005** | Network timeout              | Transient network timeout.                                                                                                                           |
+//!     | **4006** | Network error                | Transient network error.                                                                                                                             |
+//!     | **4007** | Invalid reconnect            | The reconnect URL is invalid.                                                                                                                        |
+//!
+//!     ```sh
+//!     twitch event websocket close --session=c61731d5 --reason=10054
+//!     ```
 
 pub mod cli;
 pub mod command;

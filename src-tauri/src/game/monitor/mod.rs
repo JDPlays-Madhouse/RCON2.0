@@ -30,11 +30,11 @@ impl Monitor {
             loop {
                 match status_comms.rx_mut().recv().await {
                     Ok(status) => {
-                        error_count.saturating_sub(1);
+                        error_count = error_count.saturating_sub(1);
                     }
                     Err(e) => {
                         tracing::error!("{e}");
-                        error_count.saturating_add(1);
+                        error_count = error_count.saturating_add(1);
                         if error_count > 10 {
                             return;
                         }

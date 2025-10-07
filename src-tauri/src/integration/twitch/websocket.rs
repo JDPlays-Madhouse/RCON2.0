@@ -1,12 +1,13 @@
 use std::time::Duration;
 
 use crate::integration::event::{normalise_tier, CustomRewardVariant};
+use crate::integration::websocket::{WebsocketCommand, WebsocketController, WebsocketState};
 use crate::integration::{self, CustomRewardEvent, IntegrationEvent};
 use anyhow::Result;
 use futures::stream::FusedStream;
 use futures::TryStreamExt;
 use itertools::Itertools;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::{Sender};
 use tokio_tungstenite::tungstenite;
 use tracing::{debug, error, info, warn};
 use tracing::{trace, Instrument};
@@ -23,15 +24,23 @@ use twitch_api::{
 };
 use twitch_oauth2::{TwitchToken, UserToken};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
 pub enum WebsocketError {
+    #[error("Token elapsed")]
     TokenElapsed,
+    #[error("Error occured while reconnecting")]
     Reconnect,
+    #[error("Invalid token")]
     InvalidToken,
+    #[error("Websocket Terminated")]
     Terminated,
+    #[error("Failed to connect to {0}")]
     FailedToConnect(String),
+    #[error("Failed to run to {0}")]
     FailedToRun(String),
+    #[error("Invalid url: {0}")]
     InvalidURL(String),
+    #[error("Error while processing message: {0}")]
     ProcessMessage(String),
 }
 
@@ -51,12 +60,15 @@ pub struct WebsocketClient {
     pub subscriptions: Vec<eventsub::EventType>,
     pub subscribed: Vec<eventsub::EventType>,
     pub event_tx: Sender<integration::IntegrationEvent>,
+    pub controller: WebsocketController,
+    state: WebsocketState,
     keep_alive_seconds: Duration,
 }
 
 impl std::fmt::Debug for WebsocketClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WebsocketClient")
+        .field("state", &self.state)
             .field("session_id", &self.session_id)
             .field("token", &self.token)
             .field("user_id", &self.user_id)
@@ -73,6 +85,7 @@ impl WebsocketClient {
         user_id: types::UserId,
         subscriptions: Vec<eventsub::EventType>,
         event_tx: Sender<integration::IntegrationEvent>,
+        controller: WebsocketController
     ) -> Self {
         let client: HelixClient<_> = twitch_api::HelixClient::with_client(
             <reqwest::Client>::default_client_with_name(Some(
@@ -91,12 +104,14 @@ impl WebsocketClient {
             subscribed: Vec::new(),
             keep_alive_seconds: Duration::from_secs(10),
             event_tx,
+            state: WebsocketState::Down,
+            controller
         }
     }
 
     /// Connect to the websocket and return the stream
     pub async fn connect(
-        &self,
+        &mut self,
     ) -> Result<
         tokio_tungstenite::WebSocketStream<
             tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
@@ -112,7 +127,9 @@ impl WebsocketClient {
         match tokio_tungstenite::connect_async_with_config(&self.connect_url, Some(config), false)
             .await
         {
-            Ok((socket, _response)) => Ok(socket),
+            Ok((socket, _response)) => {
+                self.state = WebsocketState::Alive;
+                Ok(socket)},
             Err(e) => {
                 error!("{}", e);
                 Err(WebsocketError::FailedToConnect("Can't Connect".into()))
@@ -163,21 +180,50 @@ impl WebsocketClient {
     /// Run the websocket subscriber
     #[tracing::instrument(skip_all, fields())]
     pub async fn run(&mut self) -> Result<(), WebsocketError> {
-        let mut s = match self.connect().await {
+        let mut websocket_stream = match self.connect().await {
             Ok(s) => s,
             Err(e) => return Err(e),
         };
+
         info!("Connected to Twitch's Websocket");
 
         loop {
-            if s.is_terminated() {
+            if websocket_stream.is_terminated() {
+                self.state = WebsocketState::Down;
                 error!("Websocket Terminated");
                 return Err(WebsocketError::Terminated);
             }
 
-            let next = futures::StreamExt::next(&mut s);
+            let next = futures::StreamExt::next(&mut websocket_stream);
             let next_with_timeout = async_std::future::timeout(self.keep_alive_seconds, next);
             tokio::select!(
+                ws_command = self.controller.recv_command() => {
+                    let span = tracing::info_span!("websocket_command", raw_message = ?ws_command);
+                    match ws_command {
+                        Ok(WebsocketCommand::StatusCheck) => {
+                            match self.controller.send(WebsocketCommand::State(self.state)){
+                                Ok(_) => (),
+                                Err(e) => {
+                                    tracing::error!("Websocket command failed to send: {e}");
+                                    continue
+                                },
+                            };
+                        }
+                        Ok(WebsocketCommand::Restart) => {
+                            websocket_stream = match self.connect().instrument(span).await{
+                                Ok(s) => s,
+                                Err(e) => {
+                                    tracing::error!("WebsocketCommand::Restart error while restarting: {e}");
+                                    return Err(WebsocketError::Reconnect);
+                                },
+                            };
+                        }
+                        Ok(WebsocketCommand::State(_)) => continue,
+                        Err(e) => {
+                            tracing::error!("{e}");
+                        }
+                    }
+                },
                 msg_result = next_with_timeout => {
                     match msg_result {
                         Ok(Some(msg)) => {
@@ -189,7 +235,7 @@ impl WebsocketClient {
                                     tracing::warn!(
                                         "connection was sent with an unexpected frame or was reset, reestablishing it"
                                     );
-                                    s = WebsocketError::FailedToRun("when reestablishing connection".into()).map_err(self
+                                    websocket_stream = WebsocketError::FailedToRun("when reestablishing connection".into()).map_err(self
                                         .connect()
                                         .instrument(span)
                                         .await
@@ -197,9 +243,9 @@ impl WebsocketClient {
                                     continue
                                 },
                                 Ok(m) => m,
-                                // BUG: #9 Error occured here
                                 Err(e) => {
                                     tracing::error!("When getting message: {e}");
+                                    self.state = WebsocketState::Down;
                                     return Err(WebsocketError::FailedToConnect(format!("When getting message: {e}")));
                                     },
                             };
@@ -209,12 +255,13 @@ impl WebsocketClient {
                                 Ok(m) => m,
                                 Err(e) => {
                                     if e == WebsocketError::Reconnect {
-                                        s = WebsocketError::FailedToRun("When reconnecting to websocket".into()).map_err(self
+                                        websocket_stream = WebsocketError::FailedToRun("When reconnecting to websocket".into()).map_err(self
                                         .connect()
                                         .await
                                         ).unwrap(); // BUG: Not handling error.
                                     continue
                                     } else {
+                                    self.state = WebsocketState::Down;
                                     return Err(e)}
                                 }
                             }
@@ -224,7 +271,7 @@ impl WebsocketClient {
                         }
                         Err(timeout_error) => {
                             debug!("Twitch websocket has timed out, reestablishing now: {timeout_error}");
-                            s = WebsocketError::FailedToRun("when reestablishing connection after timeout".into()).map_err(self
+                            websocket_stream = WebsocketError::FailedToRun("when reestablishing connection after timeout".into()).map_err(self
                                         .connect()
                                         .await
                                         ).unwrap(); // BUG: Not handling error.
@@ -234,6 +281,7 @@ impl WebsocketClient {
                     }
                 },
                 else => {
+                    self.state = WebsocketState::Down;
                     error!("Websocket Terminated");
                     return Err(WebsocketError::Terminated);
                 }
@@ -691,5 +739,9 @@ impl WebsocketClient {
             .unique_by(|s| s.to_str())
             .collect_vec();
         subscribed
+    }
+    
+    pub fn state(&self) -> WebsocketState {
+        self.state
     }
 }

@@ -10,14 +10,14 @@ import IntegrationLogo from "./icons";
 import Patreon from "@/components/icons/patreon";
 import StreamLabs from "@/components/icons/streamlabs";
 
-interface IntegrationStatusProps extends React.ComponentProps<"div"> { }
+interface IntegrationStatusProps extends React.ComponentProps<"div"> {}
 
 export default function IntegrationStatusBar({
   className = "",
   ...props
 }: IntegrationStatusProps) {
   const [statuses, setStatuses] = useState<IntegrationStatusMap>(
-    defaultIntegrationStatus(),
+    defaultIntegrationStatus()
   );
   const [forceUpdate, setForceUpdate] = useState(0);
   const [integrations, setIntegrations] = useState<Api[]>([]);
@@ -44,7 +44,7 @@ export default function IntegrationStatusBar({
 
   function handleSetStatuses(status: IntegrationStatus, api: Api) {
     if (statuses[api].status === status.status) return;
-    setForceUpdate((i) => i+1)
+    setForceUpdate((i) => i + 1);
     statuses[api] = status;
     setStatuses(statuses);
   }
@@ -53,6 +53,7 @@ export default function IntegrationStatusBar({
     handleSetStatuses({ status: "Connecting", api }, api);
     invoke<IntegrationStatus>("connect_to_integration", { api, force })
       .then((status) => {
+        console.log({ status });
         handleSetStatuses(status, api);
       })
       .catch((error) => {
@@ -69,6 +70,8 @@ export default function IntegrationStatusBar({
   function handleIntegrationStatusCheck(api: Api) {
     invoke<IntegrationStatus>("integration_status", { api })
       .then((status) => {
+        console.log("integration_status");
+        console.log({ status });
         handleSetStatuses(status, api);
       })
       .catch((error) => {
@@ -79,10 +82,12 @@ export default function IntegrationStatusBar({
   function handleOnClick(api: Api) {
     switch (statuses[api].status) {
       case "Connected":
+      case "Connecting":
         handleIntegrationStatusCheck(api);
         break;
       case "Unknown":
       case "Error":
+      case "NotStarted":
       case "Disconnected":
         if (
           statuses[api].status === "Error" &&
@@ -90,12 +95,27 @@ export default function IntegrationStatusBar({
         ) {
           return;
         }
-        statuses[api] = { status: "Connecting", api };
-        setStatuses(statuses);
         handleConnectToIntegration(api);
+        handleIntegrationStatusCheck(api);
         break;
     }
   }
+
+  function handleStatusChecks() {
+    for (const integration of integrations) {
+      handleOnClick(integration);
+    }
+  }
+
+  // TODO: Add red for not "not implemented"
+  useEffect(() => {
+    const intervalId = setInterval(handleStatusChecks, 500);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [integrations]);
+
   return (
     <div
       className={cn("flex flex-row gap-2 content-center", className)}

@@ -8,12 +8,19 @@ use std::{
         Arc,
     },
     thread::JoinHandle,
+    time::{Duration, Instant},
 };
 use tauri::State;
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, instrument};
 
-use crate::command::Runner;
+use crate::{
+    command::Runner,
+    integration::{
+        websocket::{WebsocketController, WebsocketState},
+        WEBSOCKET_STATE_TIMEOUT,
+    },
+};
 
 use super::{
     status::{IntegrationError, IntegrationStatus},
@@ -56,6 +63,7 @@ pub struct TwitchApiConnection {
     pub runner: Runner,
     token: Mutex<Option<UserToken>>,
     connecting: bool,
+    websocker_controller: WebsocketController,
 }
 
 impl std::fmt::Debug for TwitchApiConnection {
@@ -139,6 +147,7 @@ impl TwitchApiConnection {
             runner: Runner::new(),
             token: Mutex::new(None),
             connecting: false,
+            websocker_controller: WebsocketController::new(Api::Twitch),
         }
     }
 
@@ -160,6 +169,7 @@ impl TwitchApiConnection {
     }
 
     pub async fn new_websocket(&mut self, config: Config, _force: bool) {
+        self.connecting = true;
         debug!("new websocket");
         if let Some(joinhandle) = self.websocket_joinhandle.take() {
             joinhandle.abort();
@@ -192,25 +202,35 @@ impl TwitchApiConnection {
             self.user_id().await.expect("Token is checked."),
             subscriptions,
             self.runner.tx(),
+            self.websocker_controller.clone(),
         ));
         let websocket = self.websocket.clone().unwrap();
         self.websocket_joinhandle = Some(tauri::async_runtime::spawn(async move {
             use websocket::WebsocketError::*;
             let mut websocket_loop = websocket.clone();
-            loop {
+            let mut restart_count: u16 = 0;
+            let last_error = Instant::now();
+            let acceptable_restart_rate = Duration::from_secs_f64(1.);
+            let acceptable_error_limit = 10;
+            while restart_count <= acceptable_error_limit {
                 match websocket_loop.run().await {
                     Ok(_) => {}
-                    Err(e @ Reconnect) | Err(e @ InvalidToken) | Err(e @ TokenElapsed) => {
+                    Err(e @ InvalidToken) | Err(e @ TokenElapsed) => {
                         error!("Token error: {:?}", e);
                         break;
                     }
                     Err(e) => {
-                        error!("{:?}", e);
-                        break;
+                        if last_error.elapsed() > acceptable_restart_rate {
+                            restart_count += 1;
+                        } else {
+                            restart_count = restart_count.saturating_sub(1);
+                        }
+                        error!("Restart websocket count {restart_count}: {:?}", e);
                     }
                 }
             }
         }));
+        self.connecting = false;
     }
 }
 
@@ -305,12 +325,41 @@ impl TwitchApiConnection {
         let mut token_cont = self.token.lock().await;
         *token_cont = token
     }
+    pub async fn websocket_state(&mut self) -> Option<WebsocketState> {
+        if self.websocket.is_none() {
+            None
+        } else {
+            Some(
+                self.websocker_controller
+                    .get_state()
+                    .await
+                    .unwrap_or(WebsocketState::Errored),
+            )
+        }
+    }
 
     pub async fn check_status(&mut self) -> anyhow::Result<IntegrationStatus, IntegrationError> {
         let api = Api::Twitch;
         if self.connecting {
             return Ok(IntegrationStatus::Connecting(api));
         };
+        if let Some(ws_state) = self.websocket_state().await {
+            if !ws_state.is_alive() {
+                tracing::info!("{:?} state: {:?}", api, ws_state);
+            };
+            match ws_state {
+                WebsocketState::Down => return Ok(IntegrationStatus::Disconnected(api)),
+                WebsocketState::Alive => (),
+                WebsocketState::Errored => {
+                    return Ok(IntegrationStatus::Error {
+                        api: Api::Twitch,
+                        error: IntegrationError::WsError,
+                    })
+                }
+            }
+        } else {
+            return Ok(IntegrationStatus::Disconnected(api));
+        }
         let token: UserToken = match self.token().await {
             Some(t) => t,
             None => return Ok(IntegrationStatus::Disconnected(api)),
@@ -529,106 +578,3 @@ pub async fn refresh_twitch_websocket(
     info!("Websocket refreshed");
     Ok(())
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use rstest::{fixture, rstest};
-//
-//     use crate::integration::IntegrationChannels;
-//
-//     use super::*;
-//
-//     #[fixture]
-//     fn twitch_connection() -> TwitchApiConnection {
-//         TwitchApiConnection::new("username", "client_id", "client_secret")
-//     }
-//
-//     #[fixture]
-//     fn channels() -> IntegrationChannels<IntegrationEvent> {
-//         IntegrationChannels::default()
-//     }
-//
-//     #[rstest]
-//     fn connection_initialization(twitch_connection: TwitchApiConnection) {
-//         let empty_vec: Vec<&str> = Vec::new();
-//         assert_eq!(twitch_connection.username, "username");
-//         assert_eq!(twitch_connection.client_id, "client_id");
-//         assert_eq!(twitch_connection.client_secret, "client_secret");
-//         assert_eq!(twitch_connection.scope, empty_vec);
-//     }
-//
-//     #[rstest]
-//     fn add_one_scope(mut twitch_connection: TwitchApiConnection) {
-//         let scope: Vec<&str> = Vec::from(["test::scope"]);
-//         twitch_connection = twitch_connection.add_scope("test::scope");
-//         assert_eq!(twitch_connection.username, "username");
-//         assert_eq!(twitch_connection.client_id, "client_id");
-//         assert_eq!(twitch_connection.client_secret, "client_secret");
-//         assert_eq!(twitch_connection.scope, scope);
-//     }
-//
-//     #[rstest]
-//     fn add_two_scope(mut twitch_connection: TwitchApiConnection) {
-//         let scope: Vec<&str> = Vec::from(["test::scope1", "test::scope2"]);
-//         twitch_connection = twitch_connection
-//             .add_scope("test::scope1")
-//             .add_scope("test::scope2");
-//         assert_eq!(twitch_connection.username, "username");
-//         assert_eq!(twitch_connection.client_id, "client_id");
-//         assert_eq!(twitch_connection.client_secret, "client_secret");
-//         assert_eq!(twitch_connection.scope, scope);
-//     }
-//
-//     #[rstest]
-//     fn add_default_scope(mut twitch_connection: TwitchApiConnection) {
-//         twitch_connection = twitch_connection.default_scopes();
-//         assert_eq!(twitch_connection.username, "username");
-//         assert_eq!(twitch_connection.client_id, "client_id");
-//         assert_eq!(twitch_connection.client_secret, "client_secret");
-//         assert_eq!(twitch_connection.scope, default_scopes_twitch());
-//     }
-//
-//     #[rstest]
-//     fn has_scope(mut twitch_connection: TwitchApiConnection) {
-//         let scope = "test::scope";
-//         let empty_scopes: Vec<&str> = vec![];
-//
-//         assert!(!twitch_connection.has_scope(scope));
-//         assert_eq!(twitch_connection.scope, empty_scopes);
-//         twitch_connection = twitch_connection.add_scope(scope);
-//         assert!(twitch_connection.has_scope(scope));
-//         assert_eq!(twitch_connection.scope, vec![scope]);
-//     }
-//
-//     #[rstest]
-//     fn remove_scope(mut twitch_connection: TwitchApiConnection) {
-//         let scope = "test::scope";
-//         let empty_scopes: Vec<&str> = vec![];
-//
-//         assert!(!twitch_connection.has_scope(scope));
-//         assert_eq!(twitch_connection.scope, empty_scopes);
-//         twitch_connection = twitch_connection.add_scope(scope);
-//         assert!(twitch_connection.has_scope(scope));
-//         assert_eq!(twitch_connection.scope, vec![scope]);
-//         twitch_connection = twitch_connection.remove_scope(scope);
-//         assert!(!twitch_connection.has_scope(scope));
-//         assert_eq!(twitch_connection.scope, empty_scopes);
-//     }
-//
-//     #[rstest]
-//     fn channel_transmitting(
-//         mut channels: IntegrationChannels<IntegrationEvent>,
-//         mut twitch_connection: TwitchApiConnection,
-//     ) {
-//         twitch_connection.add_transmitor(channels.tx.clone());
-//         let msg = IntegrationEvent::Chat("Test 124");
-//         assert!(twitch_connection
-//             .transmit_event(IntegrationEvent::Connected)
-//             .is_ok());
-//         assert!(twitch_connection.transmit_event(msg).is_ok());
-//
-//         let rx = channels.take_rx().unwrap();
-//         assert_eq!(rx.recv().unwrap(), IntegrationEvent::Connected);
-//         assert_eq!(rx.recv().unwrap(), msg);
-//     }
-// }

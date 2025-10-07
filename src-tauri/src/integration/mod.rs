@@ -4,7 +4,6 @@ use std::sync::{
 };
 
 use anyhow::{bail, Result};
-
 pub mod twitch;
 use config::Value;
 use indexmap::IndexMap;
@@ -13,6 +12,12 @@ use tauri::State;
 use tracing::{error, info, instrument};
 pub use twitch::TwitchApiConnection;
 
+pub mod websocket;
+pub use websocket::{
+    WebsocketCommand, WebsocketController, WebsocketControllerError, WebsocketState,
+    WEBSOCKET_STATE_TIMEOUT,
+};
+
 mod event;
 pub use event::{CustomRewardEvent, CustomRewardVariant, IntegrationEvent};
 
@@ -20,7 +25,7 @@ pub mod status;
 pub use status::{integration_status, IntegrationError, IntegrationStatus};
 use twitch_oauth2::TwitchToken;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Api {
     Twitch,
     YouTube,
