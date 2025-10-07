@@ -215,7 +215,7 @@ impl TwitchApiConnection {
             while restart_count <= acceptable_error_limit {
                 match websocket_loop.run().await {
                     Ok(_) => {}
-                    Err(e @ InvalidToken) | Err(e @ TokenElapsed) => {
+                    Err(e @ InvalidToken) => {
                         error!("Token error: {:?}", e);
                         break;
                     }

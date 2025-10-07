@@ -107,7 +107,6 @@ export default function IntegrationStatusBar({
     }
   }
 
-  // TODO: Add red for not "not implemented"
   useEffect(() => {
     const intervalId = setInterval(handleStatusChecks, 500);
 

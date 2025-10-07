@@ -8,6 +8,7 @@ import { IntegrationStatus } from "@/types";
 import { TooltipTriggerProps } from "@radix-ui/react-tooltip";
 import React, { useEffect } from "react";
 import CountdownTimer from "../countdown-timer";
+import { cn } from "@/lib/utils";
 
 export interface LogoProps {
   fill: string;
@@ -18,6 +19,7 @@ interface IntegrationProps extends TooltipTriggerProps {
   status: IntegrationStatus;
   primaryColor?: string;
   secondaryColor?: string;
+  errorColor?: string;
   Logo: React.FC<LogoProps>;
   name: string;
 }
@@ -29,11 +31,12 @@ export default function IntegrationLogo({
   className = "w-8 h-8",
   primaryColor = "#FFFFFF",
   secondaryColor = "#1e293b",
+  errorColor = "#FF3333FF",
   ...props
 }: IntegrationProps) {
   const [fill, setFill] = React.useState(secondaryColor);
   const [displayStatus, setDisplayStatus] = React.useState<string>(
-    status.status,
+    status.status
   );
   const [displayText, setDisplayText] = React.useState<string>(status.status);
   useEffect(() => {
@@ -43,7 +46,26 @@ export default function IntegrationLogo({
   }, [status]);
 
   const fillColor = () => {
-    return status.status === "Connected" ? primaryColor : secondaryColor;
+    switch (status.status) {
+      case "Connected":
+        return primaryColor;
+      case "Connecting":
+        return primaryColor + "AA";
+      case "Unknown":
+      case "Error":
+      case "NotStarted":
+      case "Disconnected":
+        if (
+          status.status == "Error" &&
+          status.api.error.error == "NotImplemented"
+        ) {
+          return secondaryColor;
+        } else {
+          return errorColor;
+        }
+      default:
+        return secondaryColor;
+    }
   };
 
   function handleDisplayStatus() {
@@ -96,13 +118,19 @@ export default function IntegrationLogo({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger {...props}>
-          <Logo fill={fill} className={className} />
+          <Logo fill={fill} className={cn("hover:opacity-75", className)} />
         </TooltipTrigger>
-        <TooltipContent className="mt-2 text-s bg-secondary" key={name + status.status}>
+        <TooltipContent
+          className="mt-2 text-s bg-secondary"
+          key={name + status.status}
+        >
           <div>
             {name}: {displayStatus}
             {status.status == "Connected" && status.api.expires_at ? (
-              <CountdownTimer seconds={status.api.expires_at} preText="Token: "/>
+              <CountdownTimer
+                seconds={status.api.expires_at}
+                preText="Token: "
+              />
             ) : (
               <></>
             )}
