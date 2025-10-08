@@ -109,7 +109,8 @@ impl GameServerConnected {
                 if server.game == Game::Factorio {
                     let _ = gameserverconnected
                         .send_command(format!(
-                            r#"/sc game.print("RCON v{} Connected")"#,
+                            r#"/sc game.print("RCON v{} Connected");print("RCON v{} Connected")"#,
+                            clap::crate_version!(),
                             clap::crate_version!()
                         ))
                         .await;
@@ -159,7 +160,8 @@ impl GameServerConnected {
                 if server.game == Game::Factorio {
                     let _ = c
                         .send_command(format!(
-                            r#"/sc game.print("RCON v{} Disconnecting")"#,
+                            r#"/sc game.print("RCON v{} Disconnecting"); print("RCON v{} Disconnecting)"#,
+                            clap::crate_version!(),
                             clap::crate_version!()
                         ))
                         .await;
@@ -585,6 +587,7 @@ pub async fn connect_to_server(
     channel: Channel<ServerStatus>,
     server: GameServer,
 ) -> Result<ServerStatus, ServerStatus> {
+    tracing::info!("Connecting to {}", server.name());
     match channel.send(ServerStatus::Connecting {
         server: server.clone(),
     }) {
@@ -637,6 +640,7 @@ pub async fn send_command_to_server(
 
 #[tauri::command]
 #[instrument(level = "trace")]
+/// TODO: Check by sending a print command
 pub async fn check_connection(server: GameServer) -> ServerStatus {
     trace!("check_connection");
     let connections = CONNECTIONS.lock().await;

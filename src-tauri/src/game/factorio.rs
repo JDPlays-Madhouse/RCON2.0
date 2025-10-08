@@ -24,6 +24,7 @@ pub struct FactorioServerStatus {
     now: SystemTime,
     duration_since_last_heartbeat: Duration,
     game_id: u64,
+    server_id: String,
 }
 
 /// Json object recieved from [`GET_ALL_GAMES_URL`]
@@ -168,6 +169,7 @@ impl ServerDescription {
             now: SystemTime::now(),
             game_id: self.game_id(),
             duration_since_last_heartbeat: self.duration_since_last_heartbeat().unwrap_or_default(),
+            server_id: self.server_id.clone(),
         }
     }
 }
@@ -182,11 +184,16 @@ impl ServerDescription {
             return Err(ServerDescriptionError::NotFactorio);
         }
         if let Some(server) = game_server.game_address() {
-            Self::new(server, token).await
+            Self::new(server, token, Some(game_server.id())).await
         } else if let Some(name) = game_server.server_name() {
             let short = ServerDescriptionShort::find_server_by_name(name, token, username).await?;
             if let Some(short_description) = short {
-                Self::new(short_description.host_address(), token).await
+                Self::new(
+                    short_description.host_address(),
+                    token,
+                    Some(game_server.id()),
+                )
+                .await
             } else {
                 let err = ServerDescriptionError::ServerNotFoundWithName(name.clone());
                 tracing::error!("{}", err);
@@ -200,6 +207,7 @@ impl ServerDescription {
     pub async fn new(
         host_address: SocketAddr,
         token: &str,
+        server_id: Option<String>,
     ) -> Result<Self, ServerDescriptionError> {
         let client = Client::new();
         let request = client
@@ -216,16 +224,18 @@ impl ServerDescription {
                 .map_err(ServerDescriptionError::RequestError)?;
             return Err(ServerDescriptionError::MatchMakingApiError(api_error));
         }
-        let server_descriptions: ServerDescription = sever_description_response
+        let mut server_descriptions: ServerDescription = sever_description_response
             .json()
             .await
             .map_err(ServerDescriptionError::RequestError)?;
-
+        if let Some(sid) = server_id {
+            server_descriptions.server_id = sid
+        }
         Ok(server_descriptions)
     }
 
     pub async fn update(&mut self, token: &str) -> Result<&mut Self, ServerDescriptionError> {
-        let new = Self::new(self.host_address(), token).await?;
+        let new = Self::new(self.host_address(), token, Some(self.server_id.clone())).await?;
         let old = self.clone();
         if new.game_id() != old.game_id() {
             eprintln!("Game id diff: {} -> {}", old.game_id(), new.game_id());
@@ -510,7 +520,6 @@ where
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::str::FromStr;
 
     #[test]

@@ -53,7 +53,6 @@ export default function IntegrationStatusBar({
     handleSetStatuses({ status: "Connecting", api }, api);
     invoke<IntegrationStatus>("connect_to_integration", { api, force })
       .then((status) => {
-        console.log({ status });
         handleSetStatuses(status, api);
       })
       .catch((error) => {
@@ -70,8 +69,6 @@ export default function IntegrationStatusBar({
   function handleIntegrationStatusCheck(api: Api) {
     invoke<IntegrationStatus>("integration_status", { api })
       .then((status) => {
-        console.log("integration_status");
-        console.log({ status });
         handleSetStatuses(status, api);
       })
       .catch((error) => {
@@ -108,7 +105,7 @@ export default function IntegrationStatusBar({
   }
 
   useEffect(() => {
-    const intervalId = setInterval(handleStatusChecks, 2000);
+    const intervalId = setInterval(handleStatusChecks, 5000);
 
     return () => {
       clearInterval(intervalId);

@@ -4,10 +4,12 @@ export enum Page {
   TwitchTriggers,
   Settings,
 }
-
+export enum ServerCommand {
+  start = "start",
+  stop = "stop",
+}
 export type ServerCommands = {
-  start?: string;
-  stop?: string;
+  [Property in ServerCommand]?: string;
 };
 
 export type Server = {
@@ -201,14 +203,23 @@ export type Duration = {
   secs: number;
 };
 
-export type GameServerStatus = {
-  game: "Factorio";
-  status: {
-    name: string;
-    gameId: number;
-    hostAddress: string;
-    lastHeartbeat: SystemTime;
-    now: SystemTime;
-    durationSinceLastHeartbeat: Duration;
-  };
-};
+export type GameServerStatus =
+  | { game: "NoGame" }
+  | {
+      game: "Factorio";
+      status: {
+        name: string;
+        gameId: number;
+        hostAddress: string;
+        lastHeartbeat: SystemTime;
+        now: SystemTime;
+        durationSinceLastHeartbeat: Duration;
+        serverId: string;
+      };
+    };
+
+export enum GameServerState {
+  Ok,
+  Warning,
+  Down,
+}

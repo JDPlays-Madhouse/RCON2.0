@@ -23,13 +23,13 @@ impl Monitor {
     /// TODO: [Result] might be unnessesary
     pub async fn run(&mut self) -> Result<()> {
         let mut status_comms = self.status_comms.clone();
-        let current_server_comms = self.current_server_comms.clone();
-        let current_config = self.current_config.clone();
+        let _current_server_comms = self.current_server_comms.clone();
+        let _current_config = self.current_config.clone();
         self.join_handle = Some(tokio::spawn(async move {
             let mut error_count: u8 = 0;
             loop {
                 match status_comms.rx_mut().recv().await {
-                    Ok(status) => {
+                    Ok(_status) => {
                         error_count = error_count.saturating_sub(1);
                     }
                     Err(e) => {

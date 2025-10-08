@@ -306,6 +306,7 @@ pub async fn run() {
             servers::send_command_to_server,
             servers::set_default_server,
             servers::update_server,
+            servers::run_command_on_server,
             settings::set_config_array,
             settings::set_config_bool,
             settings::get_config_bool,

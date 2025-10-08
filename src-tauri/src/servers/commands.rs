@@ -1,6 +1,15 @@
 use serde::{Deserialize, Serialize};
 use std::process::{Command, Output, Stdio};
 
+use crate::servers::GameServer;
+
+#[derive(Debug, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ServerCommand {
+    Start,
+    Stop,
+}
+
 #[derive(Debug, Default, Deserialize, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct ServerCommands {
     start: Option<String>,
@@ -119,6 +128,71 @@ pub enum ServerCommandError {
     NoStopCommand,
     #[error("IO Error: {0}")]
     IOError(#[from] std::io::Error),
+}
+
+#[tauri::command]
+pub async fn run_command_on_server(
+    server: GameServer,
+    command: ServerCommand,
+) -> Result<String, String> {
+    tracing::info!("Running: {:?}", command);
+    let cmds = if let Some(cmds) = server.commands() {
+        cmds
+    } else {
+        return Err("No server commands set.".into());
+    };
+    match command {
+        ServerCommand::Start => {
+            if let Some(start) = cmds.start() {
+                tracing::debug!("Running command: {}", start);
+                let output = match cmds.run_start() {
+                    Ok(o) => o,
+                    Err(e) => {
+                        tracing::error!("Start Server Command Error: {e}");
+                        return Err(e.to_string());
+                    }
+                };
+                if output.status.success() {
+                    tracing::info!("Server Start {}", output.status);
+                    return Ok(String::from_utf8(output.stdout).expect("Utf8 bytes"));
+                } else {
+                    tracing::error!("Errored command: '{}'", start);
+                    tracing::error!(
+                        "Server Start Errored: {}",
+                        String::from_utf8(output.stderr.clone()).expect("Utf8 bytes")
+                    );
+                    return Err(String::from_utf8(output.stderr).expect("Utf8 bytes"));
+                }
+            } else {
+                return Err("No server start command set.".into());
+            }
+        }
+        ServerCommand::Stop => {
+            if let Some(stop) = cmds.stop() {
+                tracing::debug!("Running command: {}", stop);
+                let output = match cmds.run_stop() {
+                    Ok(o) => o,
+                    Err(e) => {
+                        tracing::error!("Stop Server Command Error: {e}");
+                        return Err(e.to_string());
+                    }
+                };
+                if output.status.success() {
+                    tracing::info!("Server Stop {}", output.status);
+                    return Ok(String::from_utf8(output.stdout).expect("Utf8 bytes"));
+                } else {
+                    tracing::error!("Errored command: '{}'", stop);
+                    tracing::error!(
+                        "Server Stop Errored: {}",
+                        String::from_utf8(output.stderr.clone()).expect("Utf8 bytes")
+                    );
+                    return Err(String::from_utf8(output.stderr).expect("Utf8 bytes"));
+                }
+            } else {
+                return Err("No server stop command set.".into());
+            }
+        }
+    }
 }
 
 #[cfg(test)]

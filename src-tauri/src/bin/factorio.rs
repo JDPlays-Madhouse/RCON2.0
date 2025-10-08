@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
 
     println!("{:#?}", &server_description_short);
     let mut server_description =
-        ServerDescription::new(server_description_short.host_address(), &token).await?;
+        ServerDescription::new(server_description_short.host_address(), &token, None).await?;
     loop {
         let _ = server_description.update(&token).await;
         println!("{:?}", server_description.duration_since_last_heartbeat()?);

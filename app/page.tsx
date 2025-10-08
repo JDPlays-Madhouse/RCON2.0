@@ -6,6 +6,7 @@ import ServerConfig from "@/components/servers/server-config";
 import ServerControl from "@/components/servers/server-control";
 import ServerDashboard from "@/components/servers/server-dashboard";
 import LogArea from "@/components/servers/server-log";
+import GameServerStatusBar from "@/components/servers/server-status";
 import ServerSwitcher from "@/components/servers/server-switcher";
 import Settings from "@/components/settings/settings";
 import TwitchTrigger from "@/components/twitch/twitch-triggers";
@@ -53,17 +54,20 @@ export default function Home() {
         servers={servers}
       >*/}
       <header className="px-10 py-5 flex flex-row justify-between w-full max-w-[2560px] mx-auto border border-t-none border-x-none flex-initial">
-        <div className="flex flex-row gap-4 items-center">
+        <div className="flex-1 flex flex-row gap-4 items-center justify-start">
           <ServerSwitcher
             className=""
             selectedServer={selectedServer}
             setSelectedServer={setSelectedServer}
           />
-          <ServerControl selectedServer={selectedServer} />
           <IntegrationStatus />
         </div>
-
-        <MainNav page={page} setPage={setPage} />
+        <div className="flex-2 flex flex-row justify-center m-0">
+          <ServerControl selectedServer={selectedServer} />
+        </div>
+        <div className="flex-1 flex flex-row justify-end">
+          <MainNav page={page} setPage={setPage} className="flex-1" />
+        </div>
       </header>
       <ResizablePanelGroup direction="vertical" className="border max-w-dvw">
         <ResizablePanel defaultSize={70}>

@@ -20,6 +20,7 @@ pub mod settings;
 #[serde(tag = "game", content = "status")]
 pub enum GameServerStatus {
     Factorio(factorio::FactorioServerStatus),
+    NoGame,
 }
 
 impl GameServerStatus {
@@ -27,6 +28,9 @@ impl GameServerStatus {
         server: GameServer,
         settings: &GameSettings,
     ) -> Result<GameServerStatus, GameStatusError> {
+        if server.game_address().is_none() & server.server_name().is_none() {
+            return Ok(GameServerStatus::NoGame);
+        }
         match server.game() {
             Game::Factorio => {
                 let factorio_settings = settings.factorio();
@@ -62,8 +66,6 @@ pub enum GameStatusError {
 }
 
 pub fn status_emittor() {}
-
-fn workload() {}
 
 #[tauri::command]
 pub async fn latest_game_server_status(server: GameServer) -> Result<GameServerStatus, String> {
