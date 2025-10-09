@@ -13,7 +13,15 @@ use tauri::{ipc::Channel, State};
 use tokio::net::TcpStream;
 use tracing::{debug, error, info, instrument, trace};
 
-use crate::{command::Command, servers::commands::ServerCommands, settings::Settings};
+use crate::{
+    command::command_logs::{CommandLog, COMMAND_LOGS},
+    AsyncMutex,
+};
+use crate::{
+    command::{command_logs::CommandLogs, Command},
+    servers::commands::ServerCommands,
+    settings::Settings,
+};
 
 pub static SERVERS: LazyLock<Mutex<HashMap<String, GameServer>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -618,6 +626,7 @@ pub async fn connect_to_server(
 pub async fn send_command_to_server(
     server: GameServer,
     mut command: Command,
+    command_logs: State<'_, Arc<AsyncMutex<CommandLogs>>>,
 ) -> Result<String, String> {
     trace!("send_command_to_server");
     let mut connections = CONNECTIONS.lock().await;
@@ -631,6 +640,8 @@ pub async fn send_command_to_server(
         .await
     {
         Ok(r) => {
+            let log = CommandLog::from_server(&command, &server);
+            COMMAND_LOGS.lock().await.add_log(log);
             trace!("CONNECTIONS Unlocked");
             Ok(r)
         }

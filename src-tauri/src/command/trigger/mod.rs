@@ -42,63 +42,65 @@ pub enum Trigger {
         tier_comparison_operator: ComparisonOperator,
         count: u64,
         count_comparison_operator: ComparisonOperator
-    }
+    },
+    Server
 }
 
 impl PartialEq<IntegrationEvent> for Trigger {
     fn eq(&self, event: &IntegrationEvent) -> bool {
         match self {
             Trigger::Chat {
-                        pattern,
-                        case_sensitive,
-                    } => {
-                        if let IntegrationEvent::Chat { msg, .. } = event {
-                            let mut msg_match = msg.clone();
-                            let mut pattern_match = pattern.clone();
-                            if !case_sensitive {
-                                msg_match = msg_match.to_lowercase();
-                                pattern_match = pattern_match.to_lowercase();
+                                pattern,
+                                case_sensitive,
+                            } => {
+                                if let IntegrationEvent::Chat { msg, .. } = event {
+                                    let mut msg_match = msg.clone();
+                                    let mut pattern_match = pattern.clone();
+                                    if !case_sensitive {
+                                        msg_match = msg_match.to_lowercase();
+                                        pattern_match = pattern_match.to_lowercase();
+                                    }
+                                    msg_match.as_str().contains(&pattern_match)
+                                } else {
+                                    false
+                                }
                             }
-                            msg_match.as_str().contains(&pattern_match)
-                        } else {
-                            false
-                        }
-                    }
             Trigger::ChannelPointRewardRedeemed { id, variant, .. } => {
-                        if let IntegrationEvent::ChannelPoint(reward_event) = event {
-                            &reward_event.id == id && &reward_event.variant == variant
-                        } else {
-                            false
-                        }
-                    }
+                                if let IntegrationEvent::ChannelPoint(reward_event) = event {
+                                    &reward_event.id == id && &reward_event.variant == variant
+                                } else {
+                                    false
+                                }
+                            }
             Trigger::ChatRegex { .. } => {
-                        error!("Chat Regex as a trigger not implemented yet.");
-                        false
-                    }
+                                error!("Chat Regex as a trigger not implemented yet.");
+                                false
+                            }
             Trigger::Subscription {
-                        tier:trigger_tier,
-                        comparison_operator,
-                    } => {
-                        if let IntegrationEvent::Subscription { tier:event_tier, .. } = event {
-                            comparison_operator.compare(event_tier, trigger_tier)
-                        } else {
-                            false
-                        }
-                    }
+                                tier:trigger_tier,
+                                comparison_operator,
+                            } => {
+                                if let IntegrationEvent::Subscription { tier:event_tier, .. } = event {
+                                    comparison_operator.compare(event_tier, trigger_tier)
+                                } else {
+                                    false
+                                }
+                            }
             Trigger::GiftSub { 
-                tier:trigger_tier,
-                tier_comparison_operator, 
-                count: trigger_count, 
-                count_comparison_operator 
-            } => {
-                if let IntegrationEvent::GiftSub { tier:event_tier, count: event_count, .. } = event {
-                           let count =  count_comparison_operator.compare( event_count, trigger_count);
-                           let tier = tier_comparison_operator.compare( event_tier, trigger_tier);
-                           count & tier
-                        } else {
-                            false
-                        }
-            },
+                        tier:trigger_tier,
+                        tier_comparison_operator, 
+                        count: trigger_count, 
+                        count_comparison_operator 
+                    } => {
+                        if let IntegrationEvent::GiftSub { tier:event_tier, count: event_count, .. } = event {
+                                   let count =  count_comparison_operator.compare( event_count, trigger_count);
+                                   let tier = tier_comparison_operator.compare( event_tier, trigger_tier);
+                                   count & tier
+                                } else {
+                                    false
+                                }
+                    },
+            Trigger::Server => &IntegrationEvent::Server == event,
         }
     }
 }
@@ -113,22 +115,23 @@ impl Trigger {
         use Trigger::*;
         match self {
             Chat { .. } => Chat {
-                        pattern: Default::default(),
-                        case_sensitive: true,
-                    },
+                                pattern: Default::default(),
+                                case_sensitive: true,
+                            },
             ChatRegex { .. } => ChatRegex {
-                        pattern: Default::default(),
-                    },
+                                pattern: Default::default(),
+                            },
             ChannelPointRewardRedeemed { .. } => ChannelPointRewardRedeemed {
-                        title: Default::default(),
-                        id: Default::default(),
-                        variant: Default::default(),
-                    },
+                                title: Default::default(),
+                                id: Default::default(),
+                                variant: Default::default(),
+                            },
             Subscription { .. } => Subscription {
-                        tier: SubscriptionTier::default(),
-                        comparison_operator: ComparisonOperator::default(),
-                    },
+                                tier: SubscriptionTier::default(),
+                                comparison_operator: ComparisonOperator::default(),
+                            },
             GiftSub { .. } => GiftSub { tier: Default::default(), tier_comparison_operator: Default::default(), count: Default::default(), count_comparison_operator: Default::default() },
+            Server => Server,
         }
     }
 
@@ -136,21 +139,22 @@ impl Trigger {
     pub fn event_type(&self) -> IntegrationEvent {
         match self {
             Trigger::Chat { .. } => IntegrationEvent::Chat {
-                        msg: Default::default(),
-                        author: Default::default(),
-                    },
+                                msg: Default::default(),
+                                author: Default::default(),
+                            },
             Trigger::ChatRegex { .. } => IntegrationEvent::Chat {
-                        msg: Default::default(),
-                        author: Default::default(),
-                    },
+                                msg: Default::default(),
+                                author: Default::default(),
+                            },
             Trigger::ChannelPointRewardRedeemed { .. } => {
-                        IntegrationEvent::ChannelPoint(CustomRewardEvent::default())
-                    }
+                                IntegrationEvent::ChannelPoint(CustomRewardEvent::default())
+                            }
             Trigger::Subscription { .. } => IntegrationEvent::Subscription {
-                        tier: Default::default(),
-                        user_name: Default::default(),
-                    },
+                                tier: Default::default(),
+                                user_name: Default::default(),
+                            },
             Trigger::GiftSub { .. } => IntegrationEvent::GiftSub { tier: Default::default(), count: Default::default(), user_name: Default::default() },
+            Trigger::Server => IntegrationEvent::Server,
         }
     }
 
@@ -284,7 +288,7 @@ impl TryFrom<Value> for Trigger {
                     Some(t) => t.clone().into(),
                     None => {
                         warn!(
-                        "A trigger_type of '{}' needs the properties: {:?}. Defaulting to \"{:?}\"",
+                        "A trigger_type of '{}', missing 'tier', needs the properties: {:?}. Defaulting to \"{:?}\"",
                         trigger_type,
                         vec!["tier", "comparison_operator"],
                         SubscriptionTier::default()
@@ -297,7 +301,7 @@ impl TryFrom<Value> for Trigger {
                     Some(t) => t.clone().into(),
                     None => {
                         warn!(
-                        "A trigger_type of '{}' needs the properties: {:?} Defaulting to \"{:?}\"",
+                        "A trigger_type of '{}', missing 'comparison_operator', needs the properties: {:?} Defaulting to \"{:?}\"",
                         trigger_type,
                         vec!["tier", "comparison_operator"],
                         ComparisonOperator::default()
@@ -394,66 +398,70 @@ impl From<Trigger> for Value {
         let mut map = Map::new();
         match trigger {
             Trigger::Chat {
-                        pattern,
-                        case_sensitive,
-                    } => {
-                        map.insert(
-                            "trigger_type".to_string(),
-                            ValueKind::from(stringify!(Chat)),
-                        );
-                        map.insert("pattern".to_string(), ValueKind::from(pattern));
-                        map.insert(
-                            "case_sensitive".to_string(),
-                            ValueKind::from(case_sensitive),
-                        );
-                    }
+                                pattern,
+                                case_sensitive,
+                            } => {
+                                map.insert(
+                                    "trigger_type".to_string(),
+                                    ValueKind::from(stringify!(Chat)),
+                                );
+                                map.insert("pattern".to_string(), ValueKind::from(pattern));
+                                map.insert(
+                                    "case_sensitive".to_string(),
+                                    ValueKind::from(case_sensitive),
+                                );
+                            }
             Trigger::ChatRegex { pattern } => {
-                        map.insert(
-                            "trigger_type".to_string(),
-                            ValueKind::from(stringify!(ChatRegex)),
-                        );
-                        map.insert("pattern".to_string(), ValueKind::from(pattern));
-                    }
+                                map.insert(
+                                    "trigger_type".to_string(),
+                                    ValueKind::from(stringify!(ChatRegex)),
+                                );
+                                map.insert("pattern".to_string(), ValueKind::from(pattern));
+                            }
             Trigger::ChannelPointRewardRedeemed { title, id, variant } => {
-                        map.insert(
-                            "trigger_type".to_string(),
-                            ValueKind::from(stringify!(ChannelPointRewardRedeemed)),
-                        );
-                        map.insert("title".to_string(), ValueKind::from(title));
-                        map.insert("id".to_string(), ValueKind::from(id));
-                        map.insert("variant".to_string(), ValueKind::from(variant));
-                    }
+                                map.insert(
+                                    "trigger_type".to_string(),
+                                    ValueKind::from(stringify!(ChannelPointRewardRedeemed)),
+                                );
+                                map.insert("title".to_string(), ValueKind::from(title));
+                                map.insert("id".to_string(), ValueKind::from(id));
+                                map.insert("variant".to_string(), ValueKind::from(variant));
+                            }
             Trigger::Subscription {
-                        tier,
-                        comparison_operator,
-                    } => {
-                        map.insert(
-                            "trigger_type".to_string(),
-                            ValueKind::from(stringify!(Subscription)),
-                        );
-                        map.insert("tier".to_string(), ValueKind::from(tier));
-                        map.insert(
-                            "comparison_operator".to_string(),
-                            ValueKind::from(comparison_operator),
-                        );
-                    }
+                                tier,
+                                comparison_operator,
+                            } => {
+                                map.insert(
+                                    "trigger_type".to_string(),
+                                    ValueKind::from(stringify!(Subscription)),
+                                );
+                                map.insert("tier".to_string(), ValueKind::from(tier));
+                                map.insert(
+                                    "comparison_operator".to_string(),
+                                    ValueKind::from(comparison_operator),
+                                );
+                            }
             Trigger::GiftSub { tier, tier_comparison_operator, count, count_comparison_operator 
-                } => {
-                    map.insert(
-                        "trigger_type".to_string(),
-                        ValueKind::from(stringify!(Subscription)),
-                    );
-                    map.insert("tier".to_string(), ValueKind::from(tier));
-                    map.insert(
-                            "tier_comparison_operator".to_string(),
-                            ValueKind::from(tier_comparison_operator),
-                        );
-                    map.insert("count".to_string(), ValueKind::from(count));
-                    map.insert(
-                            "count_comparison_operator".to_string(),
-                            ValueKind::from(count_comparison_operator),
-                        );
-                }
+                        } => {
+                            map.insert(
+                                "trigger_type".to_string(),
+                                ValueKind::from(stringify!(Subscription)),
+                            );
+                            map.insert("tier".to_string(), ValueKind::from(tier));
+                            map.insert(
+                                    "tier_comparison_operator".to_string(),
+                                    ValueKind::from(tier_comparison_operator),
+                                );
+                            map.insert("count".to_string(), ValueKind::from(count));
+                            map.insert(
+                                    "count_comparison_operator".to_string(),
+                                    ValueKind::from(count_comparison_operator),
+                                );
+                        }
+            Trigger::Server => {map.insert(
+                                "trigger_type".to_string(),
+                                ValueKind::from(stringify!(Server)),
+                            );}
         }
         Self::new(None, ValueKind::from(map))
     }

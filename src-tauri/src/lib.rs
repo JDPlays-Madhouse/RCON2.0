@@ -134,7 +134,8 @@ pub mod servers;
 pub mod settings;
 pub(crate) mod utility;
 
-use std::sync::Arc;
+pub use futures::lock::Mutex as AsyncMutex;
+pub use std::sync::Arc;
 
 use anyhow::Context;
 use cli::handle_cli_matches;
@@ -154,6 +155,8 @@ use tracing_error::ErrorLayer;
 use tracing_subscriber::fmt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+
+use crate::command::command_logs::COMMAND_LOGS;
 
 pub const PROGRAM: &str = "RCON2.0";
 
@@ -270,6 +273,7 @@ pub async fn run() {
 
             app.manage(Arc::new(futures::lock::Mutex::new(config_clone.clone())));
             app.manage(Arc::new(futures::lock::Mutex::new(default_server)));
+            app.manage(Arc::clone(&COMMAND_LOGS));
             app.manage(twitch_int_clone);
 
             tracing_subscriber::Registry::default()
@@ -321,6 +325,7 @@ pub async fn run() {
             integration::twitch::get_channel_point_rewards,
             integration::twitch::refresh_twitch_websocket,
             game::latest_game_server_status,
+            command::command_logs::get_command_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -8,7 +8,8 @@ use twitch_types::SubscriptionTier;
 use crate::command::trigger;
 
 #[allow(dead_code)]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum IntegrationEvent {
     #[default]
     Connected,
@@ -33,6 +34,7 @@ pub enum IntegrationEvent {
     Continue,
     /// TODO: add implementation for updating triggers and commands for runner.
     Update,
+    Server,
 }
 
 impl IntegrationEvent {
@@ -60,6 +62,7 @@ impl IntegrationEvent {
             IntegrationEvent::Chat { msg, .. } => Some(&msg),
             IntegrationEvent::Connected
             | IntegrationEvent::Disconnected
+            | IntegrationEvent::Server
             | IntegrationEvent::Subscription { .. }
             | IntegrationEvent::GiftSub { .. }
             | IntegrationEvent::Unknown
@@ -80,6 +83,7 @@ impl IntegrationEvent {
             IntegrationEvent::GiftSub { user_name, .. } => user_name.clone().unwrap_or_default(),
             IntegrationEvent::Connected
             | IntegrationEvent::Disconnected
+            | IntegrationEvent::Server
             | IntegrationEvent::Unknown
             | IntegrationEvent::Stop
             | IntegrationEvent::Pause
@@ -98,6 +102,7 @@ impl IntegrationEvent {
             Connected => Connected,
             ChannelPoint(..) => ChannelPoint(CustomRewardEvent::default()),
             Unknown => Unknown,
+            Server => Server,
             Stop => Stop,
             Pause => Pause,
             Continue => Continue,
@@ -169,7 +174,7 @@ impl From<CustomRewardVariant> for ValueKind {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
 pub struct CustomRewardEvent {
     pub variant: CustomRewardVariant,
     /// Occurrence ID

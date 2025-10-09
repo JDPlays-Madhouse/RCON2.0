@@ -1,4 +1,12 @@
-import { Api, apis, Game, games, IntegrationStatusMap, Servers } from "@/types";
+import {
+  Api,
+  apis,
+  Game,
+  games,
+  IntegrationStatusMap,
+  Servers,
+  SystemTime,
+} from "@/types";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -29,4 +37,10 @@ export function defaultIntegrationStatus(): IntegrationStatusMap {
     status[Api[api]] = { status: "Unknown" };
   }
   return status;
+}
+
+export function systemTimeToDate(systemTime: SystemTime) {
+  return new Date(
+    systemTime.secs_since_epoch * 1000 + systemTime.nanos_since_epoch / 1000000
+  );
 }

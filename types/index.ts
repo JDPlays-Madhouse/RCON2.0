@@ -132,11 +132,38 @@ export type GameServerTrigger = {
   trigger: Trigger;
   enabled: boolean;
 };
+export type IntegrationEvent =
+  | { type: "Connected" }
+  | { type: "Disconnected" }
+  | { type: "Unknown" }
+  | { type: "Stop" }
+  | { type: "Pause" }
+  | { type: "Continue" }
+  | { type: "Update" }
+  | { type: "Chat"; msg: string; author: string }
+  | { type: "Subscription"; tier: string; user_name: string }
+  | {
+      type: "ChannelPoint";
+      variant: CustomRewardVariant;
+      event_id: string;
+      id: string;
+      title: string;
+      user_name: string;
+      message: string;
+    }
+  | { type: "GiftSub"; tier: string; user_name?: string; count: number };
 
 export type Command = {
   name: string;
   rcon_lua: RconCommand;
   server_triggers: GameServerTrigger[];
+};
+export type CommandLog = {
+  time: Date;
+  command: Command;
+  trigger: GameServerTrigger;
+  message?: string;
+  username?: string;
 };
 
 /// Make sure left side is equal to right.
@@ -222,4 +249,9 @@ export enum GameServerState {
   Ok,
   Warning,
   Down,
+}
+
+export enum CustomRewardVariant {
+  New,
+  Update,
 }

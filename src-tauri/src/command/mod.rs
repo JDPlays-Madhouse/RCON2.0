@@ -1,3 +1,4 @@
+pub mod command_logs;
 use anyhow::{bail, Result};
 use config::{Map, Value, ValueKind};
 use itertools::Itertools;
@@ -26,6 +27,7 @@ mod variable;
 pub use variable::Variable;
 
 use crate::{
+    command::command_logs::{CommandLog, COMMAND_LOGS},
     integration::IntegrationEvent,
     servers::{GameServer, CONNECTIONS},
 };
@@ -114,7 +116,17 @@ impl Command {
                     let _ = connection
                         .send_command(self.tx_string(event.message(), &event.username()))
                         .await;
+
                     info!("Sent \"{}\" to \"{}\" server.", self.name, &server.name);
+                    let username = event.username();
+                    let message = event.message().map(|s| s.to_string());
+                    COMMAND_LOGS.lock().await.add_log(CommandLog::new(
+                        self.clone(),
+                        trigger.clone(),
+                        event.clone(),
+                        username,
+                        message,
+                    ));
                 }
             }
         }
