@@ -628,6 +628,8 @@ pub async fn send_command_to_server(
     mut command: Command,
     command_logs: State<'_, Arc<AsyncMutex<CommandLogs>>>,
 ) -> Result<String, String> {
+    let log = CommandLog::from_server(&command, &server);
+    COMMAND_LOGS.lock().await.add_log(log);
     trace!("send_command_to_server");
     let mut connections = CONNECTIONS.lock().await;
     trace!("CONNECTIONS Locked");
@@ -640,8 +642,6 @@ pub async fn send_command_to_server(
         .await
     {
         Ok(r) => {
-            let log = CommandLog::from_server(&command, &server);
-            COMMAND_LOGS.lock().await.add_log(log);
             trace!("CONNECTIONS Unlocked");
             Ok(r)
         }

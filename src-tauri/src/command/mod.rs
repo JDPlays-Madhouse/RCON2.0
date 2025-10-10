@@ -110,6 +110,13 @@ impl Command {
     pub async fn handle_event(&mut self, event: &IntegrationEvent) {
         for trigger in self.server_triggers.clone() {
             if let Some(server) = trigger.event_triggered(event) {
+                COMMAND_LOGS.lock().await.add_log(CommandLog::new(
+                    self.clone(),
+                    trigger.clone(),
+                    event.clone(),
+                    event.username(),
+                    event.message().map(|s| s.to_string()),
+                ));
                 info!("Server {} was triggered by {:?}", server.name, event);
                 let mut connection_lock = CONNECTIONS.lock().await;
                 if let Some(connection) = connection_lock.get_mut(&server) {
@@ -118,15 +125,6 @@ impl Command {
                         .await;
 
                     info!("Sent \"{}\" to \"{}\" server.", self.name, &server.name);
-                    let username = event.username();
-                    let message = event.message().map(|s| s.to_string());
-                    COMMAND_LOGS.lock().await.add_log(CommandLog::new(
-                        self.clone(),
-                        trigger.clone(),
-                        event.clone(),
-                        username,
-                        message,
-                    ));
                 }
             }
         }

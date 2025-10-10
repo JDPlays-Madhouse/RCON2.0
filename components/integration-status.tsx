@@ -2,15 +2,22 @@
 
 import Twitch from "@/components/icons/twitch";
 import YouTube from "@/components/icons/youtube";
-import { cn, defaultIntegrationStatus } from "@/lib/utils";
+import { cn, defaultIntegrationStatus, initErrorMap } from "@/lib/utils";
 import React, { useEffect, useState } from "react";
-import { Api, apis, IntegrationStatus, IntegrationStatusMap } from "@/types";
+import {
+  Api,
+  apis,
+  IntegrationErrorMap,
+  IntegrationStatus,
+  IntegrationStatusMap,
+} from "@/types";
 import { invoke } from "@tauri-apps/api/core";
 import IntegrationLogo from "./icons";
 import Patreon from "@/components/icons/patreon";
 import StreamLabs from "@/components/icons/streamlabs";
 
 interface IntegrationStatusProps extends React.ComponentProps<"div"> {}
+const ERROR_LIMIT = 20;
 
 export default function IntegrationStatusBar({
   className = "",
@@ -21,6 +28,28 @@ export default function IntegrationStatusBar({
   );
   const [forceUpdate, setForceUpdate] = useState(0);
   const [integrations, setIntegrations] = useState<Api[]>([]);
+
+  const [errorCount, setErrorCount] = useState<IntegrationErrorMap>(
+    initErrorMap()
+  );
+
+  function increaseErrorCount(api: Api) {
+    setErrorCount((ec) => {
+      ec[api] += 1;
+      return ec;
+    });
+  }
+
+  function decreaseErrorCount(api: Api) {
+    setErrorCount((ec) => {
+      if (ec[api] <= 0) {
+        ec[api] = 0;
+        return ec;
+      }
+      ec[api] -= 1;
+      return ec;
+    });
+  }
 
   useEffect(() => {
     invoke<boolean>("get_config_bool", {
@@ -93,19 +122,46 @@ export default function IntegrationStatusBar({
           return;
         }
         handleConnectToIntegration(api);
-        handleIntegrationStatusCheck(api);
         break;
     }
   }
 
   function handleStatusChecks() {
-    for (const integration of integrations) {
-      handleOnClick(integration);
+    for (const api of integrations) {
+      invoke<IntegrationStatus>("integration_status", { api })
+        .then((status) => {
+          handleSetStatuses(status, api);
+          switch (status.status) {
+            case "Connected":
+            case "Connecting":
+              decreaseErrorCount(api);
+              break;
+            case "Unknown":
+            case "Error":
+            case "NotStarted":
+            case "Disconnected":
+              if (
+                status.status === "Error" &&
+                status.api.error.error === "NotImplemented"
+              ) {
+                return;
+              }
+              increaseErrorCount(api);
+              if (errorCount[api] > ERROR_LIMIT) {
+                handleConnectToIntegration(api);
+                errorCount[api] = 0;
+              }
+              break;
+          }
+        })
+        .catch((error) => {
+          handleSetStatuses({ status: "Error", api: { api, error } }, api);
+        });
     }
   }
 
   useEffect(() => {
-    const intervalId = setInterval(handleStatusChecks, 5000);
+    const intervalId = setInterval(handleStatusChecks, 500);
 
     return () => {
       clearInterval(intervalId);

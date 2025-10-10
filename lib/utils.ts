@@ -3,6 +3,7 @@ import {
   apis,
   Game,
   games,
+  IntegrationErrorMap,
   IntegrationStatusMap,
   Servers,
   SystemTime,
@@ -38,7 +39,14 @@ export function defaultIntegrationStatus(): IntegrationStatusMap {
   }
   return status;
 }
-
+export function initErrorMap(): IntegrationErrorMap {
+  // @ts-expect-error(Constructing status.)
+  const error_map: IntegrationErrorMap = {};
+  for (const api of apis) {
+    error_map[Api[api]] = 0;
+  }
+  return error_map;
+}
 export function systemTimeToDate(systemTime: SystemTime) {
   return new Date(
     systemTime.secs_since_epoch * 1000 + systemTime.nanos_since_epoch / 1000000

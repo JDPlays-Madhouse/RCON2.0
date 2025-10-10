@@ -1,6 +1,6 @@
 {
   "name": "rcon2.0",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -29,6 +29,8 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@tailwindcss/postcss": "^4.1.14",
     "@tanstack/react-table": "^8.20.5",
+    "@tanstack/react-query": "^5.49.0",
+    "@tanstack/react-virtual": "^3.12.0",
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/plugin-cli": "^2.0.0",
     "@tauri-apps/plugin-clipboard-manager": "^2.2.0",

@@ -341,9 +341,9 @@ impl TwitchApiConnection {
             return Ok(IntegrationStatus::Connecting(api));
         };
         if let Some(ws_state) = self.websocket_state().await {
-            if !ws_state.is_alive() {
-                tracing::info!("{:?} state: {:?}", api, ws_state);
-            };
+            // if !ws_state.is_alive() {
+            //     tracing::info!("{:?} state: {:?}", api, ws_state);
+            // };
             match ws_state {
                 WebsocketState::Down => return Ok(IntegrationStatus::Disconnected(api)),
                 WebsocketState::Alive => (),
@@ -550,7 +550,7 @@ pub async fn get_channel_point_rewards(
     twitch_mutex: State<'_, Arc<futures::lock::Mutex<TwitchApiConnection>>>,
     testing: bool,
 ) -> Result<Vec<CustomChannelPointRewardInfo>, String> {
-    if testing {
+    if testing | tauri::is_dev() {
         Ok(CustomChannelPointRewardInfo::from_test_list(
             jd_channel_points(),
         ))

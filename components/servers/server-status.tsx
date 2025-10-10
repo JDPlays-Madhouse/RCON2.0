@@ -27,7 +27,6 @@ interface GameServerStatusBarProps extends React.ComponentProps<"div"> {
   status: GameServerStatus;
 }
 
-const NoGame: GameServerStatus = { game: "NoGame" };
 export default function GameServerStatusBar({
   className = "w-full",
   selectedServer,

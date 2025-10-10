@@ -17,7 +17,7 @@ export default function ChannelPointRewardsDashboard({
 
   useEffect(() => {
     invoke<CustomChannelPointRewardInfo[]>("get_channel_point_rewards", {
-      testing: true,
+      testing: false,
     }).then((channel_rewards) => {
       setRewards(channel_rewards);
     });
