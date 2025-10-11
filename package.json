@@ -1,6 +1,6 @@
 {
   "name": "rcon2.0",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -24,12 +24,13 @@
     "@radix-ui/react-popover": "^1.1.2",
     "@radix-ui/react-scroll-area": "^1.2.2",
     "@radix-ui/react-select": "^2.1.2",
-    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.4",
     "@tailwindcss/postcss": "^4.1.14",
-    "@tanstack/react-table": "^8.20.5",
     "@tanstack/react-query": "^5.49.0",
+    "@tanstack/react-table": "^8.20.5",
     "@tanstack/react-virtual": "^3.12.0",
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/plugin-cli": "^2.0.0",

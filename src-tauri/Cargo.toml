@@ -1,6 +1,6 @@
 [package]
 name = "RCON2"
-version = "0.2.7"
+version = "0.2.8"
 description = "Rcon integration"
 authors = ["Ozy_Viking<admin@hankin.io>"]
 license = ""
