@@ -13,9 +13,9 @@ pub struct CommandLog {
     pub(super) time: SystemTime,
     pub(super) command: Command,
     pub(super) trigger: GameServerTrigger,
+    pub(super) event: IntegrationEvent,
     pub(super) username: String,
     pub(super) message: Option<String>,
-    pub(super) event: IntegrationEvent,
 }
 
 impl Ord for CommandLog {
@@ -52,6 +52,13 @@ impl CommandLog {
         }
     }
 
+    /// Clone of the log with the time set to [`SystemTime::now()`]
+    pub fn repeat_log(&self) -> Self {
+        let mut log = self.clone();
+        log.time = SystemTime::now();
+        log
+    }
+
     pub fn time(&self) -> SystemTime {
         self.time
     }
@@ -68,8 +75,8 @@ impl CommandLog {
         &self.username
     }
 
-    pub fn message(&self) -> Option<&String> {
-        self.message.as_ref()
+    pub fn message(&self) -> Option<&str> {
+        self.message.as_ref().map(|x| x.as_str())
     }
 
     pub fn event(&self) -> &IntegrationEvent {

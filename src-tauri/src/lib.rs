@@ -326,6 +326,8 @@ pub async fn run() {
             integration::twitch::refresh_twitch_websocket,
             game::latest_game_server_status,
             command::command_logs::get_command_logs,
+            command::command_logs::resend_command,
+            command::command_logs::resend_event,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

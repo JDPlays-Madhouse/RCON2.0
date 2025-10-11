@@ -229,6 +229,14 @@ impl TwitchApiConnection {
         }));
         self.connecting = false;
     }
+
+    pub async fn send_event_to_runner(
+        &mut self,
+        event: IntegrationEvent,
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<IntegrationEvent>> {
+        let event_tx = self.runner.tx();
+        event_tx.send(event).await
+    }
 }
 
 impl TwitchApiConnection {

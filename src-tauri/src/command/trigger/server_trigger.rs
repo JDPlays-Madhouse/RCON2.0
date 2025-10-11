@@ -84,6 +84,10 @@ impl GameServerTrigger {
             None
         }
     }
+
+    pub fn server(&self) -> &GameServer {
+        &self.server
+    }
 }
 
 impl From<GameServerTrigger> for Value {
