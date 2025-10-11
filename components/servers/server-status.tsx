@@ -33,6 +33,7 @@ export default function GameServerStatusBar({
   status,
   ...props
 }: GameServerStatusBarProps) {
+  const [forceUpdate, setForceUpdate] = useState<number>(0);
   const [serverCommands, setServerCommands] = useState<ServerCommand[]>([]);
   const [ranCommands, setRanCommands] = useState<{
     [Property in ServerCommand]: Date;
@@ -40,6 +41,13 @@ export default function GameServerStatusBar({
     start: new Date(0),
     stop: new Date(0),
   });
+
+  useEffect(() => {
+    const intervalId = setInterval(setForceUpdate, 200, (i) => i + 1);
+
+    // Clean up the interval when the component unmounts or dependencies change
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Check for commands
   useEffect(() => {
@@ -68,7 +76,6 @@ export default function GameServerStatusBar({
     const new_ran = ranCommands;
 
     new_ran[command] = new Date();
-    console.log(new_ran);
     setRanCommands(new_ran);
     invoke("run_command_on_server", { server: selectedServer, command })
       .then((status) => {

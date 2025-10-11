@@ -20,16 +20,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { MoreHorizontal, Plus } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import {
   Table,
   TableBody,
@@ -38,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -50,6 +43,7 @@ import { cn, systemTimeToDate } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { DataTablePagination } from "@/components/datatables/pagination";
+import { ButtonGroup } from "@/components/ui/button-group";
 
 export const columns: ColumnDef<CommandLog>[] = [
   {
@@ -137,22 +131,50 @@ export const columns: ColumnDef<CommandLog>[] = [
     },
   },
   {
-    id: "sendCommand",
-    header: "Send Command",
-    cell: ({ row, table }) => {
-      const sendCommand = () => {
-        const command: Command = row.original.command;
-        // @ts-expect-error using custom command
-        table.options.meta.sendCommand(command);
-      };
+    accessorKey: "trigger.server.name",
+    header({ column }) {
       return (
         <Button
-          variant="secondary"
-          className="hover:bg-primary active:bg-primary/50"
-          onClick={() => sendCommand()}
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Resend Command
+          Server
+          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
+      );
+    },
+  },
+  {
+    id: "sendCommand",
+    header: "Resend",
+    cell: ({ row, table }) => {
+      const resendCommand = () => {
+        const command_log = row.original;
+        // @ts-expect-error using custom command
+        table.options.meta.resendCommand(command_log);
+      };
+      const resendEvent = () => {
+        const command_log = row.original;
+        // @ts-expect-error using custom command
+        table.options.meta.resendEvent(command_log);
+      };
+      return (
+        <ButtonGroup className="mx-auto">
+          <Button
+            variant="secondary"
+            className="bg-primary/50 hover:bg-primary active:bg-primary/50"
+            onClick={() => resendCommand()}
+          >
+            Command
+          </Button>
+          <Button
+            variant="secondary"
+            className="bg-green-800 hover:bg-green-500 active:bg-green-500/20"
+            onClick={() => resendEvent()}
+          >
+            Event
+          </Button>
+        </ButtonGroup>
       );
     },
   },
@@ -163,6 +185,7 @@ interface DataTableProps {
 }
 
 export default function CommandLogTable({ selectedServer }: DataTableProps) {
+  const [thisServerOnly, setThisServerOnly] = useState(false);
   const [data, setData] = useState<CommandLog[]>([]);
   const [count, setCount] = useState(0);
 
@@ -171,7 +194,8 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
   };
 
   useEffect(() => {
-    const intervalId = setInterval(handleUpdateData, 5000);
+    handleUpdateData();
+    const intervalId = setInterval(handleUpdateData, 1000);
     return () => {
       clearInterval(intervalId);
     };
@@ -206,7 +230,10 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
       return obj;
     }
   }
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: "time", desc: false },
+  ]);
+  console.log(sorting);
   const table = useReactTable({
     data,
     columns,
@@ -221,8 +248,13 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
       columnFilters,
     },
     meta: {
-      sendCommand: function f(command: Command) {
-        invoke("send_command_to_server", { server: selectedServer, command })
+      resendCommand: function f(commandLog: CommandLog) {
+        invoke("resend_command", { commandLog })
+          .then(console.log)
+          .catch(console.warn);
+      },
+      resendEvent: function f(commandLog: CommandLog) {
+        invoke("resend_event", { commandLog })
           .then(console.log)
           .catch(console.warn);
       },
@@ -231,7 +263,7 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
   // send_command_to_server
   return (
     <div className="w-full">
-      <div className="flex items-center py-4 justify-between flex-row w-full">
+      <div className="flex items-center py-4 justify-center flex-row w-full gap-2">
         <Input
           placeholder="Filter by Username..."
           value={
@@ -240,8 +272,34 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
           onChange={(event) =>
             table.getColumn("username")?.setFilterValue(event.target.value)
           }
-          className="max-w-sm"
+          className="max-w-sm border-secondary-foreground/50"
         />
+        <Input
+          placeholder="Filter by Command Name..."
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("name")?.setFilterValue(event.target.value)
+          }
+          className="max-w-sm border-secondary-foreground/50"
+        />
+        <Input
+          placeholder="Filter by Trigger Name..."
+          value={(table.getColumn("trigger")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("trigger")?.setFilterValue(event.target.value)
+          }
+          className="max-w-sm border-secondary-foreground/50"
+        />
+        <Button
+          className="flex flex-row text-foreground items-center justify-center gap-1"
+          variant="secondary"
+          onClick={() => {
+            setThisServerOnly(!thisServerOnly);
+          }}
+        >
+          {thisServerOnly ? <Check className="" /> : <X />}{" "}
+          <span>This server only.</span>
+        </Button>
       </div>
       <div className="rounded-md border w-full">
         <Table>

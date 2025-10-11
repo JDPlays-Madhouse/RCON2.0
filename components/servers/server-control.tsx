@@ -50,6 +50,7 @@ export default function ServerControl({
   }, []);
 
   useEffect(() => {
+    console.log({ gameStatus, autoConnect, manuallyStopped });
     if (gameId === -1) {
       return;
     } else if (
@@ -65,6 +66,12 @@ export default function ServerControl({
   }, [gameId, manuallyStopped, autoConnect]);
 
   useEffect(() => {
+    console.log({
+      connected: connected(),
+      autoConnect,
+      connecting: connecting(),
+      manuallyStopped,
+    });
     if (selectedServer && channel) {
       if (!connected() && autoConnect && !connecting() && !manuallyStopped) {
         handleServerConnect();
