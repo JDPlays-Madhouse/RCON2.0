@@ -160,13 +160,13 @@ export default function IntegrationStatusBar({
     }
   }
 
-  useEffect(() => {
-    const intervalId = setInterval(handleStatusChecks, 500);
+  // useEffect(() => {
+  //   const intervalId = setInterval(handleStatusChecks, 500);
 
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [integrations]);
+  //   return () => {
+  //     clearInterval(intervalId);
+  //   };
+  // }, [integrations]);
 
   return (
     <div
