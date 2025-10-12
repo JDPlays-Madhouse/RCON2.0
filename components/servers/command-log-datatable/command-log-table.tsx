@@ -12,6 +12,7 @@ import {
 import {
   ColumnDef,
   ColumnFiltersState,
+  PaginationState,
   SortingState,
   flexRender,
   getCoreRowModel,
@@ -188,6 +189,11 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
   const [thisServerOnly, setThisServerOnly] = useState(false);
   const [data, setData] = useState<CommandLog[]>([]);
   const [count, setCount] = useState(0);
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
+  const [pagination, setPagination] = React.useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const updateTable = () => {
     setCount((c) => c + 1);
@@ -195,16 +201,23 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
 
   useEffect(() => {
     handleUpdateData();
+    if (!autoRefresh) {
+      return;
+    }
     const intervalId = setInterval(handleUpdateData, 1000);
     return () => {
       clearInterval(intervalId);
     };
-  }, [selectedServer]);
+  }, [selectedServer, autoRefresh]);
 
+  // TODO: Change to just fetch new data.
   const handleUpdateData = () => {
-    updateTable();
+    // updateTable();
     if (selectedServer) {
       invoke<CommandLog[]>("get_command_logs").then((commands) => {
+        // if (commands.length === data.length) {
+        //   return;
+        // }
         setData(commands);
       });
     }
@@ -233,12 +246,13 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "time", desc: false },
   ]);
-  console.log(sorting);
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    onPaginationChange: setPagination,
     getPaginationRowModel: getPaginationRowModel(),
+    autoResetPageIndex: false,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
@@ -246,6 +260,7 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
     state: {
       sorting,
       columnFilters,
+      pagination,
     },
     meta: {
       resendCommand: function f(commandLog: CommandLog) {
@@ -300,6 +315,29 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
           {thisServerOnly ? <Check className="" /> : <X />}{" "}
           <span>This server only.</span>
         </Button>
+        <ButtonGroup>
+          <Button
+            onClick={() => setAutoRefresh((r) => !r)}
+            variant="secondary"
+            className={
+              autoRefresh
+                ? "bg-green-500/70 hover:bg-green-500/100 active:bg-green-500/30"
+                : "bg-amber-500/70 hover:bg-amber-500/100 active:bg-amber-500/30"
+            }
+          >
+            {autoRefresh ? "Stop auto refreshing" : "Start auto refreshing"}
+          </Button>
+          <Button
+            onClick={() => {
+              handleUpdateData();
+              setAutoRefresh(autoRefresh);
+            }}
+            variant="secondary"
+            className="active:bg-green-500/30"
+          >
+            Manual Refresh
+          </Button>
+        </ButtonGroup>
       </div>
       <div className="rounded-md border w-full">
         <Table>
