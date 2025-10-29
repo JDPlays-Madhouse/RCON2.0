@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 pub struct Variable {
     name: String,
     r#type: VariableType,
+    // position: usize,
 }
 
 impl Variable {
@@ -19,8 +20,10 @@ impl Variable {
             return Ok(None);
         }
         let mut variables = Vec::new();
-        for v in variable.split(',') {
-            variables.push(Variable::from_str(v)?);
+        for (_position, v) in variable.split(',').enumerate() {
+            let variable = Variable::from_str(v)?;
+            // variable.set_position(position);
+            variables.push(variable);
         }
         Ok(Some(variables))
     }
@@ -68,7 +71,7 @@ impl Variable {
         }
     }
 
-    /// Returns an [`Variable`] with the value set to the value from the message.
+    /// Returns a [`Variable`] with the value set to the value from the message.
     /// TODO: Change to nom
     pub fn from_message(&self, msg: Option<&str>) -> Option<Self> {
         if msg.is_none() {
@@ -93,6 +96,7 @@ impl Variable {
                             return Some(Self {
                                 name: self.name.clone(),
                                 r#type: VariableType::String(match_string.to_string()),
+                                // position: todo!(),
                             });
                         }
                     } else if let Some(rem) = match_var.strip_prefix('\'') {
@@ -101,6 +105,7 @@ impl Variable {
                             return Some(Self {
                                 name: self.name.clone(),
                                 r#type: VariableType::String(match_string.to_string()),
+                                // position: todo!(),
                             });
                         }
                     } else {
@@ -108,6 +113,7 @@ impl Variable {
                             return Some(Self {
                                 name: self.name.clone(),
                                 r#type: VariableType::String(match_str.to_string()),
+                                // position: todo!(),
                             });
                         };
                     }
@@ -123,7 +129,8 @@ impl Variable {
                                 return Some(Self {
                                     name: self.name.clone(),
                                     r#type: VariableType::Int(match_int),
-                                })
+                                    // position: todo!(),
+                                });
                             }
                             Err(e) => {
                                 tracing::error!(
@@ -146,7 +153,8 @@ impl Variable {
                                 return Some(Self {
                                     name: self.name.clone(),
                                     r#type: VariableType::Float(match_float),
-                                })
+                                    // position: todo!(),
+                                });
                             }
                             Err(e) => {
                                 tracing::error!(
@@ -171,6 +179,14 @@ impl Variable {
     pub fn variable_type(&self) -> &VariableType {
         &self.r#type
     }
+
+    // pub fn position(&self) -> usize {
+    //     self.position
+    // }
+
+    // pub fn set_position(&mut self, position: usize) {
+    //     self.position = position;
+    // }
 }
 
 impl Ord for Variable {
@@ -200,7 +216,11 @@ impl FromStr for Variable {
             None => return Err(VariableError::NoName(s.to_string())),
         };
         let r#type = VariableType::from_str(s.strip_prefix(&name).unwrap_or_default())?;
-        Ok(Self { name, r#type })
+        Ok(Self {
+            name,
+            r#type,
+            // position: 0,
+        })
     }
 }
 

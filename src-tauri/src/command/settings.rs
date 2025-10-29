@@ -140,7 +140,7 @@ impl ScriptSettings {
                 Ok(_) => Ok(FileType::Dir),
             },
             (false, FileType::File) => {
-                self.write().expect("writing to file");
+                self.write().expect("writing to file"); // TODO: Display error path
                 Ok(FileType::File)
             }
         }

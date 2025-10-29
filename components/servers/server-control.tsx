@@ -40,7 +40,7 @@ export default function ServerControl({
     selectedServer?.server_name !== undefined ||
     selectedServer?.game_address !== undefined;
   // console.log({ status, connected: connected() });
-
+  // BUG: #10 Improve autostart logic.
   useEffect(() => {
     invoke<boolean>("get_config_bool", {
       key: "servers.autostart",
