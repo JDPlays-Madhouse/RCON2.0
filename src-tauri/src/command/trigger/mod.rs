@@ -520,6 +520,10 @@ impl From<Trigger> for Value {
                                 );
                         }
             Trigger::Bits { bits, comparison_operator } => {
+                map.insert(
+                                "trigger_type".to_string(),
+                                ValueKind::from(stringify!(Bits)),
+                            );
                 map.insert("bits".to_string(), ValueKind::from(bits));
                 map.insert(
                                     "comparison_operator".to_string(),
