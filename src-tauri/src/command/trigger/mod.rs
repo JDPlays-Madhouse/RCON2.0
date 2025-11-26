@@ -43,6 +43,10 @@ pub enum Trigger {
         count: u64,
         count_comparison_operator: ComparisonOperator
     },
+    Bits{
+        bits: u64,
+        comparison_operator: ComparisonOperator
+    },
     Server
 }
 
@@ -101,6 +105,13 @@ impl PartialEq<IntegrationEvent> for Trigger {
                                 }
                     },
             Trigger::Server => &IntegrationEvent::Server == event,
+            Trigger::Bits { bits: trigger_bits, comparison_operator: bits_comparison_operator } => {
+                if let IntegrationEvent::Bits { bits: event_bits , ..} = event {
+                    bits_comparison_operator.compare(event_bits, trigger_bits)
+                } else {
+                    false
+                }
+            },
         }
     }
 }
@@ -130,6 +141,7 @@ impl Trigger {
                                 tier: SubscriptionTier::default(),
                                 comparison_operator: ComparisonOperator::default(),
                             },
+            Bits { .. } => Bits { bits: Default::default(), comparison_operator: Default::default() },
             GiftSub { .. } => GiftSub { tier: Default::default(), tier_comparison_operator: Default::default(), count: Default::default(), count_comparison_operator: Default::default() },
             Server => Server,
         }
@@ -155,6 +167,7 @@ impl Trigger {
                             },
             Trigger::GiftSub { .. } => IntegrationEvent::GiftSub { tier: Default::default(), count: Default::default(), user_name: Default::default() },
             Trigger::Server => IntegrationEvent::Server,
+            Trigger::Bits { .. } => IntegrationEvent::Bits { user_name: Default::default(), bits: Default::default() },
         }
     }
 
@@ -385,6 +398,54 @@ impl TryFrom<Value> for Trigger {
                 };
                 Ok(Self::GiftSub { tier, tier_comparison_operator, count, count_comparison_operator })
             }
+            "bits" => {
+                let required_keys = ["bits", "comparison_operator"];
+                let bits = match trigger_table.get("bits") {
+                    Some(t) => {
+                        let key = required_keys[1];
+                        match t.clone().into_uint(){
+                        
+                        Ok(c) => c,
+                        Err(e) => {
+                            warn!("{e:?}");
+                            warn!(
+                                "{key} is an invalid type, recieved '{t:?}'. A trigger_type of '{}' needs the properties: {:?}. Defaulting to \"{:?}\"",
+                                trigger_type,
+                                required_keys,
+                                u64::default()
+                            );
+                            u64::default()
+                        },
+                    }},
+                    None => {
+                        warn!(
+                        "A trigger_type of '{}', missing 'bits', needs the properties: {:?}. Defaulting to \"{:?}\"",
+                        trigger_type,
+                        vec!["bits", "comparison_operator"],
+                        u64::default()
+                    );
+
+                        u64::default()
+                    }
+                };
+                let comparison_operator = match trigger_table.get("comparison_operator") {
+                    Some(t) => t.clone().into(),
+                    None => {
+                        warn!(
+                        "A trigger_type of '{}', missing 'comparison_operator', needs the properties: {:?} Defaulting to \"{:?}\"",
+                        trigger_type,
+                        vec!["tier", "comparison_operator"],
+                        ComparisonOperator::default()
+
+                    );
+                        ComparisonOperator::default()
+                    }
+                };
+                Ok(Self::Bits {
+                    bits,
+                    comparison_operator,
+                })
+            }
             _trig => {
                 error!("Trigger type has not been implemented: {}", trigger_type);
                 bail!("Trigger type has not been implemented: {}", trigger_type)
@@ -458,10 +519,19 @@ impl From<Trigger> for Value {
                                     ValueKind::from(count_comparison_operator),
                                 );
                         }
+            Trigger::Bits { bits, comparison_operator } => {
+                map.insert("bits".to_string(), ValueKind::from(bits));
+                map.insert(
+                                    "comparison_operator".to_string(),
+                                    ValueKind::from(comparison_operator),
+                                );
+            }
             Trigger::Server => {map.insert(
                                 "trigger_type".to_string(),
                                 ValueKind::from(stringify!(Server)),
-                            );}
+                            );
+                        
+                        }
         }
         Self::new(None, ValueKind::from(map))
     }

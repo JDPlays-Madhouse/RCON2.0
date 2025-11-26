@@ -28,6 +28,10 @@ pub enum IntegrationEvent {
         count: u64,
         user_name: Option<String>,
     },
+    Bits {
+        user_name: String,
+        bits: u64,
+    },
     Unknown,
     Stop,
     Pause,
@@ -60,7 +64,8 @@ impl IntegrationEvent {
                 Some(&custom_reward_event.message)
             }
             IntegrationEvent::Chat { msg, .. } => Some(&msg),
-            IntegrationEvent::Connected
+            IntegrationEvent::Bits { .. }
+            | IntegrationEvent::Connected
             | IntegrationEvent::Disconnected
             | IntegrationEvent::Server
             | IntegrationEvent::Subscription { .. }
@@ -81,6 +86,7 @@ impl IntegrationEvent {
             IntegrationEvent::Chat { author, .. } => author.clone(),
             IntegrationEvent::Subscription { user_name, .. } => user_name.clone(),
             IntegrationEvent::GiftSub { user_name, .. } => user_name.clone().unwrap_or_default(),
+            IntegrationEvent::Bits { user_name, .. } => user_name.clone(),
             IntegrationEvent::Connected
             | IntegrationEvent::Disconnected
             | IntegrationEvent::Server
@@ -116,6 +122,10 @@ impl IntegrationEvent {
                 tier: Default::default(),
                 count: Default::default(),
                 user_name: Default::default(),
+            },
+            Bits { .. } => Bits {
+                user_name: Default::default(),
+                bits: Default::default(),
             },
         }
     }

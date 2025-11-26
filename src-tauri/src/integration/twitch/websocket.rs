@@ -358,7 +358,7 @@ impl WebsocketClient {
                                 ..
                             }) => self.channel_subscribe_message(message).await,
                             Event::ChannelSubscriptionGiftV1(eventsub::Payload{message, ..}) => self.channel_subscription_gift(message).await,
-
+                            Event::ChannelBitsUseV1(eventsub::Payload{message, ..}) => self.channel_bits_use(message).await,
                             m => {
                                 let message =
                                     format!("Received an unimplemented websocket event: {:?}", m);
@@ -586,6 +586,35 @@ impl WebsocketClient {
             }
         };
     }
+   /// Channel Bits Use docs: [dev.twitch.tv](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelbitsuse)
+    async fn channel_bits_use(
+        &mut self,
+        message: eventsub::Message<eventsub::channel::ChannelBitsUseV1>,
+    ) {
+        match message.clone() {
+            eventsub::Message::Notification(reward_payload) => {
+                let user_name = reward_payload.user_name.clone().take();
+                let message = format!(
+                    "{} bits given from {}",
+                    reward_payload.bits, user_name
+                );
+                info!(
+                    target = "rcon2::integration::twitch::websocket::ChannelBitsUse",
+                    message
+                );
+                let _ = self
+                    .event_tx
+                    .send(IntegrationEvent::Bits  {
+                        user_name,
+                        bits: u64::try_from(reward_payload.bits).expect("usize is never larger than u64"),
+                    })
+                    .await;
+            }
+            _ => {
+                error! {"Unhandled ChannelBitsUse Payload: {:?}", message}
+            }
+        }
+    }
 
     pub async fn process_welcome_message(
         &mut self,
@@ -699,6 +728,23 @@ impl WebsocketClient {
                     match self.client
                         .create_eventsub_subscription(
                             eventsub::channel::ChannelSubscriptionMessageV1::broadcaster_user_id(self.user_id.clone()), 
+                            transport.clone(), 
+                            &self.token
+                        ).await 
+                    {
+                        Ok(sub)  =>  {
+                            self.subscribed.push(subscription);
+                            info!("Subscribed to {}", subscription);
+                            debug!{"Subscription: {:?}", sub};
+                        },
+                        Err(e) => {warn!("Failed to subscribe to {}: {}", subscription, e)},
+
+                    }
+                }
+                ChannelBitsUse => {
+                    match self.client
+                        .create_eventsub_subscription(
+                            eventsub::channel::ChannelBitsUseV1::broadcaster_user_id(self.user_id.clone()), 
                             transport.clone(), 
                             &self.token
                         ).await 

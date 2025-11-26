@@ -24,62 +24,62 @@ name = "rcon2_lib"
 crate-type = ["staticlib", "cdylib", "lib"]
 
 [build-dependencies]
-tauri-build = { version = "2.0.3", features = [] }
+tauri-build = { version = "2.5.2", features = [] }
 
 
 [dependencies]
-anyhow = "1.0.93"
+anyhow = "1.0.100"
 async-std = { version = "1.13.2", features = ["attributes"] }
-async-trait = { version = "0.1.83" }
+async-trait = { version = "0.1.89" }
 cached = { version = "0.56.0", features = ["disk_store"] }
-clap = { version = "4.5.48", features = ["derive", "env", "cargo"] }
-config = { version = "0.15.16", features = ["preserve_order", "toml"] }
+clap = { version = "4.5.53", features = ["derive", "env", "cargo"] }
+config = { version = "0.15.19", features = ["preserve_order", "toml"] }
 crypto_hmac = { package = "hmac", version = "0.12.1" }
 dirs = "6.0.0"
 dotenvy = "0.15.7"
 futures = "0.3.31"
-http = "1.1.0"
-hyper = "1.5.0"
-indexmap = { version = "2.11.4", features = ["serde"] }
+http = "1.4.0"
+hyper = "1.8.1"
+indexmap = { version = "2.12.1", features = ["serde"] }
 itertools = "0.14.0"
-libc = "0.2.162"
-log = "0.4.22"
+libc = "0.2.177"
+log = "0.4.28"
 miette = { version = "7.6.0", features = ["fancy", "serde"] }
 num_threads = "0.1.7"
 rcon = { version = "0.6.0", features = ["rt-tokio"] }
-reqwest = { version = "0.12.9", features = ["json"] }
-rpassword = "7.3.1"
-serde = { version = "1.0.215", features = ["derive"] }
+reqwest = { version = "0.12.24", features = ["json"] }
+rpassword = "7.4.0"
+serde = { version = "1.0.228", features = ["derive"] }
 serde_cbor = "0.11.2"
-serde_json = "1.0.132"
-sha2 = "0.10.8"
+serde_json = "1.0.145"
+sha2 = "0.10.9"
 simple-mermaid = "0.2.0"
 sled = "0.34.7"
-tauri = { version = "2.1.1", features = ["tracing"] }
-tauri-plugin-clipboard-manager = "2.2.0"
-tauri-plugin-http = "2"
-tauri-plugin-localhost = "2"
-tauri-plugin-websocket = "2"
-thiserror = "2.0.16"
-time = { version = "0.3.36", features = [
+tauri = { version = "2.9.3", features = ["tracing"] }
+tauri-plugin-clipboard-manager = "2.3.2"
+tauri-plugin-http = "2.5.4"
+tauri-plugin-localhost = "2.3.1"
+tauri-plugin-websocket = "2.4.1"
+thiserror = "2.0.17"
+time = { version = "0.3.44", features = [
   "local-offset",
   "formatting",
   "parsing",
 ] }
-tokio = { version = "1.41.1", features = ["full", "tracing"] }
-tokio-tungstenite = { version = "0.27.0", features = ["native-tls", "url"] }
-toml = "0.9.7"
-tracing = { version = "0.1.40", features = ["async-await", "log"] }
+tokio = { version = "1.48.0", features = ["full", "tracing"] }
+tokio-tungstenite = { version = "0.28.0", features = ["native-tls", "url"] }
+toml = "0.9.8"
+tracing = { version = "0.1.41", features = ["async-await", "log"] }
 tracing-appender = "0.2.3"
-tracing-error = "0.2.0"
+tracing-error = "0.2.1"
 tracing-log = "0.2.0"
-tracing-subscriber = { version = "0.3.18", features = [
+tracing-subscriber = { version = "0.3.20", features = [
   "local-time",
   "tracing",
   "fmt",
   "registry",
 ] }
-twitch_api = { version = "0.7.0-rc.8", features = [
+twitch_api = { version = "0.7.2", features = [
   "reqwest",
   "helix",
   "eventsub",
@@ -87,16 +87,16 @@ twitch_api = { version = "0.7.0-rc.8", features = [
   "tracing",
 ] }
 twitch_oauth2 = { version = "0.15.2", features = ["client", "reqwest"] }
-twitch_types = "0.4.7"
-url = "2.5.3"
-uuid = { version = "1.11.0", features = ["v7", "rng", "v4"] }
-webbrowser = "1.0.2"
+twitch_types = "0.4.10"
+url = "2.5.7"
+uuid = { version = "1.18.1", features = ["v7", "rng", "v4"] }
+webbrowser = "1.0.6"
 
 [dev-dependencies]
 rstest = "0.26.1"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-cli = "2"
+tauri-plugin-cli = "2.4.1"
 
 [features]
 mock_api = ["twitch_api/mock_api"]
