@@ -104,6 +104,7 @@ export enum TriggerType {
   ChannelPointRewardRedeemed = "Channel Point Reward Redeemed",
   Subscription = "Subscription",
   GiftSub = "Gift Sub",
+  Bits = "Bits",
 }
 
 export type Trigger =
@@ -116,6 +117,10 @@ export type Trigger =
   | {
       trigger: TriggerType.Subscription;
       data: { tier: string; comaparison_operator: ComparisonOperator };
+    }
+  | {
+      trigger: TriggerType.Bits;
+      data: { bits: Number; comaparison_operator: ComparisonOperator };
     }
   | {
       trigger: TriggerType.GiftSub;

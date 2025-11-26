@@ -91,6 +91,8 @@ If there any not listed that you want, start an issue, and I will add it if poss
 3. channel.channel_points_custom_reward_redemption.update: Amending a reward redemption. (Not Recommended yet)
 4. channel.subscribe: New subscribers
 5. channel.subscription.message: Re-subscribers
+6. channel.bits.use: Bits used on twitch channel.
+7. channel.subscription.gift: A notification when a viewer gives a gift subscription to one or more users in the specified channel.
 
 ### YouTube
 
@@ -130,7 +132,7 @@ id = "12345678-1234-1234-1234-123456789012"
 enabled = true
 server_name = "Server Doesn't Exist"
 trigger_type = "Chat"
-pattern = "This will never trigger nor appear in dashboard, as the server doesn't exist."
+pattern = "This will never trigger, nor appear, in the dashboard, as the server doesn't exist."
 
 ["example 2"]
 prefix = "C"
@@ -141,6 +143,19 @@ relative_path = hello_world.lua # or ./hello_world.lua not /wrong.lua
 enabled = true
 server_name = "local"
 trigger_type = "Subscription"
+
+[bits_bought]
+prefix = "mc"
+command_type = "Inline"
+inline = "game.print('Someone actually bought bits.')"
+name = "bits_bought"
+
+[[bits_bought.server_triggers]]
+enabled = true
+server_name = "local"
+trigger_type = "bits"
+comparison_operator = "Any"
+bits = 0
 ```
 
 ### Command Name
@@ -320,3 +335,30 @@ Required websocket subscription in main config file.
 
 > [!NOTE]
 > If you want additional options let me know. Tier or sub length etc.
+
+##### Bits
+
+Matches whenever Bits are used on a twitch channel.
+
+```toml
+comparison_operator = "Any"
+bits = 0
+```
+
+Valid Comaparison Operators:
+
+- `"Any"` | `"*"`: All tiers will trigger.
+- `">"`: Tiers greater than this tier will trigger.
+- `">="`: Tiers greater than and equal to this tier will trigger.
+- `"=="`: Only tiers equal to this tier will trigger.
+- `"!="`: Only tiers not equal to this tier will trigger.
+- `"<"`: Tiers less than this tier will trigger.
+- `"<="`: Tiers less than and equal to this tier will trigger.
+
+Bits can be set to any number that is between 0 and $2^{64} − 1$
+
+Required websocket subscription in main config file.
+
+```rust
+    "channel.bits.use"
+```
