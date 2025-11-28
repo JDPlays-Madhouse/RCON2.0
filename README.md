@@ -1,7 +1,5 @@
 # RCON2.0
 
-[![Build Rust Binary](https://github.com/JDPlays-Madhouse/RCON2.0/actions/workflows/build-rust-binary.yaml/badge.svg)](https://github.com/JDPlays-Madhouse/RCON2.0/actions/workflows/build-rust-binary.yaml)
-
 ## Known Bugs
 
 - [ ] [Issue #2](https://github.com/JDPlays-Madhouse/RCON2.0/issues/2) Cli doesn't work for windows - possible solution [github.com](https://github.com/tauri-apps/tauri/issues/8305#issuecomment-1826871949)
