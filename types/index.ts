@@ -120,7 +120,7 @@ export type Trigger =
     }
   | {
       trigger: TriggerType.Bits;
-      data: { bits: Number; comaparison_operator: ComparisonOperator };
+      data: { bits: number; comaparison_operator: ComparisonOperator };
     }
   | {
       trigger: TriggerType.GiftSub;

@@ -246,6 +246,7 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "time", desc: false },
   ]);
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
@@ -321,8 +322,8 @@ export default function CommandLogTable({ selectedServer }: DataTableProps) {
             variant="secondary"
             className={
               autoRefresh
-                ? "bg-green-500/70 hover:bg-green-500/100 active:bg-green-500/30"
-                : "bg-amber-500/70 hover:bg-amber-500/100 active:bg-amber-500/30"
+                ? "bg-green-500/70 hover:bg-green-500 active:bg-green-500/30"
+                : "bg-amber-500/70 hover:bg-amber-500 active:bg-amber-500/30"
             }
           >
             {autoRefresh ? "Stop auto refreshing" : "Start auto refreshing"}

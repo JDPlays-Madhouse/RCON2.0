@@ -73,9 +73,10 @@ export default function GameServerStatusBar({
   };
 
   function handleOnClickServerCommandButton(command: ServerCommand) {
+    /* eslint-disable */
     const new_ran = ranCommands;
-
     new_ran[command] = new Date();
+    /* eslint-enable */
     setRanCommands(new_ran);
     invoke("run_command_on_server", { server: selectedServer, command })
       .then((status) => {

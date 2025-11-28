@@ -183,7 +183,7 @@ export const column: ColumnDef<CustomChannelPointRewardInfo>[] = [
           asChild
         >
           <Button
-            className="w-6 h-6 p-[4px]"
+            className="w-6 h-6 p-1"
             variant="secondary"
             size="icon"
             onClick={async () => {
@@ -213,6 +213,7 @@ export default function ChannelPointRewardsTable<TData, TValue>({
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "is_enabled", desc: true },
   ]);
+  /* eslint-disable */
   const table = useReactTable({
     data,
     columns,
@@ -227,6 +228,8 @@ export default function ChannelPointRewardsTable<TData, TValue>({
       columnFilters,
     },
   });
+  /* eslint-enable */
+
   return (
     <div className="w-full">
       <div className="flex items-center py-4">

@@ -39,59 +39,31 @@ export default function ServerControl({
   const hasGameServerDetails = () =>
     selectedServer?.server_name !== undefined ||
     selectedServer?.game_address !== undefined;
-  // console.log({ status, connected: connected() });
-  // BUG: #10 Improve autostart logic.
-  useEffect(() => {
-    invoke<boolean>("get_config_bool", {
-      key: "servers.autostart",
-    }).then((connect) => {
-      setAutoConnect(connect);
-    });
-  }, []);
 
-  useEffect(() => {
-    console.log({ gameStatus, autoConnect, manuallyStopped });
-    if (gameId === -1) {
-      return;
-    } else if (
-      gameStatus.game !== "NoGame" &&
-      autoConnect &&
-      !manuallyStopped
-    ) {
-      console.log("Reconnecting server");
-      handleServerDisconnect();
-      handleServerConnect();
-      setGameId(gameStatus.status.gameId);
-    }
-  }, [gameId, manuallyStopped, autoConnect]);
-
-  useEffect(() => {
-    console.log({
-      connected: connected(),
-      autoConnect,
-      connecting: connecting(),
-      manuallyStopped,
-    });
-    if (selectedServer && channel) {
-      if (!connected() && autoConnect && !connecting() && !manuallyStopped) {
-        handleServerConnect();
-      } else {
-        handleServerCheck();
-      }
-    }
-  }, [selectedServer, autoConnect, channel, manuallyStopped]);
-
-  useEffect(() => {
-    const channel = new Channel<ServerStatus>();
-    channel.onmessage = (message) => {
-      // console.log("New Message: ", message);
-      if (message.data.server?.id === selectedServer?.id) {
-        setStatus(message);
-      }
-    };
-    setChannel(channel);
-  }, []); // Needs empty array..
-
+  function handleSetGameServerStatus() {
+    invoke<GameServerStatus>("latest_game_server_status", {
+      server: selectedServer,
+    })
+      .then((new_status) => {
+        if (
+          new_status.game === "NoGame" ||
+          new_status.status.serverId !== selectedServer?.id
+        ) {
+          setGameStatus(NoGame);
+          return;
+        } else {
+          if (gameId === -1 || gameId !== new_status.status.gameId) {
+            setGameId(new_status.status.gameId);
+          }
+          new_status = updateSecsSinceWithStatus(new_status);
+          setGameStatus(new_status);
+        }
+      })
+      .catch((e) => {
+        console.log(e);
+        updateSecsSince();
+      });
+  }
   function handleOnClick() {
     if (["disconnected", "error"].includes(status.event)) {
       handleServerConnect();
@@ -157,12 +129,6 @@ export default function ServerControl({
   //       .catch(console.error);
   //   }
   // }
-  useEffect(() => {
-    const intervalId = setInterval(updateSecsSince, 200);
-
-    // Clean up the interval when the component unmounts or dependencies change
-    return () => clearInterval(intervalId);
-  }, []);
   function updateSecsSince() {
     setForceUpdate((i) => i + 1);
     if (gameStatus.game === "NoGame") {
@@ -181,6 +147,7 @@ export default function ServerControl({
       });
     }
   }
+
   function updateSecsSinceWithStatus(
     status: GameServerStatus
   ): GameServerStatus {
@@ -201,30 +168,66 @@ export default function ServerControl({
     return () => clearInterval(intervalId);
   }, [selectedServer]);
 
-  function handleSetGameServerStatus() {
-    invoke<GameServerStatus>("latest_game_server_status", {
-      server: selectedServer,
-    })
-      .then((new_status) => {
-        if (
-          new_status.game === "NoGame" ||
-          new_status.status.serverId !== selectedServer?.id
-        ) {
-          setGameStatus(NoGame);
-          return;
-        } else {
-          if (gameId === -1 || gameId !== new_status.status.gameId) {
-            setGameId(new_status.status.gameId);
-          }
-          new_status = updateSecsSinceWithStatus(new_status);
-          setGameStatus(new_status);
-        }
-      })
-      .catch((e) => {
-        console.log(e);
-        updateSecsSince();
-      });
-  }
+  useEffect(() => {
+    const intervalId = setInterval(updateSecsSince, 200);
+
+    // Clean up the interval when the component unmounts or dependencies change
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // BUG: #10 Improve autostart logic.
+  useEffect(() => {
+    invoke<boolean>("get_config_bool", {
+      key: "servers.autostart",
+    }).then((connect) => {
+      setAutoConnect(connect);
+    });
+  }, []);
+
+  useEffect(() => {
+    console.log({ gameStatus, autoConnect, manuallyStopped });
+    if (gameId === -1) {
+      return;
+    } else if (
+      gameStatus.game !== "NoGame" &&
+      autoConnect &&
+      !manuallyStopped
+    ) {
+      console.log("Reconnecting server");
+      handleServerDisconnect();
+      handleServerConnect();
+      // TODO: Does this useEffect need to exist.
+      setGameId(gameStatus.status.gameId); // eslint-disable-line
+    }
+  }, [gameId, manuallyStopped, autoConnect]);
+
+  useEffect(() => {
+    console.log({
+      connected: connected(),
+      autoConnect,
+      connecting: connecting(),
+      manuallyStopped,
+    });
+    if (selectedServer && channel) {
+      if (!connected() && autoConnect && !connecting() && !manuallyStopped) {
+        handleServerConnect();
+      } else {
+        handleServerCheck();
+      }
+    }
+  }, [selectedServer, autoConnect, channel, manuallyStopped]);
+
+  useEffect(() => {
+    const channel = new Channel<ServerStatus>();
+    channel.onmessage = (message) => {
+      // console.log("New Message: ", message);
+      if (message.data.server?.id === selectedServer?.id) {
+        setStatus(message);
+      }
+    };
+    setChannel(channel); // eslint-disable-line
+  }, []); // Needs empty array..
+
   const handleMessage = () => {
     switch (status.event) {
       case "connected":

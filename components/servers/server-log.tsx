@@ -64,7 +64,7 @@ export default function LogArea({ className }: LogAreaProps) {
       <ScrollArea
         className={cn(
           "w-full py-2 border flex-auto h-full rounded-md",
-          className,
+          className
         )}
       >
         <div className="mx-3">Welcome to RCON2.0</div>
@@ -102,7 +102,7 @@ export const LogLine = ({
 }: LogProps) => {
   let parsedtime;
   if (time === "") {
-    parsedtime = new Date(Date.now());
+    parsedtime = new Date();
   } else {
     parsedtime = new Date(Date.parse(time));
   }

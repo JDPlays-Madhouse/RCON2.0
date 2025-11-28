@@ -39,11 +39,6 @@ export default function IntegrationLogo({
     status.status
   );
   const [displayText, setDisplayText] = React.useState<string>(status.status);
-  useEffect(() => {
-    setFill(fillColor());
-    setDisplayStatus(handleDisplayStatus());
-    setDisplayText(handleDisplayText());
-  }, [status]);
 
   const fillColor = () => {
     switch (status.status) {
@@ -113,7 +108,11 @@ export default function IntegrationLogo({
     }
     return displayText;
   }
-
+  useEffect(() => {
+    setFill(fillColor()); // eslint-disable-line react-hooks/set-state-in-effect
+    setDisplayStatus(handleDisplayStatus());
+    setDisplayText(handleDisplayText());
+  }, [status]);
   return (
     <TooltipProvider>
       <Tooltip>

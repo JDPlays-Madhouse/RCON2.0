@@ -153,12 +153,10 @@ export const columns: ColumnDef<Command>[] = [
       const sendCommand = () => {
         const command: Command = row.original;
         // @ts-expect-error using custom command
-        table.options.meta.sendCommand(command)
-      }
-      return <Button onClick={() => sendCommand()}>
-        Send Command
-      </Button>
-    }
+        table.options.meta.sendCommand(command);
+      };
+      return <Button onClick={() => sendCommand()}>Send Command</Button>;
+    },
   },
   {
     id: "actions",
@@ -214,12 +212,12 @@ export default function CommandsTable({ selectedServer }: DataTableProps) {
   };
 
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
+    []
   );
   function updateNestedValue<tValue, tObj>(
     keyArr: string[],
     value: tValue,
-    obj: { [index: string]: tObj | tValue },
+    obj: { [index: string]: tObj | tValue }
   ): { [index: string]: tObj | tValue } {
     const key = keyArr.shift();
     if (!key) {
@@ -234,6 +232,7 @@ export default function CommandsTable({ selectedServer }: DataTableProps) {
     }
   }
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
@@ -251,7 +250,7 @@ export default function CommandsTable({ selectedServer }: DataTableProps) {
       sendCommand: function f(command: Command) {
         invoke("send_command_to_server", { server: selectedServer, command })
           .then(console.log)
-          .catch(console.warn)
+          .catch(console.warn);
       },
     },
   });
@@ -299,9 +298,9 @@ export default function CommandsTable({ selectedServer }: DataTableProps) {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   );
                 })}
@@ -319,7 +318,7 @@ export default function CommandsTable({ selectedServer }: DataTableProps) {
                     <TableCell key={cell.id} className="text-center">
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext(),
+                        cell.getContext()
                       )}
                     </TableCell>
                   ))}

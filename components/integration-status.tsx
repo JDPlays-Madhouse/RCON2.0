@@ -51,30 +51,10 @@ export default function IntegrationStatusBar({
     });
   }
 
-  useEffect(() => {
-    invoke<boolean>("get_config_bool", {
-      key: "auth.twitch.auto_connect",
-    }).then((connect) => {
-      if (connect) {
-        handleConnectToIntegration(Api.Twitch);
-      } else {
-        handleIntegrationStatusCheck(Api.Twitch);
-      }
-    });
-  }, [integrations]);
-
-  useEffect(() => {
-    for (const api of apis) {
-      handleIntegrationStatusCheck(Api[api]);
-    }
-  }, [integrations]);
-
-  useEffect(handleListOfIntegrations, []);
-
   function handleSetStatuses(status: IntegrationStatus, api: Api) {
     if (statuses[api].status === status.status) return;
     setForceUpdate((i) => i + 1);
-    statuses[api] = status;
+    statuses[api] = status; // eslint-disable-line react-hooks/immutability
     setStatuses(statuses);
   }
 
@@ -159,7 +139,25 @@ export default function IntegrationStatusBar({
         });
     }
   }
+  useEffect(() => {
+    invoke<boolean>("get_config_bool", {
+      key: "auth.twitch.auto_connect",
+    }).then((connect) => {
+      if (connect) {
+        handleConnectToIntegration(Api.Twitch);
+      } else {
+        handleIntegrationStatusCheck(Api.Twitch);
+      }
+    });
+  }, [integrations]);
 
+  useEffect(() => {
+    for (const api of apis) {
+      handleIntegrationStatusCheck(Api[api]);
+    }
+  }, [integrations]);
+
+  useEffect(handleListOfIntegrations, []);
   // useEffect(() => {
   //   const intervalId = setInterval(handleStatusChecks, 500);
 
