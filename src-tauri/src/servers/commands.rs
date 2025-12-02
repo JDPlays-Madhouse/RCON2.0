@@ -195,8 +195,6 @@ pub async fn run_command_on_server(
     }
 }
 
-// BUG: #17 Fix bug with code on windows, move commands to `cmd /c input` or pwsh...
-#[allow(unused)]
 #[cfg(test)]
 mod tests {
 
@@ -206,21 +204,22 @@ mod tests {
 
     #[fixture]
     fn commands() -> ServerCommands {
-        ServerCommands::new(
-            Some("echo 'start server'".to_string()),
-            Some("echo 'stop server'".to_string()),
-        )
+        if cfg!(target_os = "windows") {
+            ServerCommands::new(
+                Some(r#"cmd /c echo start server"#.to_string()),
+                Some(r#"cmd /c echo stop server"#.to_string()),
+            )
+        } else {
+            ServerCommands::new(
+                Some(r#"echo 'start server'"#.to_string()),
+                Some(r#"echo 'stop server'"#.to_string()),
+            )
+        }
     }
 
-    // #[rstest]
+    #[rstest]
     fn start_command(commands: ServerCommands) {
         let mut start = commands.start_command().unwrap();
-        // eprintln!("{:?}", &start.get_program());
-        // eprintln!("{:?}", &start);
-
-        // // let output = start.output();
-        // let mut start = Command::new("cmd");
-        // start.args(["/c", "echo", "'hello", "world'"]);
         let output = start.output().unwrap();
         eprintln!("Start command output: {:?}", output);
 
@@ -239,7 +238,7 @@ mod tests {
         );
     }
 
-    // #[rstest]
+    #[rstest]
     fn stop_command(commands: ServerCommands) {
         let mut stop = commands.stop_command().unwrap();
         let output = stop.output().unwrap();
@@ -260,7 +259,7 @@ mod tests {
         );
     }
 
-    // #[rstest]
+    #[rstest]
     fn run_start_command(commands: ServerCommands) {
         let output = commands.run_start().unwrap();
         eprintln!("{:?}", output);
@@ -280,7 +279,7 @@ mod tests {
         );
     }
 
-    // #[rstest]
+    #[rstest]
     fn run_stop_command(commands: ServerCommands) {
         let output = commands.run_stop().unwrap();
         eprintln!("{:?}", output);
