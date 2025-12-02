@@ -57,6 +57,7 @@ simple-mermaid = "0.2.0"
 sled = "0.34.7"
 tauri = { version = "2.9.3", features = ["tracing"] }
 tauri-plugin-clipboard-manager = "2.3.2"
+tauri-plugin-dialog = "2"
 tauri-plugin-http = "2.5.4"
 tauri-plugin-localhost = "2.3.1"
 tauri-plugin-websocket = "2.4.1"

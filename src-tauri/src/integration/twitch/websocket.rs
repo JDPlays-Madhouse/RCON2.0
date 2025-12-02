@@ -7,7 +7,7 @@ use anyhow::Result;
 use futures::stream::FusedStream;
 use futures::TryStreamExt;
 use itertools::Itertools;
-use tokio::sync::mpsc::{Sender};
+use tokio::sync::mpsc::Sender;
 use tokio_tungstenite::tungstenite;
 use tracing::{debug, error, info, warn};
 use tracing::{trace, Instrument};
@@ -68,7 +68,7 @@ pub struct WebsocketClient {
 impl std::fmt::Debug for WebsocketClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WebsocketClient")
-        .field("state", &self.state)
+            .field("state", &self.state)
             .field("session_id", &self.session_id)
             .field("token", &self.token)
             .field("user_id", &self.user_id)
@@ -85,7 +85,7 @@ impl WebsocketClient {
         user_id: types::UserId,
         subscriptions: Vec<eventsub::EventType>,
         event_tx: Sender<integration::IntegrationEvent>,
-        controller: WebsocketController
+        controller: WebsocketController,
     ) -> Self {
         let client: HelixClient<_> = twitch_api::HelixClient::with_client(
             <reqwest::Client>::default_client_with_name(Some(
@@ -105,7 +105,7 @@ impl WebsocketClient {
             keep_alive_seconds: Duration::from_secs(10),
             event_tx,
             state: WebsocketState::Down,
-            controller
+            controller,
         }
     }
 
@@ -129,7 +129,8 @@ impl WebsocketClient {
         {
             Ok((socket, _response)) => {
                 self.state = WebsocketState::Alive;
-                Ok(socket)},
+                Ok(socket)
+            }
             Err(e) => {
                 error!("{}", e);
                 Err(WebsocketError::FailedToConnect("Can't Connect".into()))
@@ -357,8 +358,12 @@ impl WebsocketClient {
                                 message,
                                 ..
                             }) => self.channel_subscribe_message(message).await,
-                            Event::ChannelSubscriptionGiftV1(eventsub::Payload{message, ..}) => self.channel_subscription_gift(message).await,
-                            Event::ChannelBitsUseV1(eventsub::Payload{message, ..}) => self.channel_bits_use(message).await,
+                            Event::ChannelSubscriptionGiftV1(eventsub::Payload {
+                                message, ..
+                            }) => self.channel_subscription_gift(message).await,
+                            Event::ChannelBitsUseV1(eventsub::Payload { message, .. }) => {
+                                self.channel_bits_use(message).await
+                            }
                             m => {
                                 let message =
                                     format!("Received an unimplemented websocket event: {:?}", m);
@@ -464,7 +469,7 @@ impl WebsocketClient {
             }
         }
     }
-    
+
     async fn channel_subscription_gift(
         &mut self,
         message: eventsub::Message<eventsub::channel::ChannelSubscriptionGiftV1>,
@@ -474,7 +479,9 @@ impl WebsocketClient {
                 let user_name = reward_payload.user_name.clone().map(|n| n.to_string());
                 let message = format!(
                     "{} {:?} subscription gift from {}",
-                    reward_payload.total,reward_payload.tier, user_name.as_ref().unwrap_or(&String::from("annonymous")),
+                    reward_payload.total,
+                    reward_payload.tier,
+                    user_name.as_ref().unwrap_or(&String::from("annonymous")),
                 );
 
                 info!(
@@ -483,7 +490,7 @@ impl WebsocketClient {
                 );
                 let _ = self
                     .event_tx
-                    .send(IntegrationEvent::GiftSub  {
+                    .send(IntegrationEvent::GiftSub {
                         tier: normalise_tier(Some(reward_payload.tier.clone()), None),
                         user_name: user_name,
                         count: reward_payload.total as u64,
@@ -519,7 +526,7 @@ impl WebsocketClient {
                         title: reward_payload.reward.title,
                         user_name: reward_payload.user_name.to_string(),
                         variant: CustomRewardVariant::Update,
-                        message:reward_payload.user_input.to_string(),
+                        message: reward_payload.user_input.to_string(),
                     }))
                     .await;
             }
@@ -551,7 +558,7 @@ impl WebsocketClient {
                         title: reward_payload.reward.title,
                         user_name: reward_payload.user_name.to_string(),
                         variant: CustomRewardVariant::New,
-                        message:  reward_payload.user_input.to_string()
+                        message: reward_payload.user_input.to_string(),
                     }))
                     .await;
             }
@@ -586,7 +593,7 @@ impl WebsocketClient {
             }
         };
     }
-   /// Channel Bits Use docs: [dev.twitch.tv](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelbitsuse)
+    /// Channel Bits Use docs: [dev.twitch.tv](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelbitsuse)
     async fn channel_bits_use(
         &mut self,
         message: eventsub::Message<eventsub::channel::ChannelBitsUseV1>,
@@ -594,19 +601,17 @@ impl WebsocketClient {
         match message.clone() {
             eventsub::Message::Notification(reward_payload) => {
                 let user_name = reward_payload.user_name.clone().take();
-                let message = format!(
-                    "{} bits given from {}",
-                    reward_payload.bits, user_name
-                );
+                let message = format!("{} bits given from {}", reward_payload.bits, user_name);
                 info!(
                     target = "rcon2::integration::twitch::websocket::ChannelBitsUse",
                     message
                 );
                 let _ = self
                     .event_tx
-                    .send(IntegrationEvent::Bits  {
+                    .send(IntegrationEvent::Bits {
                         user_name,
-                        bits: u64::try_from(reward_payload.bits).expect("usize is never larger than u64"),
+                        bits: u64::try_from(reward_payload.bits)
+                            .expect("usize is never larger than u64"),
                     })
                     .await;
             }
@@ -786,7 +791,7 @@ impl WebsocketClient {
             .collect_vec();
         subscribed
     }
-    
+
     pub fn state(&self) -> WebsocketState {
         self.state
     }
