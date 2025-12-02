@@ -1,8 +1,10 @@
-use anyhow::{anyhow, Context, Error, Result};
 use config::{
     builder::{BuilderState, DefaultState},
-    ConfigBuilder, Map, Value, ValueKind,
+    ConfigBuilder, ConfigError, Map, Value, ValueKind,
 };
+use config::{Config, Environment, File, FileFormat};
+use dirs::config_dir;
+use miette::{miette, Context, Error, IntoDiagnostic};
 use serde::{
     ser::{SerializeMap, SerializeSeq},
     Serialize,
@@ -15,13 +17,21 @@ use std::{
 use tauri::State;
 use tracing::{error, info, instrument};
 
-use crate::{game, PROGRAM};
-use config::{Config, Environment, File, FileFormat};
-use dirs::config_dir;
+use crate::{game, Result, PROGRAM};
 
 pub enum FileType {
     Dir,
     File,
+}
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum SettingsError {
+    #[error("Invalid Server Config: {0}")]
+    InvalidServerConfig(ConfigError),
+    #[error("Invalid Script Config: {0}")]
+    InvalidScriptsConfig(ConfigError),
+    #[error("Failed to set config: {0}")]
+    FailedToSetConfig(ConfigError),
 }
 
 #[derive(Debug)]
@@ -36,7 +46,7 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self, SettingsError> {
         let mut mut_self = Self::default();
         let mut builder = mut_self
             .config_builder
@@ -47,7 +57,7 @@ impl Settings {
             ))
             .add_source(Environment::with_prefix("RCON"));
         mut_self.config_builder = builder.clone();
-        let config = mut_self.config();
+        let config = mut_self.try_config()?;
 
         let log_folder = PathBuf::from(
             config
@@ -81,11 +91,11 @@ impl Settings {
         }
 
         let _ = mut_self.write();
-        mut_self
+        Ok(mut_self)
     }
 
     pub fn new_from_config(config: Config) -> Self {
-        let mut settings = Self::new();
+        let mut settings = Self::new().unwrap();
         settings.config_builder = settings.config_builder.add_source(config);
         settings
     }
@@ -112,7 +122,8 @@ impl Settings {
             .config_builder
             .clone()
             .set_override(key, value)
-            .context("Setting value in config")?;
+            .into_diagnostic()
+            .wrap_err("Setting value in config")?;
         self.config_builder = builder;
         self.write().context("Writing config")?;
         Ok(())
@@ -132,7 +143,7 @@ impl Settings {
         self.set_config(key, ValueKind::Nil)
             .expect("Setting Config");
         self.write().expect("writing to file");
-        Self::new()
+        Self::new().unwrap()
     }
 
     pub fn file_exists(path: &Path) -> bool {
@@ -140,13 +151,22 @@ impl Settings {
     }
 
     pub fn current_config() -> Config {
-        Self::new().config()
+        Self::new().unwrap().config()
     }
 
+    /// Returns result
+    pub fn try_config(&self) -> Result<Config, SettingsError> {
+        self.config_builder
+            .build_cloned()
+            .map_err(SettingsError::InvalidServerConfig)
+    }
+
+    /// Unwraps config
+    #[track_caller]
     pub fn config(&self) -> Config {
         self.config_builder
             .build_cloned()
-            .context("Build config")
+            .map_err(SettingsError::InvalidServerConfig)
             .unwrap()
     }
 
@@ -156,50 +176,47 @@ impl Settings {
                 if path.is_dir() {
                     Ok(FileType::Dir)
                 } else if path.is_file() {
-                    Err(anyhow!(
+                    Err(miette!(
                         "{} is a file when it needs to be a directory",
                         path.display()
                     ))
                 } else {
-                    Err(anyhow!("reached an unhandled path in Settings::make_exist"))
+                    Err(miette!("reached an unhandled path in Settings::make_exist"))
                 }
             }
             (true, FileType::File) => {
                 if path.is_file() {
                     Ok(FileType::File)
                 } else if path.is_dir() {
-                    Err(anyhow!(
+                    Err(miette!(
                         "{} is a directory when it needs to be a file",
                         path.display()
                     ))
                 } else {
-                    Err(anyhow!("reached an unhandled path in Settings::make_exist"))
+                    Err(miette!("reached an unhandled path in Settings::make_exist"))
                 }
             }
             (false, FileType::Dir) => match std::fs::create_dir_all(path) {
-                Err(error) => Err(anyhow!(error)),
+                Err(error) => Err(miette!(error)),
                 Ok(_) => Ok(FileType::Dir),
             },
             (false, FileType::File) => {
                 let _ = self.write();
                 Ok(FileType::File)
-            } // _ => Err(anyhow!("reached an unhandled path in Settings::make_exist")),
+            } // _ => Err(miette!("reached an unhandled path in Settings::make_exist")),
         }
     }
 
-    pub fn write(&self) -> std::io::Result<()> {
+    pub fn write(&self) -> Result<()> {
         let serializable: Map<String, ConfigValue> = self
             .config()
             .try_deserialize::<Map<String, Value>>()
-            .context("deserializing config")
-            .unwrap()
+            .into_diagnostic()?
             .iter()
             .map(|(k, v)| (k.clone(), ConfigValue::from(v)))
             .collect();
-        let toml_out = toml::to_string_pretty(&serializable)
-            .context("Convert to Toml")
-            .unwrap();
-        std::fs::write(self.config_filepath(), toml_out)
+        let toml_out = toml::to_string_pretty(&serializable).into_diagnostic()?;
+        std::fs::write(self.config_filepath(), toml_out).into_diagnostic()
     }
 }
 

@@ -144,15 +144,18 @@ use integration::TwitchApiConnection;
 use logging::{LogLevel, Logger};
 pub use miette::Result;
 use serde_json::value;
-use settings::Settings;
+use settings::{Settings, SettingsError};
+
 use tauri::{AppHandle, Manager};
 use tauri_plugin_cli::CliExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use time::UtcOffset;
 use tracing::{debug, error, info};
 use tracing_appender::rolling::RollingFileAppender;
 use tracing_appender::rolling::Rotation;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::fmt;
+use tracing_subscriber::fmt::time::OffsetTime;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -161,78 +164,106 @@ use crate::command::command_logs::COMMAND_LOGS;
 pub const PROGRAM: &str = "RCON2.0";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-#[allow(unused_variables, unreachable_code)]
 pub async fn run() {
-    let settings = Settings::new();
-
-    let config = settings.config();
-    let _script_settings = ScriptSettings::new();
-    let log_level = if config.get_bool("debug").unwrap() {
-        LogLevel::Debug
-    } else {
-        settings
-            .config()
-            .get_string("max_log_level")
-            .context("Fetching loglevel from config")
-            .unwrap()
-            .try_into()
-            .context("Log level Conversion")
-            .unwrap_or(LogLevel::default())
-    };
-    info!("Log level: {}", log_level);
-
-    let file_prefix = String::from(PROGRAM) + ".log";
-    // use tauri_plugin_log::;
-    let logfile =
-        RollingFileAppender::new(Rotation::DAILY, settings.log_folder.clone(), file_prefix);
-
-    let (non_blocking_std_out, _guard) = tracing_appender::non_blocking(std::io::stdout());
-    let (non_blocking_logfile, _guard) = tracing_appender::non_blocking(logfile);
-    use tracing_subscriber::fmt::time::OffsetTime;
-
-    let offset = match UtcOffset::current_local_offset() {
-        Ok(tz) => tz,
-        Err(e) => {
-            error!("Failed to get local timezone: {:?}", e);
-            UtcOffset::UTC
-        }
-    };
-    let timer = OffsetTime::new(offset, time::format_description::well_known::Rfc3339);
-
-    let logfile_layer = fmt::layer()
-        .with_writer(non_blocking_logfile)
-        .with_ansi(false)
-        .with_timer(timer.clone())
-        .with_thread_ids(true);
-
-    let stdout_layer = fmt::layer()
-        .with_writer(non_blocking_std_out)
-        .with_timer(timer)
-        .with_thread_ids(false);
-
-    let level_filter = tracing_subscriber::filter::LevelFilter::from_level(log_level.into());
-
-    let logger_layer: Logger = Logger::new();
-
-    let twitch_integration = Arc::new(futures::lock::Mutex::new(TwitchApiConnection::new(
-        config.get_table("auth.twitch").unwrap(),
-    )));
-
-    let config_clone = config.clone();
-    let twitch_int_clone = Arc::clone(&twitch_integration);
-    let localhost_port: u16 = match config.get_int("localhost_port").unwrap_or(20080).try_into() {
-        Ok(p) => p,
-        Err(e) => {
-            error!("localhost_port is less than 0 or greater then 65535, setting it to 20080");
-            20080
-        }
-    };
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         // TODO: Add localhost access.
         // .plugin(tauri_plugin_localhost::Builder::new(localhost_port).build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_cli::init())
         .setup(move |app| {
+            let mut setup_errors = Vec::new();
+            let settings = match Settings::new() {
+                Ok(s) => s,
+                Err(e) => {
+                    app.dialog()
+                        .message(format!("{e}"))
+                        .kind(MessageDialogKind::Error)
+                        .title("Invalid Config File")
+                        .blocking_show();
+                    return Err(e.into());
+                    // setup_errors.push(SettingsError::InvalidServerConfig);
+                    // Settings::default()
+                }
+            };
+            let config: config::Config = match settings.try_config() {
+                Ok(c) => c,
+                Err(e) => {
+                    app.dialog()
+                        .message(format!("{e:?}"))
+                        .kind(MessageDialogKind::Error)
+                        .title("Invalid Config File")
+                        .blocking_show();
+                    setup_errors.push(SettingsError::InvalidServerConfig);
+                    Settings::default().config()
+                }
+            };
+            eprintln!("After config");
+            // if 1 == 1 {
+            //     return;
+            // }
+            let _script_settings = ScriptSettings::new();
+            let log_level = if config.get_bool("debug").unwrap() {
+                LogLevel::Debug
+            } else {
+                config
+                    .get_string("max_log_level")
+                    .context("Fetching loglevel from config")
+                    .unwrap()
+                    .try_into()
+                    .context("Log level Conversion")
+                    .unwrap_or(LogLevel::default())
+            };
+            info!("Log level: {}", log_level);
+
+            let file_prefix = String::from(PROGRAM) + ".log";
+            let logfile =
+                RollingFileAppender::new(Rotation::DAILY, settings.log_folder.clone(), file_prefix);
+
+            let (non_blocking_std_out, _guard) = tracing_appender::non_blocking(std::io::stdout());
+            let (non_blocking_logfile, _guard) = tracing_appender::non_blocking(logfile);
+
+            let offset = match UtcOffset::current_local_offset() {
+                Ok(tz) => tz,
+                Err(e) => {
+                    error!("Failed to get local timezone: {:?}", e);
+                    UtcOffset::UTC
+                }
+            };
+            let timer = OffsetTime::new(offset, time::format_description::well_known::Rfc3339);
+
+            let logfile_layer = fmt::layer()
+                .with_writer(non_blocking_logfile)
+                .with_ansi(false)
+                .with_timer(timer.clone())
+                .with_thread_ids(true);
+
+            let stdout_layer = fmt::layer()
+                .with_writer(non_blocking_std_out)
+                .with_timer(timer)
+                .with_thread_ids(false);
+
+            let level_filter =
+                tracing_subscriber::filter::LevelFilter::from_level(log_level.into());
+
+            let logger_layer: Logger = Logger::new();
+
+            let twitch_integration = Arc::new(futures::lock::Mutex::new(TwitchApiConnection::new(
+                config.get_table("auth.twitch").unwrap(),
+            )));
+
+            let config_clone = config.clone();
+            let twitch_int_clone = Arc::clone(&twitch_integration);
+            let _localhost_port: u16 =
+                match config.get_int("localhost_port").unwrap_or(20080).try_into() {
+                    Ok(p) => p,
+                    Err(_e) => {
+                        error!(
+                        "localhost_port is less than 0 or greater then 65535, setting it to 20080"
+                    );
+                        20080
+                    }
+                };
             match app.cli().matches() {
                 Ok(matches) => {
                     let mut devtools = false;

@@ -37,81 +37,95 @@ pub enum Trigger {
         tier: SubscriptionTier,
         comparison_operator: ComparisonOperator,
     },
-    GiftSub{
+    GiftSub {
         tier: SubscriptionTier,
         tier_comparison_operator: ComparisonOperator,
         count: u64,
-        count_comparison_operator: ComparisonOperator
+        count_comparison_operator: ComparisonOperator,
     },
-    Bits{
+    Bits {
         bits: u64,
-        comparison_operator: ComparisonOperator
+        comparison_operator: ComparisonOperator,
     },
-    Server
+    Server,
 }
 
 impl PartialEq<IntegrationEvent> for Trigger {
     fn eq(&self, event: &IntegrationEvent) -> bool {
         match self {
             Trigger::Chat {
-                                pattern,
-                                case_sensitive,
-                            } => {
-                                if let IntegrationEvent::Chat { msg, .. } = event {
-                                    let mut msg_match = msg.clone();
-                                    let mut pattern_match = pattern.clone();
-                                    if !case_sensitive {
-                                        msg_match = msg_match.to_lowercase();
-                                        pattern_match = pattern_match.to_lowercase();
-                                    }
-                                    msg_match.as_str().contains(&pattern_match)
-                                } else {
-                                    false
-                                }
-                            }
+                pattern,
+                case_sensitive,
+            } => {
+                if let IntegrationEvent::Chat { msg, .. } = event {
+                    let mut msg_match = msg.clone();
+                    let mut pattern_match = pattern.clone();
+                    if !case_sensitive {
+                        msg_match = msg_match.to_lowercase();
+                        pattern_match = pattern_match.to_lowercase();
+                    }
+                    msg_match.as_str().contains(&pattern_match)
+                } else {
+                    false
+                }
+            }
             Trigger::ChannelPointRewardRedeemed { id, variant, .. } => {
-                                if let IntegrationEvent::ChannelPoint(reward_event) = event {
-                                    &reward_event.id == id && &reward_event.variant == variant
-                                } else {
-                                    false
-                                }
-                            }
+                if let IntegrationEvent::ChannelPoint(reward_event) = event {
+                    &reward_event.id == id && &reward_event.variant == variant
+                } else {
+                    false
+                }
+            }
             Trigger::ChatRegex { .. } => {
-                                error!("Chat Regex as a trigger not implemented yet.");
-                                false
-                            }
+                error!("Chat Regex as a trigger not implemented yet.");
+                false
+            }
             Trigger::Subscription {
-                                tier:trigger_tier,
-                                comparison_operator,
-                            } => {
-                                if let IntegrationEvent::Subscription { tier:event_tier, .. } = event {
-                                    comparison_operator.compare(event_tier, trigger_tier)
-                                } else {
-                                    false
-                                }
-                            }
-            Trigger::GiftSub { 
-                        tier:trigger_tier,
-                        tier_comparison_operator, 
-                        count: trigger_count, 
-                        count_comparison_operator 
-                    } => {
-                        if let IntegrationEvent::GiftSub { tier:event_tier, count: event_count, .. } = event {
-                                   let count =  count_comparison_operator.compare( event_count, trigger_count);
-                                   let tier = tier_comparison_operator.compare( event_tier, trigger_tier);
-                                   count & tier
-                                } else {
-                                    false
-                                }
-                    },
+                tier: trigger_tier,
+                comparison_operator,
+            } => {
+                if let IntegrationEvent::Subscription {
+                    tier: event_tier, ..
+                } = event
+                {
+                    comparison_operator.compare(event_tier, trigger_tier)
+                } else {
+                    false
+                }
+            }
+            Trigger::GiftSub {
+                tier: trigger_tier,
+                tier_comparison_operator,
+                count: trigger_count,
+                count_comparison_operator,
+            } => {
+                if let IntegrationEvent::GiftSub {
+                    tier: event_tier,
+                    count: event_count,
+                    ..
+                } = event
+                {
+                    let count = count_comparison_operator.compare(event_count, trigger_count);
+                    let tier = tier_comparison_operator.compare(event_tier, trigger_tier);
+                    count & tier
+                } else {
+                    false
+                }
+            }
             Trigger::Server => &IntegrationEvent::Server == event,
-            Trigger::Bits { bits: trigger_bits, comparison_operator: bits_comparison_operator } => {
-                if let IntegrationEvent::Bits { bits: event_bits , ..} = event {
+            Trigger::Bits {
+                bits: trigger_bits,
+                comparison_operator: bits_comparison_operator,
+            } => {
+                if let IntegrationEvent::Bits {
+                    bits: event_bits, ..
+                } = event
+                {
                     bits_comparison_operator.compare(event_bits, trigger_bits)
                 } else {
                     false
                 }
-            },
+            }
         }
     }
 }
@@ -126,23 +140,31 @@ impl Trigger {
         use Trigger::*;
         match self {
             Chat { .. } => Chat {
-                                pattern: Default::default(),
-                                case_sensitive: true,
-                            },
+                pattern: Default::default(),
+                case_sensitive: true,
+            },
             ChatRegex { .. } => ChatRegex {
-                                pattern: Default::default(),
-                            },
+                pattern: Default::default(),
+            },
             ChannelPointRewardRedeemed { .. } => ChannelPointRewardRedeemed {
-                                title: Default::default(),
-                                id: Default::default(),
-                                variant: Default::default(),
-                            },
+                title: Default::default(),
+                id: Default::default(),
+                variant: Default::default(),
+            },
             Subscription { .. } => Subscription {
-                                tier: SubscriptionTier::default(),
-                                comparison_operator: ComparisonOperator::default(),
-                            },
-            Bits { .. } => Bits { bits: Default::default(), comparison_operator: Default::default() },
-            GiftSub { .. } => GiftSub { tier: Default::default(), tier_comparison_operator: Default::default(), count: Default::default(), count_comparison_operator: Default::default() },
+                tier: SubscriptionTier::default(),
+                comparison_operator: ComparisonOperator::default(),
+            },
+            Bits { .. } => Bits {
+                bits: Default::default(),
+                comparison_operator: Default::default(),
+            },
+            GiftSub { .. } => GiftSub {
+                tier: Default::default(),
+                tier_comparison_operator: Default::default(),
+                count: Default::default(),
+                count_comparison_operator: Default::default(),
+            },
             Server => Server,
         }
     }
@@ -151,23 +173,30 @@ impl Trigger {
     pub fn event_type(&self) -> IntegrationEvent {
         match self {
             Trigger::Chat { .. } => IntegrationEvent::Chat {
-                                msg: Default::default(),
-                                author: Default::default(),
-                            },
+                msg: Default::default(),
+                author: Default::default(),
+            },
             Trigger::ChatRegex { .. } => IntegrationEvent::Chat {
-                                msg: Default::default(),
-                                author: Default::default(),
-                            },
+                msg: Default::default(),
+                author: Default::default(),
+            },
             Trigger::ChannelPointRewardRedeemed { .. } => {
-                                IntegrationEvent::ChannelPoint(CustomRewardEvent::default())
-                            }
+                IntegrationEvent::ChannelPoint(CustomRewardEvent::default())
+            }
             Trigger::Subscription { .. } => IntegrationEvent::Subscription {
-                                tier: Default::default(),
-                                user_name: Default::default(),
-                            },
-            Trigger::GiftSub { .. } => IntegrationEvent::GiftSub { tier: Default::default(), count: Default::default(), user_name: Default::default() },
+                tier: Default::default(),
+                user_name: Default::default(),
+            },
+            Trigger::GiftSub { .. } => IntegrationEvent::GiftSub {
+                tier: Default::default(),
+                count: Default::default(),
+                user_name: Default::default(),
+            },
             Trigger::Server => IntegrationEvent::Server,
-            Trigger::Bits { .. } => IntegrationEvent::Bits { user_name: Default::default(), bits: Default::default() },
+            Trigger::Bits { .. } => IntegrationEvent::Bits {
+                user_name: Default::default(),
+                bits: Default::default(),
+            },
         }
     }
 
@@ -329,7 +358,12 @@ impl TryFrom<Value> for Trigger {
                 })
             }
             "giftsub" => {
-                let required_keys = vec!["tier", "tier_comparison_operator", "count", "count_comparison_operator"];
+                let required_keys = vec![
+                    "tier",
+                    "tier_comparison_operator",
+                    "count",
+                    "count_comparison_operator",
+                ];
                 let tier = match trigger_table.get("tier") {
                     Some(t) => t.clone().into(),
                     None => {
@@ -357,8 +391,8 @@ impl TryFrom<Value> for Trigger {
                         ComparisonOperator::default()
                     }
                 };
-                let count = match trigger_table.get("count"){
-                    Some(count) => match count.clone().into_uint(){
+                let count = match trigger_table.get("count") {
+                    Some(count) => match count.clone().into_uint() {
                         Ok(c) => c,
                         Err(e) => {
                             warn!("{e:?}");
@@ -369,7 +403,7 @@ impl TryFrom<Value> for Trigger {
                                 u64::default()
                             );
                             u64::default()
-                        },
+                        }
                     },
                     None => {
                         warn!(
@@ -379,10 +413,11 @@ impl TryFrom<Value> for Trigger {
                         u64::default()
                     );
                         u64::default()
-                    },
+                    }
                 };
-                
-                let count_comparison_operator = match trigger_table.get("count_comparison_operator") {
+
+                let count_comparison_operator = match trigger_table.get("count_comparison_operator")
+                {
                     Some(t) => t.clone().into(),
                     None => {
                         warn!(
@@ -396,27 +431,32 @@ impl TryFrom<Value> for Trigger {
                         ComparisonOperator::default()
                     }
                 };
-                Ok(Self::GiftSub { tier, tier_comparison_operator, count, count_comparison_operator })
+                Ok(Self::GiftSub {
+                    tier,
+                    tier_comparison_operator,
+                    count,
+                    count_comparison_operator,
+                })
             }
             "bits" => {
                 let required_keys = ["bits", "comparison_operator"];
                 let bits = match trigger_table.get("bits") {
                     Some(t) => {
                         let key = required_keys[1];
-                        match t.clone().into_uint(){
-                        
-                        Ok(c) => c,
-                        Err(e) => {
-                            warn!("{e:?}");
-                            warn!(
+                        match t.clone().into_uint() {
+                            Ok(c) => c,
+                            Err(e) => {
+                                warn!("{e:?}");
+                                warn!(
                                 "{key} is an invalid type, recieved '{t:?}'. A trigger_type of '{}' needs the properties: {:?}. Defaulting to \"{:?}\"",
                                 trigger_type,
                                 required_keys,
                                 u64::default()
                             );
-                            u64::default()
-                        },
-                    }},
+                                u64::default()
+                            }
+                        }
+                    }
                     None => {
                         warn!(
                         "A trigger_type of '{}', missing 'bits', needs the properties: {:?}. Defaulting to \"{:?}\"",
@@ -459,83 +499,90 @@ impl From<Trigger> for Value {
         let mut map = Map::new();
         match trigger {
             Trigger::Chat {
-                                pattern,
-                                case_sensitive,
-                            } => {
-                                map.insert(
-                                    "trigger_type".to_string(),
-                                    ValueKind::from(stringify!(Chat)),
-                                );
-                                map.insert("pattern".to_string(), ValueKind::from(pattern));
-                                map.insert(
-                                    "case_sensitive".to_string(),
-                                    ValueKind::from(case_sensitive),
-                                );
-                            }
-            Trigger::ChatRegex { pattern } => {
-                                map.insert(
-                                    "trigger_type".to_string(),
-                                    ValueKind::from(stringify!(ChatRegex)),
-                                );
-                                map.insert("pattern".to_string(), ValueKind::from(pattern));
-                            }
-            Trigger::ChannelPointRewardRedeemed { title, id, variant } => {
-                                map.insert(
-                                    "trigger_type".to_string(),
-                                    ValueKind::from(stringify!(ChannelPointRewardRedeemed)),
-                                );
-                                map.insert("title".to_string(), ValueKind::from(title));
-                                map.insert("id".to_string(), ValueKind::from(id));
-                                map.insert("variant".to_string(), ValueKind::from(variant));
-                            }
-            Trigger::Subscription {
-                                tier,
-                                comparison_operator,
-                            } => {
-                                map.insert(
-                                    "trigger_type".to_string(),
-                                    ValueKind::from(stringify!(Subscription)),
-                                );
-                                map.insert("tier".to_string(), ValueKind::from(tier));
-                                map.insert(
-                                    "comparison_operator".to_string(),
-                                    ValueKind::from(comparison_operator),
-                                );
-                            }
-            Trigger::GiftSub { tier, tier_comparison_operator, count, count_comparison_operator 
-                        } => {
-                            map.insert(
-                                "trigger_type".to_string(),
-                                ValueKind::from(stringify!(Subscription)),
-                            );
-                            map.insert("tier".to_string(), ValueKind::from(tier));
-                            map.insert(
-                                    "tier_comparison_operator".to_string(),
-                                    ValueKind::from(tier_comparison_operator),
-                                );
-                            map.insert("count".to_string(), ValueKind::from(count));
-                            map.insert(
-                                    "count_comparison_operator".to_string(),
-                                    ValueKind::from(count_comparison_operator),
-                                );
-                        }
-            Trigger::Bits { bits, comparison_operator } => {
+                pattern,
+                case_sensitive,
+            } => {
                 map.insert(
-                                "trigger_type".to_string(),
-                                ValueKind::from(stringify!(Bits)),
-                            );
+                    "trigger_type".to_string(),
+                    ValueKind::from(stringify!(Chat)),
+                );
+                map.insert("pattern".to_string(), ValueKind::from(pattern));
+                map.insert(
+                    "case_sensitive".to_string(),
+                    ValueKind::from(case_sensitive),
+                );
+            }
+            Trigger::ChatRegex { pattern } => {
+                map.insert(
+                    "trigger_type".to_string(),
+                    ValueKind::from(stringify!(ChatRegex)),
+                );
+                map.insert("pattern".to_string(), ValueKind::from(pattern));
+            }
+            Trigger::ChannelPointRewardRedeemed { title, id, variant } => {
+                map.insert(
+                    "trigger_type".to_string(),
+                    ValueKind::from(stringify!(ChannelPointRewardRedeemed)),
+                );
+                map.insert("title".to_string(), ValueKind::from(title));
+                map.insert("id".to_string(), ValueKind::from(id));
+                map.insert("variant".to_string(), ValueKind::from(variant));
+            }
+            Trigger::Subscription {
+                tier,
+                comparison_operator,
+            } => {
+                map.insert(
+                    "trigger_type".to_string(),
+                    ValueKind::from(stringify!(Subscription)),
+                );
+                map.insert("tier".to_string(), ValueKind::from(tier));
+                map.insert(
+                    "comparison_operator".to_string(),
+                    ValueKind::from(comparison_operator),
+                );
+            }
+            Trigger::GiftSub {
+                tier,
+                tier_comparison_operator,
+                count,
+                count_comparison_operator,
+            } => {
+                map.insert(
+                    "trigger_type".to_string(),
+                    ValueKind::from(stringify!(Subscription)),
+                );
+                map.insert("tier".to_string(), ValueKind::from(tier));
+                map.insert(
+                    "tier_comparison_operator".to_string(),
+                    ValueKind::from(tier_comparison_operator),
+                );
+                map.insert("count".to_string(), ValueKind::from(count));
+                map.insert(
+                    "count_comparison_operator".to_string(),
+                    ValueKind::from(count_comparison_operator),
+                );
+            }
+            Trigger::Bits {
+                bits,
+                comparison_operator,
+            } => {
+                map.insert(
+                    "trigger_type".to_string(),
+                    ValueKind::from(stringify!(Bits)),
+                );
                 map.insert("bits".to_string(), ValueKind::from(bits));
                 map.insert(
-                                    "comparison_operator".to_string(),
-                                    ValueKind::from(comparison_operator),
-                                );
+                    "comparison_operator".to_string(),
+                    ValueKind::from(comparison_operator),
+                );
             }
-            Trigger::Server => {map.insert(
-                                "trigger_type".to_string(),
-                                ValueKind::from(stringify!(Server)),
-                            );
-                        
-                        }
+            Trigger::Server => {
+                map.insert(
+                    "trigger_type".to_string(),
+                    ValueKind::from(stringify!(Server)),
+                );
+            }
         }
         Self::new(None, ValueKind::from(map))
     }
@@ -855,11 +902,16 @@ mod tests {
         #[case] event: IntegrationEvent,
     ) {
         assert_eq!(
-            Trigger::GiftSub { tier, tier_comparison_operator, count, count_comparison_operator },
+            Trigger::GiftSub {
+                tier,
+                tier_comparison_operator,
+                count,
+                count_comparison_operator
+            },
             event
         )
     }
-    
+
     #[rstest]
     #[case(
         SubscriptionTier::Tier1,
@@ -890,7 +942,12 @@ mod tests {
         #[case] event: IntegrationEvent,
     ) {
         assert_ne!(
-            Trigger::GiftSub { tier, tier_comparison_operator, count, count_comparison_operator },
+            Trigger::GiftSub {
+                tier,
+                tier_comparison_operator,
+                count,
+                count_comparison_operator
+            },
             event
         )
     }

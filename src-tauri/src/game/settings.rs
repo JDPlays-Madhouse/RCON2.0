@@ -1,8 +1,13 @@
 use config::Config;
 use serde::{Deserialize, Serialize};
 
-use crate::settings::{DefaultValue, Settings};
+use crate::settings::{DefaultValue, Settings, SettingsError};
 
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum GameSettingsError {
+    #[error("{0}")]
+    SettingsError(#[from] SettingsError),
+}
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct GameSettings {
     factorio: FactorioSettings,
@@ -17,9 +22,11 @@ impl GameSettings {
             .collect()
     }
 
-    pub fn new() -> Self {
-        let config = Settings::new().config();
-        Self::from_config(config)
+    pub fn new() -> Result<Self, GameSettingsError> {
+        let config = Settings::new()
+            .map_err(GameSettingsError::SettingsError)?
+            .config();
+        Ok(Self::from_config(config))
     }
 
     pub fn from_config(config: Config) -> Self {
@@ -38,11 +45,7 @@ impl GameSettings {
 
     pub fn optional_new() -> Option<Self> {
         let new = Self::new();
-        if new.is_some() {
-            Some(new)
-        } else {
-            None
-        }
+        new.ok()
     }
 
     /// Any setting is [`Some`]

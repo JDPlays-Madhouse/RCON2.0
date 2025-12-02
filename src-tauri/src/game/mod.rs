@@ -69,7 +69,7 @@ pub fn status_emittor() {}
 
 #[tauri::command]
 pub async fn latest_game_server_status(server: GameServer) -> Result<GameServerStatus, String> {
-    let settings = GameSettings::new();
+    let settings = GameSettings::new().map_err(|e| format!("{e}"))?;
     GameServerStatus::get_status(server, &settings)
         .await
         .map_err(|e| e.to_string())

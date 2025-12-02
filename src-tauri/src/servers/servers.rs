@@ -442,7 +442,7 @@ pub async fn set_default_server(
     default_server: State<'_, Arc<futures::lock::Mutex<Option<GameServer>>>>,
     server_name: String,
 ) -> Result<String, String> {
-    let mut settings = crate::settings::Settings::new();
+    let mut settings = crate::settings::Settings::new().map_err(|e| format!("{e}"))?;
     let server = match server_from_settings(settings.config(), &server_name.to_lowercase()) {
         Some(s) => s,
         None => return Err(format!("No server found with that name: {:?}", server_name)),
@@ -463,7 +463,7 @@ pub async fn set_default_server(
 pub fn new_server(server: GameServer) -> Result<GameServer, String> {
     info! {"adding new rcon server: {:?}", server};
     let ret_server = server.clone();
-    let mut settings = crate::settings::Settings::new();
+    let mut settings = crate::settings::Settings::new().map_err(|e| format!("{e}"))?;
     // BUG: #7 Non validated input causing program to crash from spaces.
     settings
         .set_config(
@@ -526,7 +526,7 @@ pub fn update_server(server: GameServer, old_server_name: String) -> Result<Game
     info! {"updating rcon server {old_server_name}: {:?}", server};
 
     let ret_server = server.clone();
-    let mut settings = crate::settings::Settings::new();
+    let mut settings = crate::settings::Settings::new().map_err(|e| format!("{e}"))?;
 
     settings
         .set_config("servers.default", server.name.clone())

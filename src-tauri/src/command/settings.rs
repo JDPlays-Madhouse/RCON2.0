@@ -229,7 +229,7 @@ impl ScriptSettings {
 
 impl Default for ScriptSettings {
     fn default() -> Self {
-        let settings = Settings::new();
+        let settings = Settings::new().unwrap_or_default();
         let config_fileformat = FileFormat::Toml;
         let config_folder = settings.script_folder;
         let config_filename = ScriptSettings::filename("config", config_fileformat);

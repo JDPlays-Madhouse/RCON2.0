@@ -195,7 +195,7 @@ pub async fn run_command_on_server(
     }
 }
 
-// BUG: Fix bug with code on windows, move commands to `cmd /c input` or pwsh...
+// BUG: #17 Fix bug with code on windows, move commands to `cmd /c input` or pwsh...
 #[allow(unused)]
 #[cfg(test)]
 mod tests {
