@@ -1,7 +1,8 @@
+use crate::servers::GameServer;
 use serde::{Deserialize, Serialize};
 use std::process::{Command, Output, Stdio};
-
-use crate::servers::GameServer;
+use tauri::AppHandle;
+use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
 #[derive(Debug, Deserialize, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -130,8 +131,43 @@ pub enum ServerCommandError {
     IOError(#[from] std::io::Error),
 }
 
+impl ServerCommandError {
+    /// Returns `true` if the server command error is [`NoStartCommand`].
+    ///
+    /// [`NoStartCommand`]: ServerCommandError::NoStartCommand
+    #[must_use]
+    pub fn is_no_start_command(&self) -> bool {
+        matches!(self, Self::NoStartCommand)
+    }
+
+    /// Returns `true` if the server command error is [`NoStopCommand`].
+    ///
+    /// [`NoStopCommand`]: ServerCommandError::NoStopCommand
+    #[must_use]
+    pub fn is_no_stop_command(&self) -> bool {
+        matches!(self, Self::NoStopCommand)
+    }
+
+    /// Returns `true` if the server command error is [`IOError`].
+    ///
+    /// [`IOError`]: ServerCommandError::IOError
+    #[must_use]
+    pub fn is_ioerror(&self) -> bool {
+        matches!(self, Self::IOError(..))
+    }
+
+    pub fn as_ioerror(&self) -> Option<&std::io::Error> {
+        if let Self::IOError(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn run_command_on_server(
+    app: AppHandle,
     server: GameServer,
     command: ServerCommand,
 ) -> Result<String, String> {
@@ -149,6 +185,24 @@ pub async fn run_command_on_server(
                     Ok(o) => o,
                     Err(e) => {
                         tracing::error!("Start Server Command Error: {e}");
+                        if let Some(io_error) = e.as_ioerror() {
+                            eprintln!("{:?}", io_error);
+                            if io_error.kind() == ::std::io::ErrorKind::NotFound {
+                                if cfg!(target_os = "windows") {
+                                    app.dialog()
+                                    .message("If the program runs in the command line, add 'cmd /c ' before it and try again.")
+                                    .kind(MessageDialogKind::Warning)
+                                    .title("Program Not Found")
+                                    .blocking_show();
+                                } else {
+                                    app.dialog()
+                                    .message("Ensure program exists, if it works in command line add 'sh -c ' before it and try again.")
+                                    .kind(MessageDialogKind::Warning)
+                                    .title("Program Not Found")
+                                    .blocking_show();
+                                }
+                            }
+                        }
                         return Err(e.to_string());
                     }
                 };
@@ -174,6 +228,24 @@ pub async fn run_command_on_server(
                     Ok(o) => o,
                     Err(e) => {
                         tracing::error!("Stop Server Command Error: {e}");
+                        if let Some(io_error) = e.as_ioerror() {
+                            eprintln!("{:?}", io_error);
+                            if io_error.kind() == ::std::io::ErrorKind::NotFound {
+                                if cfg!(target_os = "windows") {
+                                    app.dialog()
+                                    .message("If the program runs in the command line, add 'cmd /c ' before it and try again.")
+                                    .kind(MessageDialogKind::Warning)
+                                    .title("Program Not Found")
+                                    .blocking_show();
+                                } else {
+                                    app.dialog()
+                                    .message("Ensure program exists, if it works in command line add 'sh -c ' before it and try again.")
+                                    .kind(MessageDialogKind::Warning)
+                                    .title("Program Not Found")
+                                    .blocking_show();
+                                }
+                            }
+                        }
                         return Err(e.to_string());
                     }
                 };
