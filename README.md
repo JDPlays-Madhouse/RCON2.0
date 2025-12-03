@@ -1,20 +1,5 @@
 # RCON2.0
 
-## Known Bugs
-
-- [ ] [Issue #2](https://github.com/JDPlays-Madhouse/RCON2.0/issues/2) Cli doesn't work for windows - possible solution [github.com](https://github.com/tauri-apps/tauri/issues/8305#issuecomment-1826871949)
-- [ ] [Issue #3](https://github.com/JDPlays-Madhouse/RCON2.0/issues/3) On the main page of UI, unable to highlight trigger text in table.
-- [ ] [Issue #4](https://github.com/JDPlays-Madhouse/RCON2.0/issues/4) Warning log saying, please ignore for now:
-
-  ```text
-  3:40:34 pm - WARNING - log - NewEvents emitted without explicit RedrawEventsCleared
-  3:40:34 pm - WARNING - log - RedrawEventsCleared emitted without explicit MainEventsCleared
-  ```
-
-- [ ] [Issue #5](https://github.com/JDPlays-Madhouse/RCON2.0/issues/5) Writing to script file removes any `ChannelPointRewardRedeemed` trigger,
-      therefore writing is disabled until solved.
-- [ ] [Issue #8](https://github.com/JDPlays-Madhouse/RCON2.0/issues/8) Server connection status not working.
-
 ## Requirements
 
 - [x] Read twitch events directly i.e. no Streamer.bot etc.
@@ -141,6 +126,17 @@ relative_path = hello_world.lua # or ./hello_world.lua not /wrong.lua
 enabled = true
 server_name = "local"
 trigger_type = "Subscription"
+tier = "Tier1"
+comparison_operator = "Any"
+
+[["example 2".server_triggers]]
+enabled = true
+server_name = "local"
+trigger_type = "GiftSub"
+tier = "Tier1"
+tier_comparison_operator = ">"
+count = 10
+count_comparison_operator = ">="
 
 [bits_bought]
 prefix = "mc"
@@ -208,7 +204,7 @@ command_type = "File"
 relative_path = hello_world.lua # or ./hello_world.lua not /wrong.lua
 ```
 
-### Server Triggers
+## Server Triggers
 
 Server triggers are used to define when an event occurs send the command to the server.
 To duplicate a server trigger, copy and paste it, then change as required.
@@ -231,6 +227,8 @@ id = "12345678-1234-1234-1234-123456789012"
 > [!TIP]
 > The double square brackets indicate a list/array in toml.
 
+### Common Options
+
 #### Enabled
 
 Used to toggle a server trigger without needing to remove and reinsert.
@@ -242,11 +240,39 @@ The name of the server you want the command to be sent to.
 > [!IMPORTANT]
 > Must match the exact verbiage used in the core config file, both case and spelling.
 
-#### Trigger
+#### Trigger Type
 
-Each `trigger_type` has different properties.
+Each `trigger_type` has additional properties.
 
-##### Chat
+#### Properties
+
+##### Comparison Operator
+
+Example:
+
+All subscription tiers greater than and equal to Tier2 i.e. any Tier2 or Tier3.
+
+```toml
+tier = "Tier2"
+comparison_operator = ">="
+```
+
+Valid Comparison Operators:
+
+- `"Any"` | `"*"`: All tiers will trigger.
+- `">"`: Tiers greater than this tier will trigger.
+- `">="`: Tiers greater than and equal to this tier will trigger.
+- `"=="`: Only tiers equal to this tier will trigger.
+- `"!="`: Only tiers not equal to this tier will trigger.
+- `"<"`: Tiers less than this tier will trigger.
+- `"<="`: Tiers less than and equal to this tier will trigger.
+
+> [!NOTE]
+> When the comparison operator used is `"Any"` or `"*"` then the value is disregarded.
+
+### Triggers
+
+#### Chat
 
 Matches all platforms chat events, matches on exact text. Don't use regex here.
 
@@ -274,7 +300,7 @@ websocket_subscription = [
 > ```
 >
 
-##### Channel Point Reward Redeemed
+#### Channel Point Reward Redeemed
 
 Matches just on twitches channel point reward redeemed. Title is the title of the redeem and the id is the twitch ID.
 
@@ -295,7 +321,7 @@ websocket_subscription = [
 ]
 ```
 
-##### Subscription
+#### Subscription
 
 Matches any subscription events.
 
@@ -305,15 +331,7 @@ tier = "Tier1"
 comparison_operator = "Any"
 ```
 
-Valid Comaparison Operators:
-
-- `"Any"` | `"*"`: All tiers will trigger.
-- `">"`: Tiers greater than this tier will trigger.
-- `">="`: Tiers greater than and equal to this tier will trigger.
-- `"=="`: Only tiers equal to this tier will trigger.
-- `"!="`: Only tiers not equal to this tier will trigger.
-- `"<"`: Tiers less than this tier will trigger.
-- `"<="`: Tiers less than and equal to this tier will trigger.
+See **Comparison Operator** above for more info.
 
 Tiers Ordering (High number is greater):
 
@@ -326,6 +344,7 @@ Tiers Ordering (High number is greater):
 Required websocket subscription in main config file.
 
 ```toml
+websocket_subscription = [ 
     "channel.subscribe", # for new subscriptions.
     "channel.subscription.message", # for re-subscriptions.
 ]
@@ -334,29 +353,47 @@ Required websocket subscription in main config file.
 > [!NOTE]
 > If you want additional options let me know. Tier or sub length etc.
 
-##### Bits
+> [!INFO]
+> YouTube triggers aren't factored in yet.
+
+#### Gift Subscriptions
+
+These differ from **Subscriptions** as this will trigger on the purchase of the gift sub and the **Subscriptions** would fire for each gifted sub.
+
+```toml
+trigger_type = "GiftSub"
+tier = "Tier1"
+tier_comparison_operator = ">"
+count = 10
+count_comparison_operator = ">="
+```
+
+Required websocket subscription in main config file.
+
+```toml
+websocket_subscription = [
+    "channel.subscription.gift"
+]
+```
+
+#### Bits
 
 Matches whenever Bits are used on a twitch channel.
 
 ```toml
+trigger_type = "bits"
 comparison_operator = "Any"
 bits = 0
 ```
 
-Valid Comaparison Operators:
-
-- `"Any"` | `"*"`: All tiers will trigger.
-- `">"`: Tiers greater than this tier will trigger.
-- `">="`: Tiers greater than and equal to this tier will trigger.
-- `"=="`: Only tiers equal to this tier will trigger.
-- `"!="`: Only tiers not equal to this tier will trigger.
-- `"<"`: Tiers less than this tier will trigger.
-- `"<="`: Tiers less than and equal to this tier will trigger.
+See **Comparison Operator** above for more info.
 
 Bits can be set to any number that is between 0 and $2^{64} − 1$
 
 Required websocket subscription in main config file.
 
-```rust
+```toml
+websocket_subscription = [ 
     "channel.bits.use"
+]
 ```
