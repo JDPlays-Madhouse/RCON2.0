@@ -1,20 +1,5 @@
 # RCON2.0
 
-## Known Bugs
-
-- [ ] [Issue #2](https://github.com/JDPlays-Madhouse/RCON2.0/issues/2) Cli doesn't work for windows - possible solution [github.com](https://github.com/tauri-apps/tauri/issues/8305#issuecomment-1826871949)
-- [ ] [Issue #3](https://github.com/JDPlays-Madhouse/RCON2.0/issues/3) On the main page of UI, unable to highlight trigger text in table.
-- [ ] [Issue #4](https://github.com/JDPlays-Madhouse/RCON2.0/issues/4) Warning log saying, please ignore for now:
-
-  ```text
-  3:40:34 pm - WARNING - log - NewEvents emitted without explicit RedrawEventsCleared
-  3:40:34 pm - WARNING - log - RedrawEventsCleared emitted without explicit MainEventsCleared
-  ```
-
-- [ ] [Issue #5](https://github.com/JDPlays-Madhouse/RCON2.0/issues/5) Writing to script file removes any `ChannelPointRewardRedeemed` trigger,
-      therefore writing is disabled until solved.
-- [ ] [Issue #8](https://github.com/JDPlays-Madhouse/RCON2.0/issues/8) Server connection status not working.
-
 ## Requirements
 
 - [x] Read twitch events directly i.e. no Streamer.bot etc.
@@ -24,34 +9,22 @@
 - [x] Detect certain messages and parse the message for battleship. (Only 1 command)
   - [x] Example: /muppet_streamer_schedule_explosive_delivery target targetPosition
 - [x] Convert the parsed message into a valid command.
-  - [ ] have default values for commands so invalid data with a valid command
-        becomes valid command with default data.
-- [ ] Read from SteamLabs/streamelements Patreon (own api) and Humble
-      notifications and donations.
+  - [x] have default values for commands so invalid data with a valid command becomes valid command with default data.
+- [ ] Read from SteamLabs/streamelements Patreon (own api) and Humble notifications and donations.
 - [ ] Read from YouTube for chat/subs/memberships/supers.
 - [x] Have a Pause button or Api end point to pause for bio breaks.
-
-- [x] Have a RCON app/interface that takes in specific Factorio commands as well
-      as any other games.
+- [x] Have a RCON app/interface that takes in specific Factorio commands as well as any other games.
 - [x] Rcon interface needs to take configurations for any rcon server.
-- [ ] Ensure that the amount of data is below the max per tick amount.
-  - No obvious method for determining this.
-
-- [ ] Provide visiual feedback through an OBS overlay (website) to give feedback
-      on things like the boom factor.
+- [x] Ensure that the amount of data is below the max per tick amount.
+- [ ] Provide visual feedback through an OBS overlay (website) to give feedback on things like the boom factor.
       <img src="./docs/Example_visual_feedback.png" alt="Example of OBS overlay" width="400"/>
 - [ ] From twitch events read hype trains and be able to respond.
-  - JDGOESBoom with count down, if redeamed again dead factor goes up and
-    restart count down.
-- [x] Be able to add RCON commands, modify, delete, display (CRUD), including
-      default values like deadliness.
-- [ ] Be able to test when adding commands.
+  - JDGOESBoom with count down, if redeamed again dead factor goes up and restart count down.
+- [x] Be able to add RCON commands, modify, delete, display (CRUD), including default values like deadliness.
+- [x] Be able to test when adding commands.
 - [x] Output a log with raw output for debugging
-  - [x] ESPECIALLY "custom-reward-id" from twitch channel points as ill need
-        that data for adding new points rewards through streamer.bot. Or Work
-        out what the ID code.
-- [ ] Has to support some sort of user comments in the script so i can keep
-      track/notes on new code.
+  - [x] ESPECIALLY "custom-reward-id" from twitch channel points as ill need that data for adding new points rewards through streamer.bot. Or Work out what the ID code.
+- [ ] Has to support some sort of user comments in the script so I can keep track/notes on new code.
 
 ### Definitions
 
@@ -62,10 +35,56 @@
   effect.
 
 ---
+## Rcon Settings
 
-## Integrations
+Example of the main config file.
 
-### Twitch
+```toml
+log_folder = /path/to/log/folder
+script_folder = /path/to/script/folder
+max_log_level = "info"
+debug = false
+show_logs = true
+localhost_port = 20080
+
+[auth]
+platforms = ["Twitch"]
+
+[auth.twitch]
+username = "Ozy_Viking"
+client_id = "Client-ID"
+client_secret = "Client-Secret"
+redirect_url = "http://localhost:27934/twitch/register"
+auto_connect = true
+websocket_subscription = [
+    "channel.chat.message",
+    "channel.subscribe",
+    "channel.subscription.message",
+    "channel.bits.use",
+]
+
+[servers]
+default = "factorio2"
+autostart = true
+
+[servers.test]
+address = "127.0.0.1"
+game = "Factorio"
+password = "factorio for life"
+port = 37943 # RCON port
+game_name = "My Awesome Factorio Server"
+game_address = "127.0.0.1:61005" # Actual game address
+server_start = "cmd \c echo server_start"
+server_stop = "cmd \c echo server_start"
+
+[game.factorio]
+username = "Ozy_Viking"
+token = "My-Factorio-Token"
+```
+
+### Integrations
+
+#### Twitch
 
 1. Get a Client ID and Client Secret from [dev.twitch.tv/console/apps/](https://dev.twitch.tv/console/apps/).
 2. For the redirect url make sure they are exactly the same
@@ -79,7 +98,7 @@
 5. websocket_subscription are the websocket events that you want to track defined by
    [twitch docs](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/).
 
-#### Current Websocket Subscriptions
+##### Current Websocket Subscriptions
 
 If there any not listed that you want, start an issue, and I will add it if possible
 [JDPlays-Madhouse/RCON2.0/issues](https://github.com/JDPlays-Madhouse/RCON2.0/issues).
@@ -92,11 +111,11 @@ If there any not listed that you want, start an issue, and I will add it if poss
 6. channel.bits.use: Bits used on twitch channel.
 7. channel.subscription.gift: A notification when a viewer gives a gift subscription to one or more users in the specified channel.
 
-### YouTube
+#### YouTube
 
 Not yet implemented.
 
-### Patreon
+#### Patreon
 
 Not yet implemented.
 
@@ -105,6 +124,9 @@ Not yet implemented.
 ## Rcon Commands
 
 At the moment the only way to add commands is through the config file.
+
+> [!IMPORTANT]
+> This is kept in the script folder defined in the main config file and called `config.toml`
 
 ```TOML
 [example]
@@ -141,6 +163,17 @@ relative_path = hello_world.lua # or ./hello_world.lua not /wrong.lua
 enabled = true
 server_name = "local"
 trigger_type = "Subscription"
+tier = "Tier1"
+comparison_operator = "Any"
+
+[["example 2".server_triggers]]
+enabled = true
+server_name = "local"
+trigger_type = "GiftSub"
+tier = "Tier1"
+tier_comparison_operator = ">"
+count = 10
+count_comparison_operator = ">="
 
 [bits_bought]
 prefix = "mc"
@@ -208,7 +241,7 @@ command_type = "File"
 relative_path = hello_world.lua # or ./hello_world.lua not /wrong.lua
 ```
 
-### Server Triggers
+## Server Triggers
 
 Server triggers are used to define when an event occurs send the command to the server.
 To duplicate a server trigger, copy and paste it, then change as required.
@@ -231,6 +264,8 @@ id = "12345678-1234-1234-1234-123456789012"
 > [!TIP]
 > The double square brackets indicate a list/array in toml.
 
+### Common Options
+
 #### Enabled
 
 Used to toggle a server trigger without needing to remove and reinsert.
@@ -242,11 +277,39 @@ The name of the server you want the command to be sent to.
 > [!IMPORTANT]
 > Must match the exact verbiage used in the core config file, both case and spelling.
 
-#### Trigger
+#### Trigger Type
 
-Each `trigger_type` has different properties.
+Each `trigger_type` has additional properties.
 
-##### Chat
+#### Properties
+
+##### Comparison Operator
+
+Example:
+
+All subscription tiers greater than and equal to Tier2 i.e. any Tier2 or Tier3.
+
+```toml
+tier = "Tier2"
+comparison_operator = ">="
+```
+
+Valid Comparison Operators:
+
+- `"Any"` | `"*"`: All tiers will trigger.
+- `">"`: Tiers greater than this tier will trigger.
+- `">="`: Tiers greater than and equal to this tier will trigger.
+- `"=="`: Only tiers equal to this tier will trigger.
+- `"!="`: Only tiers not equal to this tier will trigger.
+- `"<"`: Tiers less than this tier will trigger.
+- `"<="`: Tiers less than and equal to this tier will trigger.
+
+> [!NOTE]
+> When the comparison operator used is `"Any"` or `"*"` then the value is disregarded.
+
+### Triggers
+
+#### Chat
 
 Matches all platforms chat events, matches on exact text. Don't use regex here.
 
@@ -274,7 +337,7 @@ websocket_subscription = [
 > ```
 >
 
-##### Channel Point Reward Redeemed
+#### Channel Point Reward Redeemed
 
 Matches just on twitches channel point reward redeemed. Title is the title of the redeem and the id is the twitch ID.
 
@@ -295,7 +358,7 @@ websocket_subscription = [
 ]
 ```
 
-##### Subscription
+#### Subscription
 
 Matches any subscription events.
 
@@ -305,15 +368,7 @@ tier = "Tier1"
 comparison_operator = "Any"
 ```
 
-Valid Comaparison Operators:
-
-- `"Any"` | `"*"`: All tiers will trigger.
-- `">"`: Tiers greater than this tier will trigger.
-- `">="`: Tiers greater than and equal to this tier will trigger.
-- `"=="`: Only tiers equal to this tier will trigger.
-- `"!="`: Only tiers not equal to this tier will trigger.
-- `"<"`: Tiers less than this tier will trigger.
-- `"<="`: Tiers less than and equal to this tier will trigger.
+See **Comparison Operator** above for more info.
 
 Tiers Ordering (High number is greater):
 
@@ -326,6 +381,7 @@ Tiers Ordering (High number is greater):
 Required websocket subscription in main config file.
 
 ```toml
+websocket_subscription = [ 
     "channel.subscribe", # for new subscriptions.
     "channel.subscription.message", # for re-subscriptions.
 ]
@@ -334,29 +390,47 @@ Required websocket subscription in main config file.
 > [!NOTE]
 > If you want additional options let me know. Tier or sub length etc.
 
-##### Bits
+> [!INFO]
+> YouTube triggers aren't factored in yet.
+
+#### Gift Subscriptions
+
+These differ from **Subscriptions** as this will trigger on the purchase of the gift sub and the **Subscriptions** would fire for each gifted sub.
+
+```toml
+trigger_type = "GiftSub"
+tier = "Tier1"
+tier_comparison_operator = ">"
+count = 10
+count_comparison_operator = ">="
+```
+
+Required websocket subscription in main config file.
+
+```toml
+websocket_subscription = [
+    "channel.subscription.gift"
+]
+```
+
+#### Bits
 
 Matches whenever Bits are used on a twitch channel.
 
 ```toml
+trigger_type = "bits"
 comparison_operator = "Any"
 bits = 0
 ```
 
-Valid Comaparison Operators:
-
-- `"Any"` | `"*"`: All tiers will trigger.
-- `">"`: Tiers greater than this tier will trigger.
-- `">="`: Tiers greater than and equal to this tier will trigger.
-- `"=="`: Only tiers equal to this tier will trigger.
-- `"!="`: Only tiers not equal to this tier will trigger.
-- `"<"`: Tiers less than this tier will trigger.
-- `"<="`: Tiers less than and equal to this tier will trigger.
+See **Comparison Operator** above for more info.
 
 Bits can be set to any number that is between 0 and $2^{64} − 1$
 
 Required websocket subscription in main config file.
 
-```rust
+```toml
+websocket_subscription = [ 
     "channel.bits.use"
+]
 ```
