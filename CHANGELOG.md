@@ -1,5 +1,134 @@
 # Changelog
 
+<a name="unreleased"></a>
+## [Unreleased]
+
+### Bug Fixes
+1. Failing tests due to not adding cmd as the program - [b7b0816](https://github.com/JDPlays-Madhouse/RCON2.0/commit/b7b081680ed41956379b97a00e698ea2a4d837ca?w=1&diff=split)
+1. Shows dialogue when config is broken. - [c9edd65](https://github.com/JDPlays-Madhouse/RCON2.0/commit/c9edd658fc66263a04b255b64b856deb8fba581f?w=1&diff=split)
+
+### Documentation
+1. Updated documentation - [735904b](https://github.com/JDPlays-Madhouse/RCON2.0/commit/735904bddc48d195390692b29d8d1df73f9aec20?w=1&diff=split)
+
+### Features
+1. Added a dialog window for program not found. - [c8a3dc0](https://github.com/JDPlays-Madhouse/RCON2.0/commit/c8a3dc03f420311f0e46769fc7be21cfc3a208fe?w=1&diff=split)
+
+<a name="0.3.1"></a>
+## [0.3.1](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.10...0.3.1) (2025-11-28)
+
+### Bug Fixes
+
+1. Fixed or ignored all eslint errors. - [c8cb5cd](https://github.com/JDPlays-Madhouse/RCON2.0/commit/c8cb5cd2a7c379d24747731cbe692c6c3fb25807?w=1&diff=split)
+
+### Chores
+
+1. Updated next to 16 - [df98767](https://github.com/JDPlays-Madhouse/RCON2.0/commit/df987676642c186bb28dd987b8eab00e53e29df7?w=1&diff=split)
+
+<a name="0.2.10"></a>
+## [0.2.10](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.9...0.2.10) (2025-11-28)
+
+### Bug Fixes
+
+1. Trigger type deleting for bits. - [5b7470d](https://github.com/JDPlays-Madhouse/RCON2.0/commit/5b7470dda4f6d6d42df86f9b313eb410592ac234?w=1&diff=split)
+
+### Documentation
+
+1. Add Bits trigger to documentation. - [a66511d](https://github.com/JDPlays-Madhouse/RCON2.0/commit/a66511ddb8e7520bb84f647397e76f454fd4233c?w=1&diff=split)
+
+### Features
+
+1. Added bits trigger - [4e26374](https://github.com/JDPlays-Madhouse/RCON2.0/commit/4e26374df153625a4a8f2488dc95e0eec41a3e48?w=1&diff=split)
+
+<a name="0.2.9"></a>
+## [0.2.9](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.8...0.2.9) (2025-10-12)
+
+### Bug Fixes
+
+1. **Previous Commands:** Stopped autoResetPageIndex for pagination. - [246328c](https://github.com/JDPlays-Madhouse/RCON2.0/commit/246328c819d053b12edd1a546e81be48f78d7aaa?w=1&diff=split)
+
+### Code Refactoring
+
+1. Changed name so it doesn't appear as if there is a factorio executable. - [b6e9f4a](https://github.com/JDPlays-Madhouse/RCON2.0/commit/b6e9f4afc25ac9e09ab672fce483467d905aece1?w=1&diff=split)
+
+<a name="0.2.8"></a>
+## [0.2.8](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.7...0.2.8) (2025-10-11)
+
+### Bug Fixes
+
+1. **Twitch Autoconnecting:** By simply not. - [0bac7c7](https://github.com/JDPlays-Madhouse/RCON2.0/commit/0bac7c723688d89d4f6b5492fdc0c78417d4487a?w=1&diff=split)
+
+### Features
+
+1. **Backend:** Resending event and commands from logs. - [f9400e2](https://github.com/JDPlays-Madhouse/RCON2.0/commit/f9400e239260d7b69b43948a845e72f820514ed8?w=1&diff=split)
+1. **Command History:** Resend event or command button - [8051577](https://github.com/JDPlays-Madhouse/RCON2.0/commit/8051577c4bd70f28511e4bdf7726997ebc7ef5f4?w=1&diff=split)
+
+<a name="0.2.7"></a>
+## [0.2.7](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.6...0.2.7) (2025-10-10)
+
+### Bug Fixes
+
+1. **Twitch:** Reconnecting when un needed. - [4412ebb](https://github.com/JDPlays-Madhouse/RCON2.0/commit/4412ebb5834565fedd1fd34b202ccdf535013626?w=1&diff=split)
+
+<a name="0.2.6"></a>
+## [0.2.6](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.5...0.2.6) (2025-10-09)
+
+### Features
+
+1. Log of all commands triggered or sent by server - [d68f427](https://github.com/JDPlays-Madhouse/RCON2.0/commit/d68f427d192c387ca2caa0fd4a85abaf2ea2301e?w=1&diff=split)
+
+<a name="0.2.5"></a>
+## [0.2.5](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.4...0.2.5) (2025-10-08)
+
+### Features
+
+1. **Factorio:** Shows server status and buttons for starting and stopping server. - [ef9375f](https://github.com/JDPlays-Madhouse/RCON2.0/commit/ef9375fe1be17fb0168b7494b99539c64b4424c8?w=1&diff=split)
+
+<a name="0.2.4"></a>
+## [0.2.4](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.3...0.2.4) (2025-10-08)
+
+### Bug Fixes
+
+1. Slowed down the rate of websocket ckecks by the frontend. - [69b28de](https://github.com/JDPlays-Madhouse/RCON2.0/commit/69b28de454bc42712c235567840d51b08c51d5f5?w=1&diff=split)
+
+<a name="0.2.3"></a>
+## [0.2.3](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.2...0.2.3) (2025-10-07)
+
+### Features
+
+1. Server status and serve start and stop commands - [7c1e120](https://github.com/JDPlays-Madhouse/RCON2.0/commit/7c1e1205b3f7b5f3f248a552a4cbc0b28cf570a6?w=1&diff=split)
+1. **Twitch:** Websocket it's self within reason 10 errors withon 1 second. - [acdebb7](https://github.com/JDPlays-Madhouse/RCON2.0/commit/acdebb78b4bbbb9d8f85216afafa5515e650fbec?w=1&diff=split)
+1. **UI:** Integration will show red on websocket disconnection. - [817bead](https://github.com/JDPlays-Madhouse/RCON2.0/commit/817bead578371c24be1a0a9a376c1d7037638138?w=1&diff=split)
+
+<a name="0.2.2"></a>
+## [0.2.2](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.1...0.2.2) (2025-10-03)
+
+### Bug Fixes
+
+1. **test:** Failing test - [b10c795](https://github.com/JDPlays-Madhouse/RCON2.0/commit/b10c79511219be71202ffcf9a14d2ca238081248?w=1&diff=split)
+
+<a name="0.2.1"></a>
+## [0.2.1](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.0...0.2.1) (2025-10-01)
+
+### Debugging Measure
+
+1. Added extra information for Twitch closed websocket [#9](https://github.com/JDPlays-Madhouse/RCON2.0/issues/9) - [9523a2d](https://github.com/JDPlays-Madhouse/RCON2.0/commit/9523a2d4072cb41ce8b60ab1ae4739959dce0bf1?w=1&diff=split)
+
+<a name="0.2.0"></a>
+## [0.2.0](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.2.0-rc.1...0.2.0) (2025-09-26)
+
+<a name="0.2.0-rc.1"></a>
+## [0.2.0-rc.1](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.12...0.2.0-rc.1) (2025-09-26)
+
+### Bug Fixes
+
+1. Fixed failing test from linux and windows diff - [f715946](https://github.com/JDPlays-Madhouse/RCON2.0/commit/f715946ef60e8a7f291b5884d7b0ad3ca47a13cf?w=1&diff=split)
+
+### Features
+
+1. Displays message in factorio when client connects and presses disconnect in ui. - [cdcae67](https://github.com/JDPlays-Madhouse/RCON2.0/commit/cdcae67b7a5bc7785b562af92b12f97033dadf7b?w=1&diff=split)
+1. Message for Channel Reward added to event. - [f90cfe2](https://github.com/JDPlays-Madhouse/RCON2.0/commit/f90cfe290be7535088945378a27dbe218d5f82ca?w=1&diff=split)
+1. **Variables:** Use input message to generate the value for accepted variables. - [6bea72e](https://github.com/JDPlays-Madhouse/RCON2.0/commit/6bea72e7c5d7b45d9126a0c2937acb4ec1ac176b?w=1&diff=split)
+
 <a name="0.1.12"></a>
 ## [0.1.12](https://github.com/JDPlays-Madhouse/RCON2.0/compare/0.1.11...0.1.12) (2025-09-21)
 

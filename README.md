@@ -9,34 +9,22 @@
 - [x] Detect certain messages and parse the message for battleship. (Only 1 command)
   - [x] Example: /muppet_streamer_schedule_explosive_delivery target targetPosition
 - [x] Convert the parsed message into a valid command.
-  - [ ] have default values for commands so invalid data with a valid command
-        becomes valid command with default data.
-- [ ] Read from SteamLabs/streamelements Patreon (own api) and Humble
-      notifications and donations.
+  - [x] have default values for commands so invalid data with a valid command becomes valid command with default data.
+- [ ] Read from SteamLabs/streamelements Patreon (own api) and Humble notifications and donations.
 - [ ] Read from YouTube for chat/subs/memberships/supers.
 - [x] Have a Pause button or Api end point to pause for bio breaks.
-
-- [x] Have a RCON app/interface that takes in specific Factorio commands as well
-      as any other games.
+- [x] Have a RCON app/interface that takes in specific Factorio commands as well as any other games.
 - [x] Rcon interface needs to take configurations for any rcon server.
-- [ ] Ensure that the amount of data is below the max per tick amount.
-  - No obvious method for determining this.
-
-- [ ] Provide visiual feedback through an OBS overlay (website) to give feedback
-      on things like the boom factor.
+- [x] Ensure that the amount of data is below the max per tick amount.
+- [ ] Provide visual feedback through an OBS overlay (website) to give feedback on things like the boom factor.
       <img src="./docs/Example_visual_feedback.png" alt="Example of OBS overlay" width="400"/>
 - [ ] From twitch events read hype trains and be able to respond.
-  - JDGOESBoom with count down, if redeamed again dead factor goes up and
-    restart count down.
-- [x] Be able to add RCON commands, modify, delete, display (CRUD), including
-      default values like deadliness.
-- [ ] Be able to test when adding commands.
+  - JDGOESBoom with count down, if redeamed again dead factor goes up and restart count down.
+- [x] Be able to add RCON commands, modify, delete, display (CRUD), including default values like deadliness.
+- [x] Be able to test when adding commands.
 - [x] Output a log with raw output for debugging
-  - [x] ESPECIALLY "custom-reward-id" from twitch channel points as ill need
-        that data for adding new points rewards through streamer.bot. Or Work
-        out what the ID code.
-- [ ] Has to support some sort of user comments in the script so i can keep
-      track/notes on new code.
+  - [x] ESPECIALLY "custom-reward-id" from twitch channel points as ill need that data for adding new points rewards through streamer.bot. Or Work out what the ID code.
+- [ ] Has to support some sort of user comments in the script so I can keep track/notes on new code.
 
 ### Definitions
 
@@ -47,10 +35,56 @@
   effect.
 
 ---
+## Rcon Settings
 
-## Integrations
+Example of the main config file.
 
-### Twitch
+```toml
+log_folder = /path/to/log/folder
+script_folder = /path/to/script/folder
+max_log_level = "info"
+debug = false
+show_logs = true
+localhost_port = 20080
+
+[auth]
+platforms = ["Twitch"]
+
+[auth.twitch]
+username = "Ozy_Viking"
+client_id = "Client-ID"
+client_secret = "Client-Secret"
+redirect_url = "http://localhost:27934/twitch/register"
+auto_connect = true
+websocket_subscription = [
+    "channel.chat.message",
+    "channel.subscribe",
+    "channel.subscription.message",
+    "channel.bits.use",
+]
+
+[servers]
+default = "factorio2"
+autostart = true
+
+[servers.test]
+address = "127.0.0.1"
+game = "Factorio"
+password = "factorio for life"
+port = 37943 # RCON port
+game_name = "My Awesome Factorio Server"
+game_address = "127.0.0.1:61005" # Actual game address
+server_start = "cmd \c echo server_start"
+server_stop = "cmd \c echo server_start"
+
+[game.factorio]
+username = "Ozy_Viking"
+token = "My-Factorio-Token"
+```
+
+### Integrations
+
+#### Twitch
 
 1. Get a Client ID and Client Secret from [dev.twitch.tv/console/apps/](https://dev.twitch.tv/console/apps/).
 2. For the redirect url make sure they are exactly the same
@@ -64,7 +98,7 @@
 5. websocket_subscription are the websocket events that you want to track defined by
    [twitch docs](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/).
 
-#### Current Websocket Subscriptions
+##### Current Websocket Subscriptions
 
 If there any not listed that you want, start an issue, and I will add it if possible
 [JDPlays-Madhouse/RCON2.0/issues](https://github.com/JDPlays-Madhouse/RCON2.0/issues).
@@ -77,11 +111,11 @@ If there any not listed that you want, start an issue, and I will add it if poss
 6. channel.bits.use: Bits used on twitch channel.
 7. channel.subscription.gift: A notification when a viewer gives a gift subscription to one or more users in the specified channel.
 
-### YouTube
+#### YouTube
 
 Not yet implemented.
 
-### Patreon
+#### Patreon
 
 Not yet implemented.
 
@@ -90,6 +124,9 @@ Not yet implemented.
 ## Rcon Commands
 
 At the moment the only way to add commands is through the config file.
+
+> [!IMPORTANT]
+> This is kept in the script folder defined in the main config file and called `config.toml`
 
 ```TOML
 [example]
