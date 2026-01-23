@@ -3,7 +3,10 @@ use std::fmt::Display;
 use anyhow::bail;
 use config::ValueKind;
 use serde::{Deserialize, Serialize};
-use twitch_types::SubscriptionTier;
+use twitch_types::{SubscriptionTier, Timestamp};
+
+mod hype_train;
+pub use hype_train::HypeTrainState;
 
 use crate::command::trigger;
 
@@ -31,6 +34,15 @@ pub enum IntegrationEvent {
     Bits {
         user_name: String,
         bits: u64,
+    },
+    HypeTrain {
+        state: HypeTrainState,
+        id: String,
+        level: usize,
+        progress: i64,
+        goal: i64,
+        total: i64,
+        expires_at: Timestamp,
     },
     Unknown,
     Stop,

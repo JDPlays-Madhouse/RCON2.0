@@ -12,6 +12,7 @@ use tokio_tungstenite::tungstenite;
 use tracing::{debug, error, info, warn};
 use tracing::{trace, Instrument};
 use twitch_api::eventsub::EventType;
+use twitch_api::eventsub::channel::goal::progress;
 use twitch_api::{
     client::ClientDefault,
     eventsub::{
@@ -364,6 +365,9 @@ impl WebsocketClient {
                             Event::ChannelBitsUseV1(eventsub::Payload { message, .. }) => {
                                 self.channel_bits_use(message).await
                             }
+                            Event::ChannelHypeTrainBeginV1(eventsub::Payload{message, ..}) => {
+                                self.channel_hype_train_begin(message).await
+                            }
                             m => {
                                 let message =
                                     format!("Received an unimplemented websocket event: {:?}", m);
@@ -612,6 +616,33 @@ impl WebsocketClient {
                         user_name,
                         bits: u64::try_from(reward_payload.bits)
                             .expect("usize is never larger than u64"),
+                    })
+                    .await;
+            }
+            _ => {
+                error! {"Unhandled ChannelBitsUse Payload: {:?}", message}
+            }
+        }
+    }
+    
+    /// Channel Hype Train begin docs: [dev.twitch.tv](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelbitsuse)
+    async fn channel_hype_train_begin(
+        &mut self,
+        message: eventsub::Message<eventsub::channel::ChannelHypeTrainBeginV1>,
+    ) {
+        match message.clone() {
+            eventsub::Message::Notification(reward_payload) => {
+                let hypetrain_id = reward_payload.id.clone().take();
+                let level = reward_payload.level.clone();
+                let progress = reward_payload.progress.clone();
+                let message = format!("Hype train level {}", level);
+                info!(
+                    target = "rcon2::integration::twitch::websocket::ChannelHypeTrainBeginV1",
+                    message
+                );
+                let _ = self
+                    .event_tx
+                    .send(IntegrationEvent::HypeTrain {
                     })
                     .await;
             }
