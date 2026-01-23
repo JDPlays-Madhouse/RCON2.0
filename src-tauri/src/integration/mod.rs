@@ -179,7 +179,7 @@ pub async fn connect_to_integration(
                     twitch.run(config, force).await;
                     Ok(IntegrationStatus::Connected {
                         api: Api::Twitch,
-                        expires_at: dbg!(Some(IntegrationStatus::seconds_to(t.expires_in()))),
+                        expires_at: Some(IntegrationStatus::seconds_to(t.expires_in())),
                     })
                 }
                 Err(e) => {

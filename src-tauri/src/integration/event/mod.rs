@@ -38,7 +38,7 @@ pub enum IntegrationEvent {
     HypeTrain {
         state: HypeTrainState,
         id: String,
-        level: usize,
+        level: i64,
         progress: i64,
         goal: i64,
         total: i64,
@@ -76,7 +76,8 @@ impl IntegrationEvent {
                 Some(&custom_reward_event.message)
             }
             IntegrationEvent::Chat { msg, .. } => Some(&msg),
-            IntegrationEvent::Bits { .. }
+            IntegrationEvent::HypeTrain { .. }
+            | IntegrationEvent::Bits { .. }
             | IntegrationEvent::Connected
             | IntegrationEvent::Disconnected
             | IntegrationEvent::Server
@@ -99,7 +100,8 @@ impl IntegrationEvent {
             IntegrationEvent::Subscription { user_name, .. } => user_name.clone(),
             IntegrationEvent::GiftSub { user_name, .. } => user_name.clone().unwrap_or_default(),
             IntegrationEvent::Bits { user_name, .. } => user_name.clone(),
-            IntegrationEvent::Connected
+            IntegrationEvent::HypeTrain { .. }
+            | IntegrationEvent::Connected
             | IntegrationEvent::Disconnected
             | IntegrationEvent::Server
             | IntegrationEvent::Unknown
@@ -138,6 +140,15 @@ impl IntegrationEvent {
             Bits { .. } => Bits {
                 user_name: Default::default(),
                 bits: Default::default(),
+            },
+            HypeTrain { .. } => HypeTrain {
+                state: HypeTrainState::Begin,
+                id: Default::default(),
+                level: Default::default(),
+                progress: Default::default(),
+                goal: Default::default(),
+                total: Default::default(),
+                expires_at: Timestamp::new("1970-01-01T00:00:00+00:00".to_string()).unwrap(),
             },
         }
     }

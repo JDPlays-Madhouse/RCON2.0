@@ -647,6 +647,13 @@ impl WebsocketClient {
                 let _ = self
                     .event_tx
                     .send(IntegrationEvent::HypeTrain {
+                        state: integration::event::HypeTrainState::Begin, // TODO: Work out actual value.
+                        id: hypetrain_id,
+                        level: level,
+                        progress,
+                        goal: reward_payload.goal,
+                        total: reward_payload.total,
+                        expires_at: reward_payload.expires_at,
                     })
                     .await;
             }
