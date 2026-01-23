@@ -1,6 +1,6 @@
 [package]
 name = "RCON2"
-version = "0.3.1"
+version = "0.3.2"
 description = "Rcon integration"
 authors = ["Ozy_Viking<admin@hankin.io>"]
 license = ""
@@ -63,9 +63,9 @@ tauri-plugin-localhost = "2.3.1"
 tauri-plugin-websocket = "2.4.1"
 thiserror = "2.0.17"
 time = { version = "0.3.44", features = [
-  "local-offset",
-  "formatting",
-  "parsing",
+    "local-offset",
+    "formatting",
+    "parsing",
 ] }
 tokio = { version = "1.48.0", features = ["full", "tracing"] }
 tokio-tungstenite = { version = "0.28.0", features = ["native-tls", "url"] }
@@ -75,17 +75,17 @@ tracing-appender = "0.2.3"
 tracing-error = "0.2.1"
 tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.20", features = [
-  "local-time",
-  "tracing",
-  "fmt",
-  "registry",
+    "local-time",
+    "tracing",
+    "fmt",
+    "registry",
 ] }
 twitch_api = { version = "0.7.2", features = [
-  "reqwest",
-  "helix",
-  "eventsub",
-  "hmac",
-  "tracing",
+    "reqwest",
+    "helix",
+    "eventsub",
+    "hmac",
+    "tracing",
 ] }
 twitch_oauth2 = { version = "0.15.2", features = ["client", "reqwest"] }
 twitch_types = "0.4.10"
