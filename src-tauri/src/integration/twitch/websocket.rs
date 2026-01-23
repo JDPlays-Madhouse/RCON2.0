@@ -120,6 +120,7 @@ impl WebsocketClient {
         WebsocketError,
     > {
         tracing::debug!("Connecting to Twitch Websocket");
+        self.subscribed.clear();
         let config = tungstenite::protocol::WebSocketConfig::default()
             .max_message_size(Some(64 << 20))
             .max_frame_size(Some(16 << 20))
@@ -134,6 +135,7 @@ impl WebsocketClient {
             }
             Err(e) => {
                 error!("{}", e);
+                self.subscribed.clear();
                 Err(WebsocketError::FailedToConnect("Can't Connect".into()))
             }
         }
@@ -248,6 +250,7 @@ impl WebsocketClient {
                                 Err(e) => {
                                     tracing::error!("When getting message: {e}");
                                     self.state = WebsocketState::Down;
+                                    self.subscribed.clear();
                                     return Err(WebsocketError::FailedToConnect(format!("When getting message: {e}")));
                                     },
                             };
@@ -264,6 +267,7 @@ impl WebsocketClient {
                                     continue
                                     } else {
                                     self.state = WebsocketState::Down;
+                                    self.subscribed.clear();
                                     return Err(e)}
                                 }
                             }
@@ -681,8 +685,8 @@ impl WebsocketClient {
         for subscription in self.subscriptions.clone() {
             if self.subscribed.contains(&subscription) {
                 info!("Already subscribed to: {}", &subscription);
-                continue;
-            }
+                continue; 
+            } // TODO: Determine if required.
             use eventsub::EventType::*;
             match subscription {
                 ChannelPointsCustomRewardRedemptionAdd => {
